@@ -6,4 +6,4 @@ developed as part of the Software Engineering course 61756 – *Methods for Soft
 - 🧑‍💻 [Tal Klerman] (https://github.com/klerman-tal)
 - 👨‍💻 [Liem Dahan] (https://github.com/liemdahan)
 - 🧑‍💻 [Lior Nissanov] (https://github.com/liornis3-maker)
-- 👩‍💻 [Michal Pomiankevich]
+- 👩‍💻 [Michal Pomiankevich] (https://github.com/Michal-Pomiankevich)
