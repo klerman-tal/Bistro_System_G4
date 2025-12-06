@@ -124,6 +124,12 @@ public class ClientConsole implements ChatIF
 
                   case "4":
                       System.out.println("Exiting client...");
+
+                      // שולחים פקודת לוגאאוט לסרבר לפני שסוגרים
+                      ArrayList<String> logoutMsg = new ArrayList<>();
+                      logoutMsg.add("CLIENT_LOGOUT");
+                      client.handleMessageFromClientUI(logoutMsg);
+
                       client.quit();
                       return;
 

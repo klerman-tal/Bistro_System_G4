@@ -23,7 +23,7 @@ public class ClientUI extends Application implements ChatIF, ClientActions {
     @Override
     public void start(Stage primaryStage) throws Exception {
 
-        String host = "localhost"; // Default server host
+        String host = "10.0.0.15"; // Default server host
 
         try {
             // Initialize the OCSF ChatClient connection
@@ -69,6 +69,25 @@ public class ClientUI extends Application implements ChatIF, ClientActions {
         if (client != null) {
             client.handleMessageFromClientUI(msg);
         }
+    }
+
+    // ---- Called when the JavaFX window is closed ----
+    @Override
+    public void stop() throws Exception {
+        System.out.println("Closing client connection...");
+
+        if (client != null) {
+            try {
+                ArrayList<String> logoutMsg = new ArrayList<>();
+                logoutMsg.add("CLIENT_LOGOUT");
+                client.handleMessageFromClientUI(logoutMsg);
+
+                client.closeConnection();
+            } catch (IOException e) {
+            }
+        }
+
+        super.stop();
     }
 
     // Main method to launch the JavaFX application
