@@ -21,7 +21,7 @@ public class ServerUI extends Application {
         primaryStage.setScene(new Scene(root));
         primaryStage.show();
 
-        // הפעלת השרת ב-thread נפרד
+        // Start the server in a separate thread
         new Thread(() -> {
             RestaurantServer server = new RestaurantServer(5556);
             server.setUiController(controller);

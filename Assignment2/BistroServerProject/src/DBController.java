@@ -11,46 +11,47 @@ public class DBController {
 
     private Connection conn;
 
-    // רפרנס לשרת כדי שנוכל לשלוח לוגים לחלון ה־UI
+    // Reference to the server so we can send log messages to the UI window
     private RestaurantServer server;
 
-    // מחבר את ה-DBController לשרת
+    // Links this DBController instance to the server
     public void setServer(RestaurantServer server) {
         this.server = server;
     }
 
-    // לוג אחיד: אם יש ServerUI – כותב לחלון, אחרת לקונסול
+    // Unified log function: 
+    // If ServerUI exists → write to UI, otherwise write to console
     private void log(String msg) {
         if (server != null) {
-            server.log(msg);   // משתמש ב-log של RestaurantServer
+            server.log(msg);   // Calls the server's log method
         } else {
             System.out.println(msg);
         }
     }
 
-    
-    	public void ConnectToDb() {
-            try {
-            	conn = DriverManager.getConnection(
-            		    // מומלץ להסיר את allowPublicKeyRetrieval לחלוטין אם אתה משתמש ב-mysql_native_password
-            		    "jdbc:mysql://localhost:3306/bistrodb?serverTimezone=Asia/Jerusalem&useSSL=false", 
-            		    "root",
-            		    "michal28"
-            		);
+    // Establish connection to the MySQL database
+    public void ConnectToDb() {
+        try {
+            conn = DriverManager.getConnection(
+                    "jdbc:mysql://localhost:3306/bistrodb?serverTimezone=Asia/Jerusalem&useSSL=false",
+                    "root",
+                    "Liornis123"
+            );
 
-                log("SQL connection succeed");
+            log("SQL connection succeed");
 
         } catch (SQLException ex) {
-            log("SQLException: " + ex.getMessage());
             log("SQLException: " + ex.getMessage());
             log("SQLState: " + ex.getSQLState());
             log("VendorError: " + ex.getErrorCode());
         }
     }
 
+    // Retrieve all orders and format them for the client output
     public ArrayList<String> getOrdersForClient() {
         ArrayList<String> result = new ArrayList<>();
 
+        // Table header for the client
         String header = "Order number | Order date | Number of guests | Confirmation code | Subscriber ID | Date of placing order";
         result.add(header);
         result.add("-----------------------------------------------------------------------------------------------------");
@@ -70,6 +71,7 @@ public class DBController {
                 int subscriberId = rs.getInt("subscriber_id");
                 Date placingDate = rs.getDate("date_of_placing_order");
 
+                // Formatting each row
                 String line = orderNumber + " | " + orderDate + " | " + numGuests
                         + " | " + confirmationCode + " | " + subscriberId + " | " + placingDate;
 
@@ -88,6 +90,7 @@ public class DBController {
         return result;
     }
 
+    // Update the order_date field for a specific order
     public void UpdateOrderDate(int orderNumber, Date newDate) {
 
         String sql = "UPDATE orders SET order_date = ? WHERE order_number = ?";
@@ -95,6 +98,7 @@ public class DBController {
         try {
             PreparedStatement stmt = conn.prepareStatement(sql);
 
+            // Convert java.util.Date → java.sql.Date
             java.sql.Date sqlDate = new java.sql.Date(newDate.getTime());
 
             stmt.setDate(1, sqlDate);
@@ -114,6 +118,7 @@ public class DBController {
         }
     }
 
+    // Update the number_of_guests field for a specific order
     public void UpdateNumberOfGuests(int orderNumber, int newGuestsCount) {
 
         String sql = "UPDATE orders SET number_of_guests = ? WHERE order_number = ?";

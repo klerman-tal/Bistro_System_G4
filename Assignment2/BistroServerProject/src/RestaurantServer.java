@@ -19,17 +19,18 @@ public class RestaurantServer extends AbstractServer {
 
     DBController conn;
 
-    // רפרנס ל-GUI של השרת (חלון הלוגים)
+    // Reference to the GUI window (server log screen)
     private gui.ServerGUIController uiController;
 
     // ===================== GUI logging support =====================
 
+    // Attach the UI controller to this server instance
     public void setUiController(gui.ServerGUIController controller) {
         this.uiController = controller;
     }
 
-    // לוג אחיד: גם לקונסול וגם ל־ServerGUI (אם קיים)
-    void log(String msg) {   // בלי 'private' כדי ש-DBController יוכל להשתמש
+    // Unified log method: prints to console and to the GUI (if available)
+    void log(String msg) {   // not 'private' so DBController can use it
         System.out.println(msg);
 
         if (uiController != null) {
@@ -47,13 +48,13 @@ public class RestaurantServer extends AbstractServer {
     public RestaurantServer(int port) {
         super(port);
         conn = new DBController();
-        conn.setServer(this);   // כדי ש-DBController ישלח לוגים לשרת
+        conn.setServer(this);   // Allow DBController to forward logs to server UI
     }
 
     // ===================== Instance methods =====================
 
     /**
-     * This method handles any messages received from the client.
+     * Handles any messages received from the client.
      *
      * @param msg    The message received from the client.
      * @param client The connection from which the message originated.
@@ -73,7 +74,7 @@ public class RestaurantServer extends AbstractServer {
                 switch (command) {
 
                     case "PRINT_ORDERS": {
-                        // שליפת כל ההזמנות ושליחה ללקוח
+                        // Retrieve all orders and send them to the client
                         ArrayList<String> lines = conn.getOrdersForClient();
                         for (String line : lines) {
                             client.sendToClient(line);
@@ -103,13 +104,13 @@ public class RestaurantServer extends AbstractServer {
                     }
 
                     default:
-                        // למקרה שמגיע משהו אחר – אפשר להשאיר כ-echo
+                        // Fallback: unknown command → send echo
                         log("Unknown command, sending echo to all clients");
                         sendToAllClients(msg);
                         break;
                 }
             } else {
-                // הודעות שהן לא ArrayList – נתייחס אליהן כ-echo רגיל
+                // Non-ArrayList messages → treat as regular echo
                 log("Non-ArrayList message, echoing to all clients");
                 sendToAllClients(msg);
             }
@@ -162,28 +163,28 @@ public class RestaurantServer extends AbstractServer {
         log("Client disconnected | IP: " + ip + " | Host: " + host + " | Status: " + status);
     }
 
-    // ===================== Main method (ללא UI) =====================
+    // ===================== Main method (no GUI) =====================
 
     /**
-     * This method is responsible for the creation of
-     * the server instance (אם מריצים בלי GUI).
+     * Responsible for creating the server instance
+     * when running without a GUI.
      *
-     * @param args[0] The port number to listen on.  Defaults to 5556
+     * @param args[0] The port number to listen on. Defaults to 5556
      *                if no argument is entered.
      */
     public static void main(String[] args) {
-        int port = 0; //Port to listen on
+        int port = 0; // Port to listen on
 
         try {
-            port = Integer.parseInt(args[0]); //Get port from command line
+            port = Integer.parseInt(args[0]); // Get port from command line
         } catch (Throwable t) {
-            port = DEFAULT_PORT; //Set port to 5556
+            port = DEFAULT_PORT; // Default to 5556
         }
 
         RestaurantServer sv = new RestaurantServer(port);
 
         try {
-            sv.listen(); //Start listening for connections
+            sv.listen(); // Start listening for connections
         } catch (Exception ex) {
             sv.log("ERROR - Could not listen for clients! " + ex.getMessage());
         }
