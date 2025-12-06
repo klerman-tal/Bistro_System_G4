@@ -28,16 +28,20 @@ public class DBController {
         }
     }
 
-    public void ConnectToDb() {
-        try {
-            conn = DriverManager.getConnection(
-                    "jdbc:mysql://localhost:3306/bistrodb?allowLoadLocalInfile=true&serverTimezone=Asia/Jerusalem&useSSL=false",
-                    "root",
-                    "Liem010799");
+    
+    	public void ConnectToDb() {
+            try {
+            	conn = DriverManager.getConnection(
+            		    // מומלץ להסיר את allowPublicKeyRetrieval לחלוטין אם אתה משתמש ב-mysql_native_password
+            		    "jdbc:mysql://localhost:3306/bistrodb?serverTimezone=Asia/Jerusalem&useSSL=false", 
+            		    "root",
+            		    "michal28"
+            		);
 
-            log("SQL connection succeed");
+                log("SQL connection succeed");
 
         } catch (SQLException ex) {
+            log("SQLException: " + ex.getMessage());
             log("SQLException: " + ex.getMessage());
             log("SQLState: " + ex.getSQLState());
             log("VendorError: " + ex.getErrorCode());

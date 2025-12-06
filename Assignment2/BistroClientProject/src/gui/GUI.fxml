@@ -16,7 +16,6 @@
 
    <children>
 
-      <!-- כותרת למעלה במרכז -->
       <Label layoutX="160.0" layoutY="20.0"
              prefWidth="480.0" prefHeight="50.0"
              text="Bistro Client – Orders Management"
@@ -26,7 +25,6 @@
          </font>
       </Label>
 
-      <!-- טבלה במרכז המסך -->
       <TableView fx:id="tblOrders"
                  layoutX="50.0" layoutY="90.0"
                  prefWidth="700.0" prefHeight="320.0">
@@ -43,7 +41,6 @@
          </columns>
       </TableView>
 
-      <!-- שורת עדכון תאריך -->
       <Label layoutX="60.0" layoutY="440.0"
              text="Update new date:"
              style="-fx-font-size: 18;">
@@ -60,7 +57,6 @@
               onAction="#onUpdateDate"
               style="-fx-background-radius: 8; -fx-background-color: #2f80ed; -fx-text-fill: white;" />
 
-      <!-- שורת עדכון מספר אורחים -->
       <Label layoutX="60.0" layoutY="490.0"
              text="Update guest count:"
              style="-fx-font-size: 18;">

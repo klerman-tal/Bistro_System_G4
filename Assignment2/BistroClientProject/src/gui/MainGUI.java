@@ -27,6 +27,7 @@ public class MainGUI implements Initializable {
     // ===== Reference to client side actions (set from ClientUI) =====
     private ClientActions clientActions;
 
+    // Method to set the client actions handler
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
     }
@@ -69,12 +70,12 @@ public class MainGUI implements Initializable {
     @FXML
     private Button btnUpdateGuests;
 
-    // רשימת ההזמנות שמוצגת בטבלה
+    // Observable list of orders displayed in the table
     private final ObservableList<OrderRow> orders = FXCollections.observableArrayList();
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        // חיבור עמודות לשדות במחלקה OrderRow
+        // Bind table columns to fields in the OrderRow class
         colOrderNumber.setCellValueFactory(new PropertyValueFactory<>("orderNumber"));
         colOrderDate.setCellValueFactory(new PropertyValueFactory<>("orderDate"));
         colNumGuests.setCellValueFactory(new PropertyValueFactory<>("numGuests"));
@@ -85,11 +86,11 @@ public class MainGUI implements Initializable {
 
         tblOrders.setItems(orders);
 
-        // ---- הגבלת לוח השנה: מהיום ועד חודש קדימה ----
+        // ---- Restrict the date picker: from today up to one month ahead ----
         LocalDate today = LocalDate.now();
         LocalDate maxDate = today.plusMonths(1);
 
-        // ערך ברירת מחדל
+        // Set default value
         dateNewDate.setValue(today);
 
         dateNewDate.setDayCellFactory(new Callback<DatePicker, DateCell>() {
@@ -100,6 +101,7 @@ public class MainGUI implements Initializable {
                     public void updateItem(LocalDate item, boolean empty) {
                         super.updateItem(item, empty);
 
+                        // Disable dates before today or after the max date
                         if (empty || item.isBefore(today) || item.isAfter(maxDate)) {
                             setDisable(true);
                             setStyle("-fx-background-color: #dddddd;");
@@ -110,11 +112,11 @@ public class MainGUI implements Initializable {
         });
     }
 
-    // ===== אירועים מהכפתורים =====
+    // ===== Button Actions =====
 
     @FXML
     private void onUpdateDate(ActionEvent event) {
-
+        // Handle update order date request
         OrderRow selected = tblOrders.getSelectionModel().getSelectedItem();
         if (selected == null) {
             System.out.println("No order selected");
@@ -127,6 +129,7 @@ public class MainGUI implements Initializable {
             return;
         }
 
+        // Validate date range
         LocalDate today = LocalDate.now();
         LocalDate maxDate = today.plusMonths(1);
         if (newDate.isBefore(today) || newDate.isAfter(maxDate)) {
@@ -134,9 +137,10 @@ public class MainGUI implements Initializable {
             return;
         }
 
-        String newDateStr = newDate.toString(); // yyyy-MM-dd
+        String newDateStr = newDate.toString(); // yyyy-MM-dd format
 
         if (clientActions != null) {
+            // Send UPDATE_DATE command to server
             ArrayList<String> msg = new ArrayList<>();
             msg.add("UPDATE_DATE");
             msg.add(String.valueOf(selected.getOrderNumber()));
@@ -144,6 +148,7 @@ public class MainGUI implements Initializable {
             clientActions.sendToServer(msg);
         }
 
+        // Optimistically update the local table view
         selected.setOrderDate(newDateStr);
         tblOrders.refresh();
 
@@ -153,7 +158,7 @@ public class MainGUI implements Initializable {
 
     @FXML
     private void onUpdateGuests(ActionEvent event) {
-
+        // Handle update number of guests request
         OrderRow selected = tblOrders.getSelectionModel().getSelectedItem();
         if (selected == null) {
             System.out.println("No order selected");
@@ -168,6 +173,7 @@ public class MainGUI implements Initializable {
 
         int newGuests;
         try {
+            // Validate input is an integer
             newGuests = Integer.parseInt(txt);
         } catch (NumberFormatException e) {
             System.out.println("Invalid guests number");
@@ -175,6 +181,7 @@ public class MainGUI implements Initializable {
         }
 
         if (clientActions != null) {
+            // Send UPDATE_GUESTS command to server
             ArrayList<String> msg = new ArrayList<>();
             msg.add("UPDATE_GUESTS");
             msg.add(String.valueOf(selected.getOrderNumber()));
@@ -182,6 +189,7 @@ public class MainGUI implements Initializable {
             clientActions.sendToServer(msg);
         }
 
+        // Optimistically update the local table view
         selected.setNumGuests(newGuests);
         tblOrders.refresh();
 
@@ -189,31 +197,32 @@ public class MainGUI implements Initializable {
                 selected.getOrderNumber() + " -> " + newGuests);
     }
 
-    // ===== כאן מגיעות כל ההודעות מהשרת =====
+    // ===== Handles all incoming messages from the server =====
     public void displayMessageFromServer(String message) {
         System.out.println("SERVER: " + message);
 
-        // שורת כותרת מתחילה את הטבלה מחדש
+        // Header row signals starting a new table list
         if (message.startsWith("Order number")) {
             orders.clear();
             return;
         }
 
-        // שורת מפריד / שגיאה / אישורי עדכון – לא שורות נתונים
+        // Ignore separator row, error messages, and update confirmations – these are not data rows
         if (message.startsWith("-")) return;
         if (message.startsWith("ERROR")) return;
         if (message.startsWith("Order ") && message.contains("updated")) {
             return;
         }
 
-        // מנסים לפרסר שורה בפורמט:
+        // Attempt to parse a data row in the format:
         // orderNumber | orderDate | numGuests | code | subscriberId | placingDate
         String[] parts = message.split("\\|");
         if (parts.length != 6) {
-            return; // לא הפורמט הצפוי
+            return; // Not the expected format
         }
 
         try {
+            // Parse fields from the incoming message parts
             int orderNumber = Integer.parseInt(parts[0].trim());
             String orderDate = parts[1].trim();
             int numGuests = Integer.parseInt(parts[2].trim());
@@ -222,15 +231,16 @@ public class MainGUI implements Initializable {
             String placingDate = parts[5].trim();
 
             OrderRow row = new OrderRow(orderNumber, orderDate, numGuests,
-                                        code, subscriberId, placingDate);
+                                         code, subscriberId, placingDate);
 
+            // Add the parsed row to the table view
             orders.add(row);
         } catch (NumberFormatException e) {
             System.out.println("Could not parse order line: " + message);
         }
     }
 
-    // ===== מודל פשוט לשורה בטבלה =====
+    // ===== Simple model for a row in the table =====
     public static class OrderRow {
         private int orderNumber;
         private String orderDate;
@@ -239,9 +249,11 @@ public class MainGUI implements Initializable {
         private String subscriberId;
         private String placingDate;
 
+        // Constructor handles date formatting for display
         public OrderRow(int orderNumber, String orderDate, int numGuests,
                         String code, String subscriberId, String placingDate) {
             this.orderNumber = orderNumber;
+            // Format orderDate from YYYY-MM-DD to DD-MM-YYYY for display
             this.orderDate = LocalDate.parse(orderDate).format(DateTimeFormatter.ofPattern("dd-MM-yyyy"));
             this.numGuests = numGuests;
             this.code = code;
@@ -249,11 +261,13 @@ public class MainGUI implements Initializable {
             this.placingDate = placingDate;
         }
 
+        // Getters and Setters (required for PropertyValueFactory)
         public int getOrderNumber() { return orderNumber; }
         public void setOrderNumber(int orderNumber) { this.orderNumber = orderNumber; }
 
         public String getOrderDate() { return orderDate; }
-        public void setOrderDate(String orderDate) { this.orderDate = orderDate; }
+        // Setter handles date formatting when updating locally
+        public void setOrderDate(String orderDate) { this.orderDate = LocalDate.parse(orderDate).format(DateTimeFormatter.ofPattern("dd-MM-yyyy")); }
 
         public int getNumGuests() { return numGuests; }
         public void setNumGuests(int numGuests) { this.numGuests = numGuests; }
