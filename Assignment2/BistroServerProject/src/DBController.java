@@ -9,33 +9,36 @@ import java.util.ArrayList;
 
 public class DBController {
 
+    // User-provided MySQL password (set in ServerUI)
+    public static String MYSQL_PASSWORD = "";
+
     private Connection conn;
 
-    // Reference to the server so we can send log messages to the UI window
+    // Reference to the server to enable logging into the server UI
     private RestaurantServer server;
 
-    // Links this DBController instance to the server
+    // Link this DBController instance to a specific server instance
     public void setServer(RestaurantServer server) {
         this.server = server;
     }
 
-    // Unified log function: 
-    // If ServerUI exists → write to UI, otherwise write to console
+    // Central logging function:
+    // If server exists -> log to UI, otherwise log to console
     private void log(String msg) {
         if (server != null) {
-            server.log(msg);   // Calls the server's log method
+            server.log(msg);
         } else {
             System.out.println(msg);
         }
     }
 
-    // Establish connection to the MySQL database
+    // Establish a connection to the MySQL database
     public void ConnectToDb() {
         try {
             conn = DriverManager.getConnection(
                     "jdbc:mysql://localhost:3306/bistrodb?serverTimezone=Asia/Jerusalem&useSSL=false",
                     "root",
-                    "Liem010799"
+                    MYSQL_PASSWORD   // Uses password provided by the user
             );
 
             log("SQL connection succeed");
@@ -47,11 +50,11 @@ public class DBController {
         }
     }
 
-    // Retrieve all orders and format them for the client output
+    // Retrieve all orders from the database and format them for the client
     public ArrayList<String> getOrdersForClient() {
         ArrayList<String> result = new ArrayList<>();
 
-        // Table header for the client
+        // Header rows sent to the client before the data
         String header = "Order number | Order date | Number of guests | Confirmation code | Subscriber ID | Date of placing order";
         result.add(header);
         result.add("-----------------------------------------------------------------------------------------------------");
@@ -71,7 +74,7 @@ public class DBController {
                 int subscriberId = rs.getInt("subscriber_id");
                 Date placingDate = rs.getDate("date_of_placing_order");
 
-                // Formatting each row
+                // Format each database row for output
                 String line = orderNumber + " | " + orderDate + " | " + numGuests
                         + " | " + confirmationCode + " | " + subscriberId + " | " + placingDate;
 
@@ -98,7 +101,7 @@ public class DBController {
         try {
             PreparedStatement stmt = conn.prepareStatement(sql);
 
-            // Convert java.util.Date → java.sql.Date
+            // Convert java.util.Date to java.sql.Date (ensures correct SQL format)
             java.sql.Date sqlDate = new java.sql.Date(newDate.getTime());
 
             stmt.setDate(1, sqlDate);
@@ -118,7 +121,7 @@ public class DBController {
         }
     }
 
-    // Update the number_of_guests field for a specific order
+    // Update the number_of_guests field for a given order
     public void UpdateNumberOfGuests(int orderNumber, int newGuestsCount) {
 
         String sql = "UPDATE orders SET number_of_guests = ? WHERE order_number = ?";
