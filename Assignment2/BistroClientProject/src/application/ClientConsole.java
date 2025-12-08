@@ -1,12 +1,14 @@
 // This file contains material supporting section 3.7 of the textbook:
 // "Object Oriented Software Engineering" and is issued under the open-source
 // license found at www.lloseng.com 
+package application;
 
 import java.io.*;
 import java.util.ArrayList;
 
-import ocsf.client.*;
-import common.*;
+import ocsf.client.AbstractClient;
+import interfaces.ChatIF;    // זה היחיד שאת צריכה כאן
+
 
 /**
  * This class constructs the UI for a chat client.  It implements the

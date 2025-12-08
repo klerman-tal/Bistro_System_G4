@@ -20,7 +20,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.ResourceBundle;
 
-import common.ClientActions;
+import interfaces.ClientActions;
 
 public class MainGUI implements Initializable {
 

@@ -1,11 +1,13 @@
 // This file contains material supporting section 3.7 of the textbook:
 // "Object Oriented Software Engineering" and is issued under the open-source
 // license found at www.lloseng.com 
+package application;
 
 import java.io.*;
 import java.util.ArrayList;
-import ocsf.client.*;
-import common.*;
+
+import ocsf.client.AbstractClient;
+import interfaces.ChatIF;
 
 /**
  * This class overrides some of the methods defined in the abstract

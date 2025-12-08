@@ -6,7 +6,6 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/BistroOCSF"/>
 	<classpathentry kind="lib" path="C:/Users/liemd/OneDrive/Documents/לימודים/שנה ג/סמסטר א/שיטות הנדסיות/פרוייקט/javafx-sdk-25.0.1/lib/javafx.base.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
@@ -62,5 +61,7 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry combineaccessrules="false" kind="src" path="/BistroOCSF"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/BistroCommon"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
