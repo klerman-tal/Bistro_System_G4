@@ -1,16 +1,27 @@
 package entities;
 
 import java.time.LocalDateTime;
+import java.util.Random;
 
 public class Reservation {
 
+	// ====== Fields ======
 	private int confarmationCode;
 	private User createdBy;
 	private LocalDateTime reservationTime;
 	private int guestAmount;
 	private boolean isConfirmed;
 	
+	// ====== Constructors ======
+	public Reservation() {
+		confarmationCode = 0;
+		createdBy = null;
+		reservationTime = null;
+		guestAmount = 0;
+		isConfirmed = false;
+	}
 	
+	// ====== Properties ======
 	public int getConfarmationCode() {
 		return confarmationCode;
 	}
@@ -40,6 +51,13 @@ public class Reservation {
 	}
 	public void setConfirmed(boolean isConfirmed) {
 		this.isConfirmed = isConfirmed;
+	}
+	
+	// ====== Methods ======
+	public String CreateConfirmationCode() {
+	    Random rand = new Random();
+	    int code = rand.nextInt(900000) + 100000; 
+	    return String.valueOf(code);
 	}
 	
 }

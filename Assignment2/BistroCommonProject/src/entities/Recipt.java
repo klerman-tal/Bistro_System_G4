@@ -2,13 +2,23 @@ package entities;
 
 public class Recipt {
 	
+	// ====== Fields ======
 	private double amountToPay;
 	private Reservation reservation;
 	private double discount;
 	private String reciptDetails;
 	private boolean isPaid;
 	
+	// ====== Constructors ======
+	public Recipt() {
+		amountToPay = 0;
+		reservation = null;
+		discount = 0;
+		reciptDetails = "";
+		isPaid = false;
+	}
 	
+	// ====== Properties ======
 	public double getAmountToPay() {
 		return amountToPay;
 	}
@@ -38,6 +48,11 @@ public class Recipt {
 	}
 	public void setPaid(boolean isPaid) {
 		this.isPaid = isPaid;
+	}
+	
+	// ====== Methods ======
+	public double CalculateFinalPayment() {
+		return amountToPay*discount;
 	}
 
 }

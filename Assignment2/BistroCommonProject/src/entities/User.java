@@ -2,12 +2,13 @@ package entities;
 
 public class User {
 	
+	// ====== Fields ======
 	private String phoneNumber;
 	private String email;
 	private Enums.UserRole userRole;
 	private Reservation activeReservation;
 	
-	
+	// ====== Properties ======
 	public String getPhoneNumber() {
 		return phoneNumber;
 	}

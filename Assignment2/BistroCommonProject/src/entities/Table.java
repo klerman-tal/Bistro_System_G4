@@ -4,8 +4,13 @@ public class Table {
 	
 	private int tableNumber;
 	private int seatsAmount;
+	private boolean isAvailable;
 	
-	
+	public Table() {
+		tableNumber = 0;
+		seatsAmount = 0;
+		isAvailable = false;
+	}
 	public int getTableNumber() {
 		return tableNumber;
 	}

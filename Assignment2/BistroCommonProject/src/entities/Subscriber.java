@@ -4,12 +4,13 @@ import java.util.ArrayList;
 
 public class Subscriber extends User {
 	
+	// ====== Fields ======
 	private int subscriberNumber;
 	private String userName;
 	private String personalDetails;
 	private ArrayList<Reservation> reservationHistory;
 	
-	
+	// ====== Properties ======
 	public int getSubscriberNumber() {
 		return subscriberNumber;
 	}
