@@ -1,0 +1,103 @@
+/* ===== ROOT WINDOW (ALL SCREEN ROUNDED) ===== */
+#rootPane {
+    -fx-background-color: #ffffff;    /* רקע חלון */
+    -fx-background-radius: 25;
+    -fx-border-radius: 25;
+    -fx-border-color: #d0d0d0;
+    -fx-border-width: 1.2;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 20, 0.3, 0, 4);
+}
+
+/* כללית – פונט יפה */
+.root {
+    -fx-font-family: "Poppins", "Segoe UI", "Roboto", "Arial";
+}
+
+
+/* ===== HEADER ===== */
+#header {
+    -fx-background-color: #000000;      /* שחור */
+    -fx-background-radius: 25 25 0 0;   /* עיגול רק למעלה */
+    -fx-padding: 20 30 20 30;
+}
+
+.title {
+    -fx-font-size: 30px;
+    -fx-font-weight: 600;
+    -fx-text-fill: white;               /* טקסט לבן */
+}
+
+
+/* ===== LABELS ===== */
+.section {
+    -fx-font-size: 17px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #333333;
+}
+
+.label {
+    -fx-text-fill: #333333;
+}
+
+
+/* ===== INPUT FIELDS ===== */
+.text-field, .password-field {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #cccccc;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-padding: 6 12;
+    -fx-font-size: 14px;
+}
+
+.text-field:focused, .password-field:focused {
+    -fx-border-color: #3a7afe;
+    -fx-effect: dropshadow(gaussian, rgba(58,122,254,0.25), 8, 0.3, 0, 0);
+}
+
+
+/* ===== RADIO BUTTON ===== */
+.radio-button {
+    -fx-text-fill: #333333;
+}
+
+
+/* ===== ERROR MESSAGE ===== */
+.errorMsg {
+    -fx-text-fill: #cc0000;
+    -fx-font-weight: bold;
+}
+
+
+/* ===== BUTTONS ===== */
+
+/* "Pay" button – מלא שחור */
+.btnPrimary {
+    -fx-background-color: #000000;
+    -fx-text-fill: white;
+    -fx-background-radius: 12;
+    -fx-padding: 10 24;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.btnPrimary:hover {
+    -fx-background-color: #333333;
+}
+
+/* "Cancel" – מסגרת שחורה */
+.btnSecondary {
+    -fx-background-color: transparent;
+    -fx-border-color: #000000;
+    -fx-border-width: 2;
+    -fx-text-fill: #000000;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-padding: 10 24;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.btnSecondary:hover {
+    -fx-background-color: #f2f2f2;
+}

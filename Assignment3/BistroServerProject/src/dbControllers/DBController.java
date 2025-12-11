@@ -1,3 +1,4 @@
+package dbControllers;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.DriverManager;
@@ -6,6 +7,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+
+import application.RestaurantServer;
 
 public class DBController {
 

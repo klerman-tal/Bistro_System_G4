@@ -1,8 +1,10 @@
+package application;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 
+import dbControllers.DBController;
 import javafx.application.Platform;
 import ocsf.server.AbstractServer;
 import ocsf.server.ConnectionToClient;
@@ -21,7 +23,7 @@ public class RestaurantServer extends AbstractServer {
     }
 
     // Log message to console and UI (JavaFX thread-safe)
-    void log(String msg) {
+    public void log(String msg) {
         System.out.println(msg);
         if (uiController != null) {
             Platform.runLater(() -> uiController.addLog(msg));

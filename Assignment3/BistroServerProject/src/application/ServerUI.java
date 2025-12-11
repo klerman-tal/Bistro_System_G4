@@ -1,3 +1,4 @@
+package application;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -7,6 +8,7 @@ import javafx.stage.Stage;
 
 import java.util.Optional;
 
+import dbControllers.DBController;
 import gui.ServerGUIController;
 
 public class ServerUI extends Application {
