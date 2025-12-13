@@ -42,7 +42,7 @@ public class DBController {
             conn = DriverManager.getConnection(
                     "jdbc:mysql://localhost:3306/bistrodb?serverTimezone=Asia/Jerusalem&useSSL=false",
                     "root",
-                    "Liornis123"   // Uses password provided by the user
+                    MYSQL_PASSWORD   // Uses password provided by the user
             );
 
             log("SQL connection succeed");
