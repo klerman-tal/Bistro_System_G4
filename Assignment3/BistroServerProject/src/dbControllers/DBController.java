@@ -24,6 +24,7 @@ public class DBController {
     public void setServer(RestaurantServer server) {
         this.server = server;
     }
+    
 
     // Central logging function:
     // If server exists -> log to UI, otherwise log to console
@@ -41,7 +42,7 @@ public class DBController {
             conn = DriverManager.getConnection(
                     "jdbc:mysql://localhost:3306/bistrodb?serverTimezone=Asia/Jerusalem&useSSL=false",
                     "root",
-                    MYSQL_PASSWORD   // Uses password provided by the user
+                    "Liornis123"   // Uses password provided by the user
             );
 
             log("SQL connection succeed");
@@ -52,6 +53,12 @@ public class DBController {
             log("VendorError: " + ex.getErrorCode());
         }
     }
+    
+    
+    public Connection getConnection() {
+        return conn;
+    }
+
 
     // Retrieve all orders from the database and format them for the client
     public ArrayList<String> getOrdersForClient() {
@@ -148,4 +155,7 @@ public class DBController {
             ex.printStackTrace();
         }
     }
+
+
+	
 }

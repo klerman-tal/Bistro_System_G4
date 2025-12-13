@@ -3,12 +3,17 @@ package entities;
 public class User {
 	
 	// ====== Fields ======
+	private Integer userId;
 	private String phoneNumber;
+	private String userName;
+	private String password;
 	private String email;
 	private Enums.UserRole userRole;
 	private Reservation activeReservation;
 	
 	// ====== Properties ======
+	
+	
 	public String getPhoneNumber() {
 		return phoneNumber;
 	}
@@ -32,6 +37,24 @@ public class User {
 	}
 	public void setActiveReservation(Reservation activeReservation) {
 		this.activeReservation = activeReservation;
+	}
+	public Integer getUserId() {
+		return userId;
+	}
+	public void setUserId(Integer userId) {
+		this.userId = userId;
+	}
+	public String getPassword() {
+		return password;
+	}
+	public void setPassword(String password) {
+		this.password = password;
+	}
+	public String getUserName() {
+		return userName;
+	}
+	public void setUserName(String userName) {
+		this.userName = userName;
 	}
 	
 

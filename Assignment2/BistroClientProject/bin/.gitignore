@@ -1,1 +1,11 @@
+/application/
+/dbControllers/
+/entities/
+/gui/
+/guiControllers/
 /interfaces/
+/logicControllers/
+/ocsf/
+/DBController.class
+/RestaurantServer.class
+/ServerUI.class
