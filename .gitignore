@@ -1,1 +1,10 @@
-/.metadata/
+# Java build outputs
+*.class
+bin/
+*/bin/
+
+# Eclipse
+.project
+.classpath
+.settings/
+.metadata/
