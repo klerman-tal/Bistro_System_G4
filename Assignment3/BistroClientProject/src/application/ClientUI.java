@@ -1,9 +1,13 @@
 package application;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Optional;
 
+import guiControllers.Login_BController;
 import guiControllers.MainGUI;
+import interfaces.ChatIF;
+import interfaces.ClientActions;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
@@ -11,22 +15,26 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.TextInputDialog;
 import javafx.stage.Stage;
-import interfaces.ChatIF;
-import interfaces.ClientActions;
 
-// ClientUI class handles the client-side UI and connection logic.
 public class ClientUI extends Application implements ChatIF, ClientActions {
 
     public static final int DEFAULT_PORT = 5556;
 
-    private static ChatClient client;    // Reference to the OCSF client object
-    private MainGUI mainController;      // Reference to the main GUI controller (כרגע לא בשימוש)
+    private static ChatClient client;
+    private MainGUI mainController; // אפשר להשאיר - לא חובה
+
+    // NEW: מי המסך הפעיל שמקבל הודעות מהשרת
+    private static ChatIF activeController;
+
+    public static void setActiveController(ChatIF controller) {
+        activeController = controller;
+    }
 
     @Override
     public void start(Stage primaryStage) throws Exception {
 
-        // ===== 1. בקשת IP מהמשתמש =====
-        TextInputDialog dialog = new TextInputDialog("10.0.0.15"); // אפשר לשים "localhost" כברירת מחדל
+        // ===== 1) בקשת IP מהמשתמש =====
+        TextInputDialog dialog = new TextInputDialog("10.0.0.15");
         dialog.setTitle("Server IP Required");
         dialog.setHeaderText("Enter Bistro server IP");
         dialog.setContentText("Server IP:");
@@ -41,9 +49,8 @@ public class ClientUI extends Application implements ChatIF, ClientActions {
 
         String host = result.get().trim();
 
-        // ===== 2. יצירת חיבור לשרת עם ה-IP שהמשתמש הכניס =====
+        // ===== 2) חיבור לשרת =====
         try {
-            // Initialize the OCSF ChatClient connection
             client = new ChatClient(host, DEFAULT_PORT, this);
         } catch (IOException e) {
             System.out.println("Error: Can't setup connection! Terminating client.");
@@ -52,16 +59,20 @@ public class ClientUI extends Application implements ChatIF, ClientActions {
             return;
         }
 
-        // ===== 3. טעינת מסך ה-LOGIN במקום GUI.fxml =====
+        // ===== 3) טעינת Login =====
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Login_B.fxml")); // *** CHANGED ***
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Login_B.fxml"));
             Parent root = loader.load();
+            Login_BController loginController = loader.getController();
+            loginController.setClientActions(this);
 
-            // אם תרצי בעתיד להעביר clientActions ללוגין:
-            // Login_BController loginController = loader.getController();
-            // loginController.setClientActions(this);
+            // אם בלוגין יש setClientActions - מומלץ להעביר (אם אין כרגע, לא חובה)
+            // Object c = loader.getController();
+            // if (c instanceof Login_BController) {
+            //     ((Login_BController) c).setClientActions(this);
+            // }
 
-            primaryStage.setTitle("Bistro Client – Login"); // *** CHANGED ***
+            primaryStage.setTitle("Bistro Client – Login");
             primaryStage.setScene(new Scene(root));
             primaryStage.show();
         } catch (IOException e) {
@@ -69,32 +80,33 @@ public class ClientUI extends Application implements ChatIF, ClientActions {
             e.printStackTrace();
             Platform.exit();
         }
-
-        // ===== 4. כרגע לא מבקשים PRINT_ORDERS =====
-        // את הלוגיקה של ההזמנות תשאירי למסכים החדשים
     }
 
-    // ---- Implementation of ChatIF: Messages from the server ----
+    // ---- הודעות מהשרת ----
     @Override
     public void display(String message) {
         System.out.println("> " + message);
 
+        // מסך פעיל מקבל הודעה
+        if (activeController != null) {
+            Platform.runLater(() -> activeController.display(message));
+        }
+
+        // אם את משתמשת ב-mainController (לא חובה)
         if (mainController != null) {
-            // Update the UI on the JavaFX application thread
             Platform.runLater(() -> mainController.displayMessageFromServer(message));
         }
     }
 
-    // ---- Implementation of ClientActions: Sending to server from the GUI ----
+    // ---- שליחה לשרת ----
     @Override
     public void sendToServer(ArrayList<String> msg) {
-        // Pass the message to the OCSF client handler
         if (client != null) {
             client.handleMessageFromClientUI(msg);
         }
     }
 
-    // ---- Called when the JavaFX window is closed ----
+    // ---- סגירה ----
     @Override
     public void stop() throws Exception {
         System.out.println("Closing client connection...");
@@ -110,12 +122,10 @@ public class ClientUI extends Application implements ChatIF, ClientActions {
                 e.printStackTrace();
             }
         }
-
         super.stop();
     }
 
-    // Main method to launch the JavaFX application
     public static void main(String[] args) {
         launch(args);
     }
-}
+} 
