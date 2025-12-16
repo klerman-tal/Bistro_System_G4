@@ -1,0 +1,120 @@
+[1mdiff --git a/Assignment3/.project b/Assignment3/.project[m
+[1mnew file mode 100644[m
+[1mindex 0000000..5d87eb4[m
+[1m--- /dev/null[m
+[1m+++ b/Assignment3/.project[m
+[36m@@ -0,0 +1,11 @@[m
+[32m+[m[32m<?xml version="1.0" encoding="UTF-8"?>[m
+[32m+[m[32m<projectDescription>[m
+[32m+[m	[32m<name>Assignment3</name>[m
+[32m+[m	[32m<comment></comment>[m
+[32m+[m	[32m<projects>[m
+[32m+[m	[32m</projects>[m
+[32m+[m	[32m<buildSpec>[m
+[32m+[m	[32m</buildSpec>[m
+[32m+[m	[32m<natures>[m
+[32m+[m	[32m</natures>[m
+[32m+[m[32m</projectDescription>[m
+[1mdiff --git a/Assignment3/BistroClientProject/.classpath b/Assignment3/BistroClientProject/.classpath[m
+[1mindex f96a746..599e55c 100644[m
+[1m--- a/Assignment3/BistroClientProject/.classpath[m
+[1m+++ b/Assignment3/BistroClientProject/.classpath[m
+[36m@@ -6,62 +6,47 @@[m
+ 		</attributes>[m
+ 	</classpathentry>[m
+ 	<classpathentry kind="src" path="src"/>[m
+[31m-	<classpathentry kind="lib" path="C:/Users/liemd/OneDrive/Documents/לימודים/שנה ג/סמסטר א/שיטות הנדסיות/פרוייקט/javafx-sdk-25.0.1/lib/javafx.base.jar">[m
+[31m-		<attributes>[m
+[31m-			<attribute name="module" value="true"/>[m
+[31m-		</attributes>[m
+[31m-	</classpathentry>[m
+[31m-	<classpathentry kind="lib" path="C:/Users/liemd/OneDrive/Documents/לימודים/שנה ג/סמסטר א/שיטות הנדסיות/פרוייקט/javafx-sdk-25.0.1/lib/javafx.controls.jar">[m
+[31m-		<attributes>[m
+[31m-			<attribute name="module" value="true"/>[m
+[31m-		</attributes>[m
+[31m-	</classpathentry>[m
+[31m-	<classpathentry kind="lib" path="C:/Users/liemd/OneDrive/Documents/לימודים/שנה ג/סמסטר א/שיטות הנדסיות/פרוייקט/javafx-sdk-25.0.1/lib/javafx.fxml.jar">[m
+[31m-		<attributes>[m
+[31m-			<attribute name="module" value="true"/>[m
+[31m-		</attributes>[m
+[31m-	</classpathentry>[m
+[31m-	<classpathentry kind="lib" path="C:/Users/liemd/OneDrive/Documents/לימודים/שנה ג/סמסטר א/שיטות הנדסיות/פרוייקט/javafx-sdk-25.0.1/lib/javafx.graphics.jar">[m
+[32m+[m	[32m<classpathentry combineaccessrules="false" kind="src" path="/BistroOCSF"/>[m
+[32m+[m	[32m<classpathentry combineaccessrules="false" kind="src" path="/BistroCommon"/>[m
+[32m+[m	[32m<classpathentry kind="lib" path="C:/Important for project/javafx/javafx-sdk-21.0.9/lib/javafx.base.jar">[m
+ 		<attributes>[m
+ 			<attribute name="module" value="true"/>[m
+ 		</attributes>[m
+ 	</classpathentry>[m
+[31m-	<classpathentry kind="lib" path="C:/Users/liemd/OneDrive/Documents/לימודים/שנה ג/סמסטר א/שיטות הנדסיות/פרוייקט/javafx-sdk-25.0.1/lib/javafx.media.jar">[m
+[32m+[m	[32m<classpathentry kind="lib" path="C:/Important for project/javafx/javafx-sdk-21.0.9/lib/javafx.controls.jar">[m
+ 		<attributes>[m
+ 			<attribute name="module" value="true"/>[m
+ 		</attributes>[m
+ 	</classpathentry>[m
+[31m-	<classpathentry kind="lib" path="C:/Users/liemd/OneDrive/Documents/לימודים/שנה ג/סמסטר א/שיטות הנדסיות/פרוייקט/javafx-sdk-25.0.1/lib/javafx.swing.jar">[m
+[32m+[m	[32m<classpathentry kind="lib" path="C:/Important for project/javafx/javafx-sdk-21.0.9/lib/javafx.fxml.jar">[m
+ 		<attributes>[m
+ 			<attribute name="module" value="true"/>[m
+ 		</attributes>[m
+ 	</classpathentry>[m
+[31m-	<classpathentry kind="lib" path="C:/Users/liemd/OneDrive/Documents/לימודים/שנה ג/סמסטר א/שיטות הנדסיות/פרוייקט/javafx-sdk-25.0.1/lib/javafx.web.jar">[m
+[32m+[m	[32m<classpathentry kind="lib" path="C:/Important for project/javafx/javafx-sdk-21.0.9/lib/javafx.graphics.jar">[m
+ 		<attributes>[m
+ 			<attribute name="module" value="true"/>[m
+ 		</attributes>[m
+ 	</classpathentry>[m
+[31m-	<classpathentry kind="lib" path="C:/Users/liemd/OneDrive/Documents/לימודים/שנה ג/סמסטר א/שיטות הנדסיות/פרוייקט/javafx-sdk-25.0.1/lib/javafx-swt.jar">[m
+[32m+[m	[32m<classpathentry kind="lib" path="C:/Important for project/javafx/javafx-sdk-21.0.9/lib/javafx.media.jar">[m
+ 		<attributes>[m
+ 			<attribute name="module" value="true"/>[m
+ 		</attributes>[m
+ 	</classpathentry>[m
+[31m-	<classpathentry kind="lib" path="C:/Users/liemd/OneDrive/Documents/לימודים/שנה ג/סמסטר א/שיטות הנדסיות/פרוייקט/javafx-sdk-25.0.1/lib/jdk.jsobject.jar">[m
+[32m+[m	[32m<classpathentry kind="lib" path="C:/Important for project/javafx/javafx-sdk-21.0.9/lib/javafx.swing.jar">[m
+ 		<attributes>[m
+ 			<attribute name="module" value="true"/>[m
+ 		</attributes>[m
+ 	</classpathentry>[m
+[31m-	<classpathentry kind="lib" path="C:/Users/liemd/OneDrive/Documents/לימודים/שנה ג/סמסטר א/שיטות הנדסיות/פרוייקט/javafx-sdk-25.0.1/lib/jfx.incubator.input.jar">[m
+[32m+[m	[32m<classpathentry kind="lib" path="C:/Important for project/javafx/javafx-sdk-21.0.9/lib/javafx.web.jar">[m
+ 		<attributes>[m
+ 			<attribute name="module" value="true"/>[m
+ 		</attributes>[m
+ 	</classpathentry>[m
+[31m-	<classpathentry kind="lib" path="C:/Users/liemd/OneDrive/Documents/לימודים/שנה ג/סמסטר א/שיטות הנדסיות/פרוייקט/javafx-sdk-25.0.1/lib/jfx.incubator.richtext.jar">[m
+[32m+[m	[32m<classpathentry kind="lib" path="C:/Important for project/javafx/javafx-sdk-21.0.9/lib/javafx-swt.jar">[m
+ 		<attributes>[m
+ 			<attribute name="module" value="true"/>[m
+ 		</attributes>[m
+ 	</classpathentry>[m
+[31m-	<classpathentry combineaccessrules="false" kind="src" path="/BistroOCSF"/>[m
+[31m-	<classpathentry combineaccessrules="false" kind="src" path="/BistroCommon"/>[m
+ 	<classpathentry kind="output" path="bin"/>[m
+ </classpath>[m
+[1mdiff --git a/Assignment3/BistroClientProject/bin/.gitignore b/Assignment3/BistroClientProject/bin/.gitignore[m
+[1mnew file mode 100644[m
+[1mindex 0000000..9ea10f4[m
+[1m--- /dev/null[m
+[1m+++ b/Assignment3/BistroClientProject/bin/.gitignore[m
+[36m@@ -0,0 +1,4 @@[m
+[32m+[m[32m/application/[m
+[32m+[m[32m/gui/[m
+[32m+[m[32m/guiControllers/[m
+[32m+[m[32m/interfaces/[m
+[1mdiff --git a/Assignment3/BistroClientProject/bin/application/ChatClient.class b/Assignment3/BistroClientProject/bin/application/ChatClient.class[m
+[1mindex d1c4adb..7594d63 100644[m
+Binary files a/Assignment3/BistroClientProject/bin/application/ChatClient.class and b/Assignment3/BistroClientProject/bin/application/ChatClient.class differ
+[1mdiff --git a/Assignment3/BistroClientProject/bin/application/ClientConsole.class b/Assignment3/BistroClientProject/bin/application/ClientConsole.class[m
+[1mindex 0784854..4750a1a 100644[m
+Binary files a/Assignment3/BistroClientProject/bin/application/ClientConsole.class and b/Assignment3/BistroClientProject/bin/application/ClientConsole.class differ
+[1mdiff --git a/Assignment3/BistroClientProject/bin/application/ClientUI.class b/Assignment3/BistroClientProject/bin/application/ClientUI.class[m
+[1mindex 4faa95e..0c70a0e 100644[m
+Binary files a/Assignment3/BistroClientProject/bin/application/ClientUI.class and b/Assignment3/BistroClientProject/bin/application/ClientUI.class differ
+[1mdiff --git a/Assignment3/BistroClientProject/bin/guiControllers/ClientDetails_BController.class b/Assignment3/BistroClientProject/bin/guiControllers/ClientDetails_BController.class[m
+[1mindex 04c917c..031676b 100644[m
+Binary files a/Assignment3/BistroClientProject/bin/guiControllers/ClientDetails_BController.class and b/Assignment3/BistroClientProject/bin/guiControllers/ClientDetails_BController.class differ
+[1mdiff --git a/Assignment3/BistroClientProject/bin/guiControllers/Login_BController.class b/Assignment3/BistroClientProject/bin/guiControllers/Login_BController.class[m
+[1mindex 4d4682a..6a12794 100644[m
+Binary files a/Assignment3/BistroClientProject/bin/guiControllers/Login_BController.class and b/Assignment3/BistroClientProject/bin/guiControllers/Login_BController.class differ
+[1mdiff --git a/Assignment3/BistroClientProject/bin/guiControllers/MainGUI$1$1.class b/Assignment3/BistroCli

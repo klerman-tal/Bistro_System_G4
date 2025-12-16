@@ -6,6 +6,8 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 import dbControllers.DBController;
+import dbControllers.User_DB_Controller;
+import logicControllers.UserController;
 
 import javafx.application.Platform;
 import ocsf.server.AbstractServer;
@@ -15,20 +17,22 @@ public class RestaurantServer extends AbstractServer {
 
     public static final int DEFAULT_PORT = 5556;
 
-    // Main DB controller (manages SQL connection)
+    // Main DB controller
     private DBController conn;
 
-    // GUI controller for server window
+    // User controllers
+    private User_DB_Controller userDB;
+    private UserController userController;
+
+    // GUI
     private gui.ServerGUIController uiController;
 
     private String serverIp;
 
-    // Allow UI controller to attach to server for logging
     public void setUiController(gui.ServerGUIController controller) {
         this.uiController = controller;
     }
 
-    // Unified logging method (console + GUI)
     public void log(String msg) {
         System.out.println(msg);
         if (uiController != null) {
@@ -36,12 +40,12 @@ public class RestaurantServer extends AbstractServer {
         }
     }
 
-    // Server constructor
+    // Constructor
     public RestaurantServer(int port) {
         super(port);
 
         conn = new DBController();
-        conn.setServer(this); // Attach server for logging
+        conn.setServer(this);
 
         try {
             serverIp = InetAddress.getLocalHost().getHostAddress();
@@ -56,10 +60,16 @@ public class RestaurantServer extends AbstractServer {
         log("Server started on IP: " + serverIp);
         log("Listening on port " + getPort());
 
-        // Open SQL connection
+        // Connect to DB
         conn.ConnectToDb();
 
-        log("Database connection initialized.");
+        // Create DB controllers for users
+        userDB = new User_DB_Controller(conn.getConnection());
+
+        // Create logic controllers
+        userController = new UserController(userDB);
+
+        log("User controllers initialized.");
     }
 
     @Override
@@ -82,7 +92,7 @@ public class RestaurantServer extends AbstractServer {
 
     @Override
     protected synchronized void clientDisconnected(ConnectionToClient client) {
-        // No extra logic needed for now
+        // nothing yet
     }
 
     @Override
@@ -91,7 +101,7 @@ public class RestaurantServer extends AbstractServer {
         log("Message received: " + msg + " from " + client);
 
         try {
-            if (msg instanceof ArrayList) {
+            if (msg instanceof ArrayList<?>) {
 
                 ArrayList<?> arr = (ArrayList<?>) msg;
                 if (arr.isEmpty()) return;
@@ -100,6 +110,18 @@ public class RestaurantServer extends AbstractServer {
                 log("Command = '" + command + "'");
 
                 switch (command) {
+
+                    // =====================
+                    //        LOGIN
+                    // =====================
+                    case "LOGIN": {
+                        log("Handling LOGIN request...");
+
+                        Object response = userController.login(arr);
+
+                        client.sendToClient(response);
+                        break;
+                    }
 
                     case "PRINT_ORDERS": {
                         var orders = conn.getOrdersForClient();
@@ -116,7 +138,6 @@ public class RestaurantServer extends AbstractServer {
                         conn.UpdateOrderDate(orderNumber, newDate);
                         client.sendToClient("Order " + orderNumber +
                                " date updated to " + dateStr);
-
                         break;
                     }
 
@@ -127,7 +148,6 @@ public class RestaurantServer extends AbstractServer {
                         conn.UpdateNumberOfGuests(orderNumber, guests);
                         client.sendToClient("Order " + orderNumber +
                                " guest count updated to " + guests);
-
                         break;
                     }
 
@@ -145,11 +165,12 @@ public class RestaurantServer extends AbstractServer {
                         } catch (IOException e) {
                             log("Error closing client: " + e.getMessage());
                         }
+
                         break;
                     }
 
                     default:
-                        log("Unknown command received");
+                        log("Unknown command received: " + command);
                         break;
                 }
             }

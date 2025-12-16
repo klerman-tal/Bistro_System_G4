@@ -44,7 +44,7 @@ public class DBController {
                     "root",
                     MYSQL_PASSWORD   // Uses password provided by the user
             );
-
+ 
             log("SQL connection succeed");
 
         } catch (SQLException ex) {
@@ -155,7 +155,11 @@ public class DBController {
             ex.printStackTrace();
         }
     }
+}
+        
+              
+      
 
 
 	
-}
+
