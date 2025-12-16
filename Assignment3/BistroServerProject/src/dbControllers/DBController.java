@@ -1,4 +1,5 @@
 package dbControllers;
+
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.DriverManager;
@@ -24,7 +25,6 @@ public class DBController {
     public void setServer(RestaurantServer server) {
         this.server = server;
     }
-    
 
     // Central logging function:
     // If server exists -> log to UI, otherwise log to console
@@ -42,10 +42,16 @@ public class DBController {
             conn = DriverManager.getConnection(
                     "jdbc:mysql://localhost:3306/bistrodb?serverTimezone=Asia/Jerusalem&useSSL=false",
                     "root",
-                    MYSQL_PASSWORD   // Uses password provided by the user
+                    MYSQL_PASSWORD
             );
  
             log("SQL connection succeed");
+
+            // ===== DEBUG / VERIFY (new) =====
+            logCurrentDatabase();                 // prints which DB we're connected to
+            logIfRestaurantTablesExists();        // prints YES/NO
+            ensureRestaurantTablesTableExists();  // creates only if missing
+            logRestaurantTablesRowCount();        // prints row count
 
         } catch (SQLException ex) {
             log("SQLException: " + ex.getMessage());
@@ -53,14 +59,79 @@ public class DBController {
             log("VendorError: " + ex.getErrorCode());
         }
     }
-    
-    
+
     public Connection getConnection() {
         return conn;
     }
 
+    // ==========================
+    // NEW HELPERS (diagnostics)
+    // ==========================
+    private void logCurrentDatabase() {
+        if (conn == null) return;
+        try (Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery("SELECT DATABASE()")) {
+            if (rs.next()) {
+                log("Connected to DB: " + rs.getString(1));
+            }
+        } catch (SQLException e) {
+            log("Failed to read current DB: " + e.getMessage());
+        }
+    }
 
-    // Retrieve all orders from the database and format them for the client
+    private void logIfRestaurantTablesExists() {
+        if (conn == null) return;
+        try (Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery("SHOW TABLES LIKE 'restaurant_tables'")) {
+            log("restaurant_tables exists? " + (rs.next() ? "YES" : "NO"));
+        } catch (SQLException e) {
+            log("Failed to check if restaurant_tables exists: " + e.getMessage());
+        }
+    }
+
+    private void logRestaurantTablesRowCount() {
+        if (conn == null) return;
+        try (Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery("SELECT COUNT(*) AS c FROM restaurant_tables")) {
+            if (rs.next()) {
+                log("restaurant_tables row count: " + rs.getInt("c"));
+            }
+        } catch (SQLException e) {
+            // If table doesn't exist yet, this can fail. That's ok.
+            log("Could not read restaurant_tables row count: " + e.getMessage());
+        }
+    }
+
+    // ==========================
+    // TABLE CREATION (new)
+    // ==========================
+    public void ensureRestaurantTablesTableExists() {
+        if (conn == null) {
+            log("Cannot ensure restaurant_tables: no DB connection.");
+            return;
+        }
+
+        String sql = """
+            CREATE TABLE IF NOT EXISTS restaurant_tables (
+                table_number INT NOT NULL,
+                seats_amount INT NOT NULL,
+                is_available TINYINT(1) NOT NULL DEFAULT 1,
+                PRIMARY KEY (table_number)
+            ) ENGINE=InnoDB;
+        """;
+
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(sql);
+            log("restaurant_tables table ensured (exists/created).");
+        } catch (SQLException e) {
+            log("Failed to create/ensure restaurant_tables: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // =======================================
+    // ORIGINAL CODE (unchanged): ORDERS PART
+    // =======================================
     public ArrayList<String> getOrdersForClient() {
         ArrayList<String> result = new ArrayList<>();
 
@@ -156,10 +227,4 @@ public class DBController {
         }
     }
 }
-        
-              
-      
-
-
-	
 

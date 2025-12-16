@@ -1,112 +1,64 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
-		<attributes>
-			<attribute name="module" value="true"/>
-		</attributes>
-	</classpathentry>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="lib" path="lib/mysql-connector-j-9.5.0.jar"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/BistroOCSF"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/BistroCommon"/>
-<<<<<<< Updated upstream
-	<classpathentry kind="lib" path="C:/Program Files/javafx-sdk-25/lib/javafx.base.jar">
-=======
+	<classpathentry combineaccessrules="false" kind="src" path="/BistroOCSF"/>
+	<classpathentry kind="lib" path="lib/mysql-connector-j-9.5.0.jar"/>
 	<classpathentry kind="lib" path="C:/Program Files/openjfx-25_windows-x64_bin-sdk/javafx-sdk-25/lib/javafx.base.jar">
->>>>>>> Stashed changes
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-<<<<<<< Updated upstream
-	<classpathentry kind="lib" path="C:/Program Files/javafx-sdk-25/lib/javafx.controls.jar">
-=======
 	<classpathentry kind="lib" path="C:/Program Files/openjfx-25_windows-x64_bin-sdk/javafx-sdk-25/lib/javafx.controls.jar">
->>>>>>> Stashed changes
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-<<<<<<< Updated upstream
-	<classpathentry kind="lib" path="C:/Program Files/javafx-sdk-25/lib/javafx.fxml.jar">
-=======
 	<classpathentry kind="lib" path="C:/Program Files/openjfx-25_windows-x64_bin-sdk/javafx-sdk-25/lib/javafx.fxml.jar">
->>>>>>> Stashed changes
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-<<<<<<< Updated upstream
-	<classpathentry kind="lib" path="C:/Program Files/javafx-sdk-25/lib/javafx.graphics.jar">
-=======
 	<classpathentry kind="lib" path="C:/Program Files/openjfx-25_windows-x64_bin-sdk/javafx-sdk-25/lib/javafx.graphics.jar">
->>>>>>> Stashed changes
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-<<<<<<< Updated upstream
-	<classpathentry kind="lib" path="C:/Program Files/javafx-sdk-25/lib/javafx.media.jar">
-=======
 	<classpathentry kind="lib" path="C:/Program Files/openjfx-25_windows-x64_bin-sdk/javafx-sdk-25/lib/javafx.media.jar">
->>>>>>> Stashed changes
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-<<<<<<< Updated upstream
-	<classpathentry kind="lib" path="C:/Program Files/javafx-sdk-25/lib/javafx.swing.jar">
-=======
 	<classpathentry kind="lib" path="C:/Program Files/openjfx-25_windows-x64_bin-sdk/javafx-sdk-25/lib/javafx.swing.jar">
->>>>>>> Stashed changes
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-<<<<<<< Updated upstream
-	<classpathentry kind="lib" path="C:/Program Files/javafx-sdk-25/lib/javafx.web.jar">
-=======
 	<classpathentry kind="lib" path="C:/Program Files/openjfx-25_windows-x64_bin-sdk/javafx-sdk-25/lib/javafx.web.jar">
->>>>>>> Stashed changes
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-<<<<<<< Updated upstream
-	<classpathentry kind="lib" path="C:/Program Files/javafx-sdk-25/lib/javafx-swt.jar">
-=======
 	<classpathentry kind="lib" path="C:/Program Files/openjfx-25_windows-x64_bin-sdk/javafx-sdk-25/lib/javafx-swt.jar">
->>>>>>> Stashed changes
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-<<<<<<< Updated upstream
-	<classpathentry kind="lib" path="C:/Program Files/javafx-sdk-25/lib/jdk.jsobject.jar">
-=======
 	<classpathentry kind="lib" path="C:/Program Files/openjfx-25_windows-x64_bin-sdk/javafx-sdk-25/lib/jdk.jsobject.jar">
->>>>>>> Stashed changes
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-<<<<<<< Updated upstream
-	<classpathentry kind="lib" path="C:/Program Files/javafx-sdk-25/lib/jfx.incubator.input.jar">
-=======
 	<classpathentry kind="lib" path="C:/Program Files/openjfx-25_windows-x64_bin-sdk/javafx-sdk-25/lib/jfx.incubator.input.jar">
->>>>>>> Stashed changes
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-<<<<<<< Updated upstream
-	<classpathentry kind="lib" path="C:/Program Files/javafx-sdk-25/lib/jfx.incubator.richtext.jar">
-=======
 	<classpathentry kind="lib" path="C:/Program Files/openjfx-25_windows-x64_bin-sdk/javafx-sdk-25/lib/jfx.incubator.richtext.jar">
->>>>>>> Stashed changes
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/jdk-25"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

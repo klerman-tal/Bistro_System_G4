@@ -1,3 +1,4 @@
-/dbControllers/
-/logicControllers/
 /application/
+/dbControllers/
+/gui/
+/logicControllers/

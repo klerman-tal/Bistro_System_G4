@@ -1,30 +1,26 @@
 package application;
 
-import java.sql.Connection;
-
-import dbControllers.Restaurant_DB_Controller;
-import logicControllers.RestaurantController;
-import entities.Restaurant;
-import entities.Table;
-
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.sql.Connection;
 import java.util.ArrayList;
 
 import dbControllers.DBController;
-import dbControllers.User_DB_Controller;
-import logicControllers.UserController;
-
-import javafx.application.Platform;
-import ocsf.server.AbstractServer;
-import ocsf.server.ConnectionToClient;
-import java.sql.Connection;
-
 import dbControllers.Restaurant_DB_Controller;
+import dbControllers.User_DB_Controller;
+
 import entities.Restaurant;
 import entities.Table;
+
+import javafx.application.Platform;
+
 import logicControllers.RestaurantController;
+import logicControllers.UserController;
+
+import ocsf.server.AbstractServer;
+import ocsf.server.ConnectionToClient;
+
 
 
 public class RestaurantServer extends AbstractServer {
