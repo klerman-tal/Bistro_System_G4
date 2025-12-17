@@ -15,9 +15,13 @@ public class UserController {
         this.userDB = userDB;
     }
 
+    /* =========================
+       LOGIN
+       ========================= */
+
     /**
      * Handles user login.
-     * 
+     *
      * @param data ArrayList containing username and password
      * @return User object if login succeeds, otherwise error string
      */
@@ -35,29 +39,56 @@ public class UserController {
         return user;
     }
 
+    /* =========================
+       REGISTER (Guest → Subscriber)
+       ========================= */
+
     /**
-     * Handles subscriber registration.
-     * Only RandomClient is allowed to register.
+     * Handles registration of a RandomClient (guest).
+     * The guest becomes a permanent Subscriber.
+     *
+     * Flow:
+     * 1. Create User (with role Subscriber)
+     * 2. Create Subscriber linked to that User
+     *
+     * @param data registration data
+     * @return Subscriber object or error message
      */
-    public Object register(ArrayList<?> data, User currentUser) {
-
-        // Permission check: only RandomClient can register
-        if (currentUser == null ||
-            currentUser.getUserRole() != Enums.UserRole.RandomClient) {
-            return "REGISTER_NOT_ALLOWED";
-        }
-
-        String firstName = data.get(1).toString();
-        String lastName  = data.get(2).toString();
-        String email     = data.get(3).toString();
-        String phone     = data.get(4).toString();
+    public Object register(ArrayList<?> data) {
 
         try {
-            return userDB.createSubscriber(firstName, lastName, email, phone);
+            String username  = data.get(1).toString();
+            String password  = data.get(2).toString();
+            String firstName = data.get(3).toString();
+            String lastName  = data.get(4).toString();
+            String email     = data.get(5).toString();
+            String phone     = data.get(6).toString();
+
+            // Step 1: Create User (permanent account)
+            User newUser = userDB.createUser(
+                    username,
+                    password,
+                    email,
+                    phone
+            );
+
+            // Step 2: Create Subscriber (activity entity)
+            Subscriber subscriber = userDB.createSubscriber(
+                    newUser.getUserId(),
+                    firstName,
+                    lastName
+            );
+
+            return subscriber;
+
         } catch (Exception e) {
             return "REGISTER_FAILED: " + e.getMessage();
         }
     }
+
+    /* =========================
+       UPDATE SUBSCRIBER DETAILS
+       ========================= */
 
     /**
      * Updates subscriber details after validating permissions.
@@ -85,26 +116,31 @@ public class UserController {
 
             if (existingSubscriber == null) {
                 return "USER_IS_NOT_SUBSCRIBER";
-            } 
+            }
 
             boolean updated = userDB.updateSubscriberDetails(
                     existingSubscriber.getSubscriberNumber(),
-                    updatedSubscriber.getUserName(),
-                    updatedSubscriber.getPersonalDetails()
+                    updatedSubscriber.getUserName()
             );
+
 
             if (!updated) {
                 return "UPDATE_FAILED";
             }
 
-            // Return the updated subscriber (fresh from DB)
+            // Return the updated subscriber from DB
             return userDB.getSubscriberByUserId(currentUser.getUserId());
 
         } catch (Exception e) {
             return "FAILED_TO_UPDATE_SUBSCRIBER_DETAILS";
         }
     }
- /**
+
+    /* =========================
+       VIEW RESERVATION HISTORY
+       ========================= */
+
+    /**
      * Returns reservation history for the current user.
      * RandomClient is NOT allowed to view reservation history.
      *
@@ -112,18 +148,15 @@ public class UserController {
      */
     public Object viewReservationHistory(User currentUser) {
 
-        // 1. Check if user is logged in
         if (currentUser == null) {
             return "USER_NOT_LOGGED_IN";
         }
 
-        // 2. Check permissions
         if (currentUser.getUserRole() == Enums.UserRole.RandomClient) {
             return "ACCESS_DENIED_RANDOM_CLIENT";
         }
 
         try {
-            // 3. Retrieve Subscriber entity linked to this user
             Subscriber subscriber =
                     userDB.getSubscriberByUserId(currentUser.getUserId());
 
@@ -131,7 +164,6 @@ public class UserController {
                 return "USER_IS_NOT_SUBSCRIBER";
             }
 
-            // 4. Fetch reservation history for this subscriber
             return userDB.getReservationHistoryBySubscriber(
                     subscriber.getSubscriberNumber()
             );
@@ -141,6 +173,45 @@ public class UserController {
         }
     }
     
-    
-    
+    /* =========================
+    UPDATE USER CONTACT DETAILS
+    ========================= */
+
+ /**
+  * Updates contact details (phone and email) of the logged-in user.
+  * Only Subscribers and restaurant staff are allowed to perform this action.
+  * RandomClient users are NOT allowed.
+  */
+ public Object updateUserContactDetails(
+         User currentUser,
+         String phone,
+         String email
+ ) {
+
+     if (currentUser == null) {
+         return "USER_NOT_LOGGED_IN";
+     }
+
+     if (currentUser.getUserRole() == Enums.UserRole.RandomClient) {
+         return "ACCESS_DENIED_RANDOM_CLIENT";
+     }
+
+     try {
+         boolean updated = userDB.updateUserContactDetails(
+                 currentUser.getUserId(),
+                 phone,
+                 email
+         );
+
+         if (!updated) {
+             return "UPDATE_FAILED";
+         }
+
+         return "UPDATE_SUCCESS";
+
+     } catch (Exception e) {
+         return "FAILED_TO_UPDATE_CONTACT_DETAILS";
+     }
+ }
+
 }

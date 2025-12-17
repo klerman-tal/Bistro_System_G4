@@ -8,57 +8,42 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/BistroOCSF"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/BistroCommon"/>
-	<classpathentry kind="lib" path="C:/Program Files/javafx-sdk-25/lib/javafx.base.jar">
+	<classpathentry kind="lib" path="C:/Important for project/javafx/javafx-sdk-21.0.9/lib/javafx.base.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Program Files/javafx-sdk-25/lib/javafx.controls.jar">
+	<classpathentry kind="lib" path="C:/Important for project/javafx/javafx-sdk-21.0.9/lib/javafx.controls.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Program Files/javafx-sdk-25/lib/javafx.fxml.jar">
+	<classpathentry kind="lib" path="C:/Important for project/javafx/javafx-sdk-21.0.9/lib/javafx.fxml.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Program Files/javafx-sdk-25/lib/javafx.graphics.jar">
+	<classpathentry kind="lib" path="C:/Important for project/javafx/javafx-sdk-21.0.9/lib/javafx.graphics.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Program Files/javafx-sdk-25/lib/javafx.media.jar">
+	<classpathentry kind="lib" path="C:/Important for project/javafx/javafx-sdk-21.0.9/lib/javafx.media.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Program Files/javafx-sdk-25/lib/javafx.swing.jar">
+	<classpathentry kind="lib" path="C:/Important for project/javafx/javafx-sdk-21.0.9/lib/javafx.swing.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Program Files/javafx-sdk-25/lib/javafx.web.jar">
+	<classpathentry kind="lib" path="C:/Important for project/javafx/javafx-sdk-21.0.9/lib/javafx.web.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Program Files/javafx-sdk-25/lib/javafx-swt.jar">
-		<attributes>
-			<attribute name="module" value="true"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="C:/Program Files/javafx-sdk-25/lib/jdk.jsobject.jar">
-		<attributes>
-			<attribute name="module" value="true"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="C:/Program Files/javafx-sdk-25/lib/jfx.incubator.input.jar">
-		<attributes>
-			<attribute name="module" value="true"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="C:/Program Files/javafx-sdk-25/lib/jfx.incubator.richtext.jar">
+	<classpathentry kind="lib" path="C:/Important for project/javafx/javafx-sdk-21.0.9/lib/javafx-swt.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>

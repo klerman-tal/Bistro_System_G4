@@ -20,14 +20,11 @@ public class User_DB_Controller {
         this.conn = conn;
     }
 
-    /**
-     * Authenticates a user using username and password.
-     *
-     * @return User object if credentials are valid, otherwise null
-     */
-    public User loginUser(String username, String password) {
+    /* =========================
+       LOGIN
+       ========================= */
 
-        User user = null;
+    public User loginUser(String username, String password) {
 
         try {
             PreparedStatement stmt = conn.prepareStatement(
@@ -40,87 +37,104 @@ public class User_DB_Controller {
             ResultSet rs = stmt.executeQuery();
 
             if (rs.next()) {
-                user = new User();
-
+                User user = new User();
                 user.setUserId(rs.getInt("user_id"));
                 user.setUserName(rs.getString("username"));
                 user.setPassword(rs.getString("password"));
-                user.setPhoneNumber(rs.getString("phone_number"));
                 user.setEmail(rs.getString("email"));
-
-                // Convert role from DB string to Enum
+                user.setPhoneNumber(rs.getString("phone"));
                 user.setUserRole(
                         Enums.UserRole.valueOf(rs.getString("role"))
                 );
+                return user;
             }
 
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
-        return user;
+        return null;
     }
 
-    /**
-     * Creates a new subscriber in the database.
-     *
-     * @return Subscriber object with generated subscriber number
-     * @throws SQLException if subscriber already exists or insert fails
-     */
-    public Subscriber createSubscriber(
-            String firstName,
-            String lastName,
+    /* =========================
+       CREATE USER (REGISTER – step 1)
+       ========================= */
+
+    public User createUser(
+            String username,
+            String password,
             String email,
             String phone
     ) throws SQLException {
 
-        String checkSql =
-                "SELECT subscriber_id FROM subscribers WHERE email = ?";
+        String sql =
+                "INSERT INTO users (username, password, role, email, phone) " +
+                "VALUES (?, ?, 'Subscriber', ?, ?)";
 
-        String insertSql =
-                "INSERT INTO subscribers (first_name, last_name, email, phone) VALUES (?, ?, ?, ?)";
+        PreparedStatement stmt =
+                conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 
-        // Check if subscriber already exists
-        PreparedStatement checkStmt = conn.prepareStatement(checkSql);
-        checkStmt.setString(1, email);
-        ResultSet rs = checkStmt.executeQuery();
+        stmt.setString(1, username);
+        stmt.setString(2, password);
+        stmt.setString(3, email);
+        stmt.setString(4, phone);
 
-        if (rs.next()) {
-            throw new SQLException("Subscriber already exists");
+        stmt.executeUpdate();
+
+        ResultSet keys = stmt.getGeneratedKeys();
+        if (keys.next()) {
+            User user = new User();
+            user.setUserId(keys.getInt(1));
+            user.setUserName(username);
+            user.setPassword(password);
+            user.setEmail(email);
+            user.setPhoneNumber(phone);
+            user.setUserRole(Enums.UserRole.Subscriber);
+            return user;
         }
 
-        // Insert new subscriber
-        PreparedStatement insertStmt =
-                conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS);
+        throw new SQLException("Failed to create user");
+    }
 
-        insertStmt.setString(1, firstName);
-        insertStmt.setString(2, lastName);
-        insertStmt.setString(3, email);
-        insertStmt.setString(4, phone);
+    /* =========================
+       CREATE SUBSCRIBER (REGISTER – step 2)
+       ========================= */
 
-        insertStmt.executeUpdate();
+    public Subscriber createSubscriber(
+            int userId,
+            String firstName,
+            String lastName
+    ) throws SQLException {
 
-        // Retrieve generated subscriber number
-        ResultSet keys = insertStmt.getGeneratedKeys();
+        String sql =
+                "INSERT INTO subscribers (user_id, first_name, last_name) " +
+                "VALUES (?, ?, ?)";
+
+        PreparedStatement stmt =
+                conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+
+        stmt.setInt(1, userId);
+        stmt.setString(2, firstName);
+        stmt.setString(3, lastName);
+
+        stmt.executeUpdate();
+
+        ResultSet keys = stmt.getGeneratedKeys();
         if (keys.next()) {
-            int subscriberNumber = keys.getInt(1);
-
             return new Subscriber(
-                    subscriberNumber,
-                    email,
-                    firstName + " " + lastName + ", phone: " + phone
+                    keys.getInt(1),                     // subscriberNumber
+                    firstName + " " + lastName,         // userName
+                    "Created on registration"           // personalDetails
             );
         }
 
         throw new SQLException("Failed to create subscriber");
     }
 
-    /**
-     * Retrieves subscriber entity associated with a specific user ID.
-     *
-     * @param userId ID of the logged-in user
-     * @return Subscriber object or null if not found
-     */
+    /* =========================
+       GET SUBSCRIBER BY USER ID
+       ========================= */
+
     public Subscriber getSubscriberByUserId(int userId) throws SQLException {
 
         String sql = "SELECT * FROM subscribers WHERE user_id = ?";
@@ -131,27 +145,54 @@ public class User_DB_Controller {
 
         if (rs.next()) {
             return new Subscriber(
-                    rs.getInt("subscriber_number"),
-                    rs.getString("user_name"),
-                    rs.getString("personal_details")
+                    rs.getInt("subscriber_id"),
+                    rs.getString("first_name") + " " + rs.getString("last_name"),
+                    "Loaded from DB"
             );
         }
 
         return null;
     }
 
-    /**
-     * Retrieves reservation history for a specific subscriber.
-     *
-     * @param subscriberNumber subscriber unique identifier
-     * @return list of Reservation objects
-     */
+    /* =========================
+       UPDATE SUBSCRIBER DETAILS
+       ========================= */
+
+    public boolean updateSubscriberDetails(
+            int subscriberNumber,
+            String userName
+    ) throws SQLException {
+
+        String sql =
+                "UPDATE subscribers " +
+                "SET first_name = ?, last_name = ? " +
+                "WHERE subscriber_id = ?";
+
+        String[] nameParts = userName.split(" ", 2);
+        String firstName = nameParts[0];
+        String lastName = (nameParts.length > 1) ? nameParts[1] : "";
+
+        PreparedStatement stmt = conn.prepareStatement(sql);
+        stmt.setString(1, firstName);
+        stmt.setString(2, lastName);
+        stmt.setInt(3, subscriberNumber);
+
+        return stmt.executeUpdate() > 0;
+    }
+
+
+    /* =========================
+       RESERVATION HISTORY
+       ========================= */
+
     public ArrayList<Reservation> getReservationHistoryBySubscriber(int subscriberNumber)
             throws SQLException {
 
         ArrayList<Reservation> history = new ArrayList<>();
 
-        String sql = "SELECT * FROM reservations WHERE subscriber_number = ?";
+        String sql =
+                "SELECT * FROM reservations WHERE subscriber_number = ?";
+
         PreparedStatement stmt = conn.prepareStatement(sql);
         stmt.setInt(1, subscriberNumber);
 
@@ -159,48 +200,51 @@ public class User_DB_Controller {
 
         while (rs.next()) {
             Reservation reservation = new Reservation();
-
             reservation.setConfarmationCode(rs.getInt("confarmation_code"));
             reservation.setReservationTime(
                     rs.getTimestamp("reservation_time").toLocalDateTime()
             );
             reservation.setGuestAmount(rs.getInt("guest_amount"));
             reservation.setConfirmed(rs.getBoolean("is_confirmed"));
-
             history.add(reservation);
         }
 
         return history;
     }
+    /* =========================
+    UPDATE USER CONTACT DETAILS
+    ========================= */
+
+ /**
+  * Updates the contact details of a user in the database.
+  * This method updates ONLY the users table (phone and email).
+  *
+  * @param userId the unique ID of the user
+  * @param phone updated phone number
+  * @param email updated email address
+  * @return true if the update succeeded, false otherwise
+  * @throws SQLException if a database error occurs
+  */
+		 public boolean updateUserContactDetails(
+		         int userId,
+		         String phone,
+		         String email
+		 ) throws SQLException {
+		
+		     String sql =
+		             "UPDATE users " +
+		             "SET phone = ?, email = ? " +
+		             "WHERE user_id = ?";
+		
+		     PreparedStatement stmt = conn.prepareStatement(sql);
+		     stmt.setString(1, phone);
+		     stmt.setString(2, email);
+		     stmt.setInt(3, userId);
+		
+		     return stmt.executeUpdate() > 0;
+ }
+
     
-    /**
-     * Updates subscriber details in the database.
-     *
-     * @param subscriberNumber unique subscriber identifier
-     * @param userName new user name
-     * @param personalDetails new personal details
-     * @return true if update succeeded, false otherwise
-     */
-    public boolean updateSubscriberDetails(
-            int subscriberNumber,String userName ,String personalDetails ) throws SQLException {
-        String sql ="UPDATE subscribers " + "SET user_name = ?, personal_details = ? " + "WHERE subscriber_number = ?";
-
-        PreparedStatement stmt = conn.prepareStatement(sql);
-
-        // Set new values
-        stmt.setString(1, userName);
-        stmt.setString(2, personalDetails);
-
-        // Identify which subscriber to update
-        stmt.setInt(3, subscriberNumber);
-
-        int rowsUpdated = stmt.executeUpdate();
-
-        // If at least one row was updated → success
-        return rowsUpdated > 0;
-    }
     
     
-    
-
 }
