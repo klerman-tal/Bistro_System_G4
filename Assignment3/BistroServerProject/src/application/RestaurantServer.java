@@ -7,6 +7,7 @@ import java.sql.Connection;
 import java.util.ArrayList;
 
 import dbControllers.DBController;
+import dbControllers.Reservation_DB_Controller;
 import dbControllers.Restaurant_DB_Controller;
 import dbControllers.User_DB_Controller;
 
@@ -34,6 +35,9 @@ public class RestaurantServer extends AbstractServer {
     // User controllers
     private User_DB_Controller userDB;
     private UserController userController;
+    
+ // Reservation DB controller
+    private Reservation_DB_Controller reservationDB;
 
     // GUI
     private gui.ServerGUIController uiController;
@@ -73,25 +77,40 @@ public class RestaurantServer extends AbstractServer {
 
         // Connect to DB
         conn.ConnectToDb();
+        
+        
         try {
             // צריך לקבל Connection מתוך DBController
             Connection sqlConn = conn.getConnection();  // אם אין מתודה כזו - תוסיפי (סעיף 4)
+            if (sqlConn == null) {
+                log("DB connection failed - server cannot start.");
+                return;
+            }
+            
+            //Restaurant
             Restaurant_DB_Controller rdb = new Restaurant_DB_Controller(sqlConn);
             restaurantController = new RestaurantController(rdb);
-
             log("RestaurantController initialized.");
+            
+            //Reservation
+            reservationDB = new Reservation_DB_Controller(sqlConn);
+            reservationDB.createReservationsTable();
+            reservationDB.createWaitingListTable();
+            log("Reservation initialized.");
+            
+            //Users
+            userDB = new User_DB_Controller(sqlConn);
+            userController = new UserController(userDB);
+            log("User controllers initialized.");
+            
+            
         } catch (Exception e) {
-            log("Failed to init RestaurantController: " + e.getMessage());
+            log("Failed: " + e.getMessage());
         }
 
 
         // Create DB controllers for users
-        userDB = new User_DB_Controller(conn.getConnection());
-
-        // Create logic controllers
-        userController = new UserController(userDB);
-
-        log("User controllers initialized.");
+       
     }
 
     @Override
@@ -146,9 +165,7 @@ public class RestaurantServer extends AbstractServer {
                     }
 
                     case "PRINT_ORDERS": {
-                        var orders = conn.getOrdersForClient();
-                        for (String order : orders)
-                            client.sendToClient(order);
+                        
                         break;
                     }
 
@@ -157,9 +174,7 @@ public class RestaurantServer extends AbstractServer {
                         String dateStr = arr.get(2).toString();
                         java.sql.Date newDate = java.sql.Date.valueOf(dateStr);
 
-                        conn.UpdateOrderDate(orderNumber, newDate);
-                        client.sendToClient("Order " + orderNumber +
-                               " date updated to " + dateStr);
+                        
                         break;
                     }
 
@@ -167,9 +182,7 @@ public class RestaurantServer extends AbstractServer {
                         int orderNumber = Integer.parseInt(arr.get(1).toString());
                         int guests = Integer.parseInt(arr.get(2).toString());
 
-                        conn.UpdateNumberOfGuests(orderNumber, guests);
-                        client.sendToClient("Order " + orderNumber +
-                               " guest count updated to " + guests);
+                      
                         break;
                     }
 
