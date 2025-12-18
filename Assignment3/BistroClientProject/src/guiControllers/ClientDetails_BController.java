@@ -12,6 +12,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
+
 import java.io.IOException;
 
 public class ClientDetails_BController {
@@ -23,8 +24,6 @@ public class ClientDetails_BController {
     @FXML private TextField txtSubscriberNumber;
     @FXML private TextField txtUserName;
     @FXML private TextArea txtPersonalDetails;
-    @FXML private TextField txtPhoneNumber;
-    @FXML private TextField txtEmail;
 
     @FXML private Label lblMessage;
 
@@ -39,6 +38,7 @@ public class ClientDetails_BController {
 
     @FXML
     private void initialize() {
+
         colDateTime.setCellValueFactory(res ->
                 new SimpleStringProperty(
                         res.getValue().getReservationTime() != null
@@ -53,7 +53,7 @@ public class ClientDetails_BController {
 
         colCode.setCellValueFactory(res ->
                 new SimpleStringProperty(
-                        String.valueOf(res.getValue().getConfarmationCode())
+                        String.valueOf(res.getValue().CreateConfirmationCode())
                 ));
 
         colStatus.setCellValueFactory(res ->
@@ -64,11 +64,11 @@ public class ClientDetails_BController {
 
     public void setSubscriber(Subscriber subscriber) {
         this.subscriber = subscriber;
-        ViewDetails();
-        ViewReservationHistory();
+        viewDetails();
+        viewReservationHistory();
     }
 
-    public void ViewDetails() {
+    private void viewDetails() {
         clearMessage();
 
         if (subscriber == null) {
@@ -76,19 +76,20 @@ public class ClientDetails_BController {
             return;
         }
 
-        txtSubscriberNumber.setText(String.valueOf(subscriber.getSubscriberNumber()));
+        txtSubscriberNumber.setText(
+                String.valueOf(subscriber.getSubscriberNumber())
+        );
+
         txtUserName.setText(subscriber.getUserName());
         txtPersonalDetails.setText(subscriber.getPersonalDetails());
-        txtPhoneNumber.setText(subscriber.getPhoneNumber());
-        txtEmail.setText(subscriber.getEmail());
     }
 
     @FXML
     private void onUpdateDetailsClicked() {
-        UpdateDetails();
+        updateDetails();
     }
 
-    public void UpdateDetails() {
+    private void updateDetails() {
         clearMessage();
 
         if (subscriber == null) {
@@ -96,13 +97,14 @@ public class ClientDetails_BController {
             return;
         }
 
-        subscriber.setPhoneNumber(txtPhoneNumber.getText().trim());
-        subscriber.setEmail(txtEmail.getText().trim());
+        subscriber.setPersonalDetails(
+                txtPersonalDetails.getText().trim()
+        );
 
-        showMessage("Details updated.");
+        showMessage("Details updated locally.");
     }
 
-    public void ViewReservationHistory() {
+    private void viewReservationHistory() {
         clearMessage();
 
         if (subscriber == null || subscriber.getReservationHistory() == null) {
@@ -110,19 +112,25 @@ public class ClientDetails_BController {
             return;
         }
 
-        tblReservationHistory.getItems().setAll(subscriber.getReservationHistory());
+        tblReservationHistory.getItems()
+                .setAll(subscriber.getReservationHistory());
     }
 
     @FXML
     private void onBackToMenuClicked() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
+
             Parent root = loader.load();
 
-            Stage stage = (Stage) rootPane.getScene().getWindow();
+            Stage stage =
+                    (Stage) rootPane.getScene().getWindow();
+
             stage.setTitle("Bistro - Main Menu");
             stage.setScene(new Scene(root));
             stage.show();
+
         } catch (IOException e) {
             e.printStackTrace();
             showMessage("Failed to open main menu.");

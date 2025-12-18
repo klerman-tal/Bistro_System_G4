@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane fx:id="rootPane"
+			xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="guiControllers.UpdateTablesController"
+            stylesheets="@Style.css">
+
+    <top>
+        <HBox alignment="CENTER_LEFT">
+            <padding><Insets top="18" right="25" bottom="18" left="25"/></padding>
+            <children>
+                <Label styleClass="title" text="Update Tables" textFill="WHITE"/>
+            </children>
+        </HBox>
+    </top>
+
+    <center>
+        <VBox spacing="12">
+            <padding><Insets top="20" right="30" bottom="20" left="30"/></padding>
+
+            <TableView fx:id="tblTables" prefHeight="320">
+                <columns>
+                    <TableColumn fx:id="colNumber" text="Table #" prefWidth="120"/>
+                    <TableColumn fx:id="colSeats" text="Seats" prefWidth="120"/>
+                    <TableColumn fx:id="colAvailable" text="Available" prefWidth="160"/>
+                </columns>
+            </TableView>
+
+            <HBox spacing="10">
+                <TextField fx:id="txtTableNumber" promptText="Table #"/>
+                <TextField fx:id="txtSeats" promptText="Seats"/>
+                <CheckBox fx:id="chkAvailable" text="Available"/>
+                <Button text="Add/Save" onAction="#onAddOrSave"/>
+            </HBox>
+
+            <HBox spacing="10">
+                <Button text="Delete Selected" onAction="#onDeleteSelected"/>
+                <Button text="Refresh" onAction="#onRefresh"/>
+            </HBox>
+
+            <Label fx:id="lblMsg" text="" visible="false" managed="false" styleClass="errorMsg"/>
+        </VBox>
+    </center>
+
+    <bottom>
+        <HBox alignment="CENTER_RIGHT">
+            <padding><Insets top="10" right="30" bottom="20" left="30"/></padding>
+            <children>
+                <Button text="Back" onAction="#onBack"/>
+            </children>
+        </HBox>
+    </bottom>
+
+</BorderPane>

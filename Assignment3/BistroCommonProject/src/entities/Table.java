@@ -23,5 +23,11 @@ public class Table {
 	public void setSeatsAmount(int seatsAmount) {
 		this.seatsAmount = seatsAmount;
 	}
+	public boolean getIsAvailable() {
+		return isAvailable;
+	}
+	public void setIsAvailable(boolean isAvailable) {
+		 this.isAvailable=isAvailable;
+	}
 
 }

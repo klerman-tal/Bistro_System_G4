@@ -1,6 +1,8 @@
 package guiControllers;
 
 import java.io.IOException;
+
+import interfaces.ClientActions;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -25,6 +27,13 @@ public class Login_BController {
 
     @FXML private Label lblMessage;
 
+    // NEW: כדי להעביר ל-MENU (ואז לכל המסכים)
+    private ClientActions clientActions;
+
+    public void setClientActions(ClientActions clientActions) {
+        this.clientActions = clientActions;
+    }
+
     @FXML
     private void onLoginClicked() {
         // כרגע: תמיד לעבור ל-MENU בלי לוגיקה
@@ -39,14 +48,20 @@ public class Login_BController {
 
     private void openMenu() {
         try {
-            // שימי לב לנתיב /gui/ כי ה-FXMLים יושבים בחבילה gui
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
             Parent root = loader.load();
+
+            // NEW: להעביר clientActions ל-Menu_BController
+            Menu_BController menuController = loader.getController();
+            if (menuController != null) {
+                menuController.setClientActions(clientActions);
+            }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setTitle("Bistro - Main Menu");
             stage.setScene(new Scene(root));
             stage.show();
+
         } catch (IOException e) {
             e.printStackTrace();
             if (lblMessage != null) {
@@ -54,6 +69,6 @@ public class Login_BController {
                 lblMessage.setVisible(true);
                 lblMessage.setManaged(true);
             }
-        }
+        } 
     }
 }
