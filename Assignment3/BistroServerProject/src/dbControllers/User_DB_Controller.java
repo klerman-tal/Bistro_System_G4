@@ -5,12 +5,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
 
 import entities.Enums;
-import entities.Reservation;
 import entities.Subscriber;
-import entities.User;
 
 public class User_DB_Controller {
 
@@ -20,16 +17,27 @@ public class User_DB_Controller {
         this.conn = conn;
     }
 
-    /* =========================
-       LOGIN
-       ========================= */
+    /* =========================================================
+       LOGIN SUBSCRIBER
+       ---------------------------------------------------------
+       Authenticates a subscriber (subscriber / manager / rep)
+       using username and password.
+       ========================================================= */
 
-    public User loginUser(String username, String password) {
+    /**
+     * Authenticates a subscriber using username and password.
+     *
+     * @param username login username
+     * @param password login password
+     * @return Subscriber object if authentication succeeds, null otherwise
+     */
+    public Subscriber loginSubscriber(String username, String password) {
 
-        try {
-            PreparedStatement stmt = conn.prepareStatement(
-                    "SELECT * FROM users WHERE username = ? AND password = ?"
-            );
+        String sql =
+                "SELECT * FROM SUBSCRIBERS " +
+                "WHERE username = ? AND password = ?";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, username);
             stmt.setString(2, password);
@@ -37,18 +45,21 @@ public class User_DB_Controller {
             ResultSet rs = stmt.executeQuery();
 
             if (rs.next()) {
-                User user = new User();
-                user.setUserId(rs.getInt("user_id"));
-                user.setUserName(rs.getString("username"));
-                user.setPassword(rs.getString("password"));
-                user.setEmail(rs.getString("email"));
-                user.setPhoneNumber(rs.getString("phone"));
-                user.setUserRole(
+                Subscriber subscriber = new Subscriber();
+
+                subscriber.setSubscriberId(rs.getInt("subscriber_id"));
+                subscriber.setUsername(rs.getString("username"));
+                subscriber.setPassword(rs.getString("password"));
+                subscriber.setFirstName(rs.getString("first_name"));
+                subscriber.setLastName(rs.getString("last_name"));
+                subscriber.setPhone(rs.getString("phone"));
+                subscriber.setEmail(rs.getString("email"));
+                subscriber.setRole(
                         Enums.UserRole.valueOf(rs.getString("role"))
                 );
-                return user;
-            }
 
+                return subscriber;
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -56,195 +67,313 @@ public class User_DB_Controller {
         return null;
     }
 
-    /* =========================
-       CREATE USER (REGISTER – step 1)
-       ========================= */
+    /* =========================================================
+       CHECK GUEST EXISTENCE
+       ---------------------------------------------------------
+       Performs a soft check to determine whether a guest with
+       the given contact details already exists.
+       ========================================================= */
 
-    public User createUser(
+    /**
+     * Checks whether a guest with the given phone and email exists.
+     */
+    public boolean guestExists(String phone, String email) throws SQLException {
+
+        String sql =
+                "SELECT 1 FROM GUESTS WHERE phone = ? AND email = ?";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, phone);
+            stmt.setString(2, email);
+
+            ResultSet rs = stmt.executeQuery();
+            return rs.next();
+        }
+    }
+
+    /* =========================================================
+       ENTER AS GUEST
+       ---------------------------------------------------------
+       Handles guest entry by storing contact details if needed.
+       This is NOT an authentication process.
+       ========================================================= */
+
+    /**
+     * Handles guest entry into the system.
+     * Guests are softly identified by their contact details.
+     */
+    public void enterAsGuest(String phone, String email) throws SQLException {
+
+        if (guestExists(phone, email)) {
+            return; // Guest already exists
+        }
+
+        String sql =
+                "INSERT INTO GUESTS (phone, email) VALUES (?, ?)";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, phone);
+            stmt.setString(2, email);
+            stmt.executeUpdate();
+        }
+    }
+
+    /* =========================================================
+       REGISTER SUBSCRIBER
+       ---------------------------------------------------------
+       Creates a new subscriber record in the system.
+       Used for subscribers, restaurant representatives,
+       and managers.
+       ========================================================= */
+
+    /**
+     * Registers a new subscriber in the system.
+     */
+    public Subscriber registerSubscriber(
             String username,
             String password,
-            String email,
-            String phone
-    ) throws SQLException {
-
-        String sql =
-                "INSERT INTO users (username, password, role, email, phone) " +
-                "VALUES (?, ?, 'Subscriber', ?, ?)";
-
-        PreparedStatement stmt =
-                conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-
-        stmt.setString(1, username);
-        stmt.setString(2, password);
-        stmt.setString(3, email);
-        stmt.setString(4, phone);
-
-        stmt.executeUpdate();
-
-        ResultSet keys = stmt.getGeneratedKeys();
-        if (keys.next()) {
-            User user = new User();
-            user.setUserId(keys.getInt(1));
-            user.setUserName(username);
-            user.setPassword(password);
-            user.setEmail(email);
-            user.setPhoneNumber(phone);
-            user.setUserRole(Enums.UserRole.Subscriber);
-            return user;
-        }
-
-        throw new SQLException("Failed to create user");
-    }
-
-    /* =========================
-       CREATE SUBSCRIBER (REGISTER – step 2)
-       ========================= */
-
-    public Subscriber createSubscriber(
-            int userId,
             String firstName,
-            String lastName
+            String lastName,
+            String phone,
+            String email,
+            Enums.UserRole role
     ) throws SQLException {
 
         String sql =
-                "INSERT INTO subscribers (user_id, first_name, last_name) " +
-                "VALUES (?, ?, ?)";
+                "INSERT INTO SUBSCRIBERS " +
+                "(username, password, first_name, last_name, phone, email, role) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
-        PreparedStatement stmt =
-                conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+        try (PreparedStatement stmt =
+                     conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-        stmt.setInt(1, userId);
-        stmt.setString(2, firstName);
-        stmt.setString(3, lastName);
+            stmt.setString(1, username);
+            stmt.setString(2, password);
+            stmt.setString(3, firstName);
+            stmt.setString(4, lastName);
+            stmt.setString(5, phone);
+            stmt.setString(6, email);
+            stmt.setString(7, role.name());
 
-        stmt.executeUpdate();
+            stmt.executeUpdate();
 
-        ResultSet keys = stmt.getGeneratedKeys();
-        if (keys.next()) {
-            return new Subscriber(
-                    keys.getInt(1),                     // subscriberNumber
-                    firstName + " " + lastName,         // userName
-                    "Created on registration"           // personalDetails
-            );
+            ResultSet keys = stmt.getGeneratedKeys();
+            if (keys.next()) {
+                Subscriber subscriber = new Subscriber();
+
+                subscriber.setSubscriberId(keys.getInt(1));
+                subscriber.setUsername(username);
+                subscriber.setPassword(password);
+                subscriber.setFirstName(firstName);
+                subscriber.setLastName(lastName);
+                subscriber.setPhone(phone);
+                subscriber.setEmail(email);
+                subscriber.setRole(role);
+
+                return subscriber;
+            }
         }
 
-        throw new SQLException("Failed to create subscriber");
+        throw new SQLException("Failed to register subscriber");
     }
 
-    /* =========================
-       GET SUBSCRIBER BY USER ID
-       ========================= */
+    /* =========================================================
+       LOAD SUBSCRIBER BY ID
+       ---------------------------------------------------------
+       Retrieves full subscriber details using the primary key.
+       Used after login or for internal system operations.
+       ========================================================= */
 
-    public Subscriber getSubscriberByUserId(int userId) throws SQLException {
+    /**
+     * Retrieves a subscriber by its unique ID.
+     */
+    public Subscriber getSubscriberById(int subscriberId) throws SQLException {
 
-        String sql = "SELECT * FROM subscribers WHERE user_id = ?";
-        PreparedStatement stmt = conn.prepareStatement(sql);
-        stmt.setInt(1, userId);
+        String sql =
+                "SELECT * FROM SUBSCRIBERS WHERE subscriber_id = ?";
 
-        ResultSet rs = stmt.executeQuery();
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-        if (rs.next()) {
-            return new Subscriber(
-                    rs.getInt("subscriber_id"),
-                    rs.getString("first_name") + " " + rs.getString("last_name"),
-                    "Loaded from DB"
-            );
+            stmt.setInt(1, subscriberId);
+
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                Subscriber subscriber = new Subscriber();
+
+                subscriber.setSubscriberId(rs.getInt("subscriber_id"));
+                subscriber.setUsername(rs.getString("username"));
+                subscriber.setPassword(rs.getString("password"));
+                subscriber.setFirstName(rs.getString("first_name"));
+                subscriber.setLastName(rs.getString("last_name"));
+                subscriber.setPhone(rs.getString("phone"));
+                subscriber.setEmail(rs.getString("email"));
+                subscriber.setRole(
+                        Enums.UserRole.valueOf(rs.getString("role"))
+                );
+
+                return subscriber;
+            }
         }
 
         return null;
     }
 
-    /* =========================
+    /* =========================================================
        UPDATE SUBSCRIBER DETAILS
-       ========================= */
+       ---------------------------------------------------------
+       Updates personal and contact information of a subscriber.
+       Does not modify authentication or role data.
+       ========================================================= */
 
+    /**
+     * Updates subscriber personal and contact details.
+     */
     public boolean updateSubscriberDetails(
-            int subscriberNumber,
-            String userName
+            int subscriberId,
+            String firstName,
+            String lastName,
+            String phone,
+            String email
     ) throws SQLException {
 
         String sql =
-                "UPDATE subscribers " +
-                "SET first_name = ?, last_name = ? " +
+                "UPDATE SUBSCRIBERS " +
+                "SET first_name = ?, last_name = ?, phone = ?, email = ? " +
                 "WHERE subscriber_id = ?";
 
-        String[] nameParts = userName.split(" ", 2);
-        String firstName = nameParts[0];
-        String lastName = (nameParts.length > 1) ? nameParts[1] : "";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-        PreparedStatement stmt = conn.prepareStatement(sql);
-        stmt.setString(1, firstName);
-        stmt.setString(2, lastName);
-        stmt.setInt(3, subscriberNumber);
+            stmt.setString(1, firstName);
+            stmt.setString(2, lastName);
+            stmt.setString(3, phone);
+            stmt.setString(4, email);
+            stmt.setInt(5, subscriberId);
 
-        return stmt.executeUpdate() > 0;
-    }
-
-
-    /* =========================
-       RESERVATION HISTORY
-       ========================= */
-
-    public ArrayList<Reservation> getReservationHistoryBySubscriber(int subscriberNumber)
-            throws SQLException {
-
-        ArrayList<Reservation> history = new ArrayList<>();
-
-        String sql =
-                "SELECT * FROM reservations WHERE subscriber_number = ?";
-
-        PreparedStatement stmt = conn.prepareStatement(sql);
-        stmt.setInt(1, subscriberNumber);
-
-        ResultSet rs = stmt.executeQuery();
-
-        while (rs.next()) {
-            Reservation reservation = new Reservation();
-            reservation.setConfarmationCode(rs.getInt("confarmation_code"));
-            reservation.setReservationTime(
-                    rs.getTimestamp("reservation_time").toLocalDateTime()
-            );
-            reservation.setGuestAmount(rs.getInt("guest_amount"));
-            reservation.setConfirmed(rs.getBoolean("is_confirmed"));
-            history.add(reservation);
+            return stmt.executeUpdate() > 0;
         }
-
-        return history;
     }
-    /* =========================
-    UPDATE USER CONTACT DETAILS
-    ========================= */
+    
+    /* =========================================================
+    DELETE GUEST
+    ---------------------------------------------------------
+    Removes a guest record from the database.
+    Guests are identified by their contact details.
+    ========================================================= */
 
  /**
-  * Updates the contact details of a user in the database.
-  * This method updates ONLY the users table (phone and email).
+  * Deletes a guest from the database based on phone and email.
   *
-  * @param userId the unique ID of the user
-  * @param phone updated phone number
-  * @param email updated email address
-  * @return true if the update succeeded, false otherwise
+  * @param phone guest phone number
+  * @param email guest email address
+  * @return true if a guest record was deleted, false otherwise
   * @throws SQLException if a database error occurs
   */
-		 public boolean updateUserContactDetails(
-		         int userId,
-		         String phone,
-		         String email
-		 ) throws SQLException {
-		
-		     String sql =
-		             "UPDATE users " +
-		             "SET phone = ?, email = ? " +
-		             "WHERE user_id = ?";
-		
-		     PreparedStatement stmt = conn.prepareStatement(sql);
-		     stmt.setString(1, phone);
-		     stmt.setString(2, email);
-		     stmt.setInt(3, userId);
-		
-		     return stmt.executeUpdate() > 0;
+	 public boolean deleteGuest(String phone, String email) throws SQLException {
+	
+	     String sql =
+	             "DELETE FROM GUESTS WHERE phone = ? AND email = ?";
+	
+	     try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+	
+	         stmt.setString(1, phone);
+	         stmt.setString(2, email);
+	
+	         return stmt.executeUpdate() > 0;
+     }
  }
+	 
+	 
+	 /* =========================================================
+	   CHECK USERNAME EXISTENCE
+	   ---------------------------------------------------------
+	   Checks whether a given username already exists in the
+	   SUBSCRIBERS table.
+	   ========================================================= */
 
-    
-    
-    
+	/**
+	 * Checks if a username is already taken.
+	 *
+	 * @param username the username to check
+	 * @return true if the username exists, false otherwise
+	 * @throws SQLException if a database error occurs
+	 */
+	public boolean usernameExists(String username) throws SQLException {
+
+	    String sql =
+	            "SELECT 1 FROM SUBSCRIBERS WHERE username = ?";
+
+	    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+	        stmt.setString(1, username);
+
+	        ResultSet rs = stmt.executeQuery();
+	        return rs.next();
+	    }
+	}
+	
+	/* =========================================================
+	   LOAD ALL SUBSCRIBERS
+	   ---------------------------------------------------------
+	   Retrieves all subscriber records from the database.
+	   This method is intended for future administrative or
+	   reporting features and is not part of the current flow.
+	   ========================================================= */
+
+	/**
+	 * Retrieves all subscribers from the database.
+	 *
+	 * @return ResultSet containing all subscriber records
+	 * @throws SQLException if a database error occurs
+	 */
+	public ResultSet getAllSubscribers() throws SQLException {
+
+	    String sql = "SELECT * FROM SUBSCRIBERS";
+
+	    PreparedStatement stmt = conn.prepareStatement(sql);
+	    return stmt.executeQuery();
+	}
+	
+	
+	/**
+	 * Checks whether a guest with the given email already exists in the database.
+	 *
+	 * This method is used during guest login/registration in order to:
+	 * - Decide whether to send OTP only
+	 * - Or create a new guest record and then send OTP
+	 *
+	 * @param email the guest's email address
+	 * @return true if a guest with this email exists, false otherwise
+	 */
+	public boolean isGuestEmailExists(String email) {
+
+	    // Query returns a single row if the email exists
+	    String query = "SELECT 1 FROM GUESTS WHERE email = ? LIMIT 1";
+
+	    try (PreparedStatement ps = conn.prepareStatement(query)) {
+
+	        // Set email parameter
+	        ps.setString(1, email);
+
+	        // Execute query
+	        ResultSet rs = ps.executeQuery();
+
+	        // If a row exists – the email is already in the database
+	        return rs.next();
+
+	    } catch (SQLException e) {
+
+	        // Log database error (can be replaced with logger)
+	        e.printStackTrace();
+
+	        // In case of error, treat as "not exists" or throw exception
+	        return false;
+	    }
+	}
+
+
+
+
 }
