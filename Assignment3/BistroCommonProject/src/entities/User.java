@@ -17,6 +17,7 @@ public class User {
 	public String getPhoneNumber() {
 		return phoneNumber;
 	}
+
 	public void setPhoneNumber(String phoneNumber) {
 		this.phoneNumber = phoneNumber;
 	}
@@ -33,7 +34,7 @@ public class User {
 		this.userRole = userRole;
 	}
 	public Reservation getActiveReservation() {
-		return activeReservation;
+		return activeReservation; 
 	}
 	public void setActiveReservation(Reservation activeReservation) {
 		this.activeReservation = activeReservation;
