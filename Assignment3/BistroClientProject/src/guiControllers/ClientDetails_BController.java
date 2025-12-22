@@ -1,6 +1,7 @@
 package guiControllers;
 
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 import entities.Reservation;
 import entities.Subscriber;
@@ -18,12 +19,13 @@ import java.io.IOException;
 public class ClientDetails_BController {
 
     private Subscriber subscriber;
+    private List<Reservation> reservationHistory;
 
     @FXML private BorderPane rootPane;
 
     @FXML private TextField txtSubscriberNumber;
     @FXML private TextField txtUserName;
-    @FXML private TextArea txtPersonalDetails;
+    @FXML private TextArea txtContactDetails;
 
     @FXML private Label lblMessage;
 
@@ -62,59 +64,59 @@ public class ClientDetails_BController {
                 ));
     }
 
+    /* =========================
+       DATA INJECTION FROM SERVER
+       ========================= */
+
     public void setSubscriber(Subscriber subscriber) {
         this.subscriber = subscriber;
-        viewDetails();
+        viewSubscriberDetails();
+    }
+
+    public void setReservationHistory(List<Reservation> history) {
+        this.reservationHistory = history;
         viewReservationHistory();
     }
 
-    private void viewDetails() {
+    /* =========================
+       VIEW METHODS
+       ========================= */
+
+    private void viewSubscriberDetails() {
         clearMessage();
 
         if (subscriber == null) {
-            showMessage("No subscriber found.");
+            showMessage("No subscriber data.");
             return;
         }
 
         txtSubscriberNumber.setText(
-                String.valueOf(subscriber.getSubscriberNumber())
+                String.valueOf(subscriber.getSubscriberId())
         );
 
-        txtUserName.setText(subscriber.getUserName());
-        txtPersonalDetails.setText(subscriber.getPersonalDetails());
-    }
-
-    @FXML
-    private void onUpdateDetailsClicked() {
-        updateDetails();
-    }
-
-    private void updateDetails() {
-        clearMessage();
-
-        if (subscriber == null) {
-            showMessage("No subscriber found.");
-            return;
-        }
-
-        subscriber.setPersonalDetails(
-                txtPersonalDetails.getText().trim()
+        txtUserName.setText(
+                subscriber.getFirstName() + " " + subscriber.getLastName()
         );
 
-        showMessage("Details updated locally.");
+        txtContactDetails.setText(
+                "Phone: " + subscriber.getPhone() + "\n" +
+                "Email: " + subscriber.getEmail()
+        );
     }
 
     private void viewReservationHistory() {
-        clearMessage();
 
-        if (subscriber == null || subscriber.getReservationHistory() == null) {
+        if (reservationHistory == null) {
             tblReservationHistory.getItems().clear();
             return;
         }
 
-        tblReservationHistory.getItems()
-                .setAll(subscriber.getReservationHistory());
+        tblReservationHistory.getItems().setAll(reservationHistory);
     }
+
+    /* =========================
+       NAVIGATION
+       ========================= */
 
     @FXML
     private void onBackToMenuClicked() {
@@ -136,6 +138,10 @@ public class ClientDetails_BController {
             showMessage("Failed to open main menu.");
         }
     }
+
+    /* =========================
+       UI HELPERS
+       ========================= */
 
     private void showMessage(String msg) {
         lblMessage.setText(msg);

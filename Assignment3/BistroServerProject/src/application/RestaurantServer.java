@@ -13,6 +13,7 @@ import dbControllers.User_DB_Controller;
 
 import entities.Restaurant;
 import entities.Table;
+import entities.User;
 
 import javafx.application.Platform;
 
@@ -22,24 +23,20 @@ import logicControllers.UserController;
 import ocsf.server.AbstractServer;
 import ocsf.server.ConnectionToClient;
 
-
-
 public class RestaurantServer extends AbstractServer {
 
     public static final int DEFAULT_PORT = 5556;
 
-    // Main DB controller
+    // DB
     private DBController conn;
-    private RestaurantController restaurantController;
 
-    // User controllers
+    // Controllers
+    private RestaurantController restaurantController;
     private User_DB_Controller userDB;
     private UserController userController;
-    
- // Reservation DB controller
     private Reservation_DB_Controller reservationDB;
 
-    // GUI
+    // GUI (Server side)
     private gui.ServerGUIController uiController;
 
     private String serverIp;
@@ -55,7 +52,9 @@ public class RestaurantServer extends AbstractServer {
         }
     }
 
+    // =====================
     // Constructor
+    // =====================
     public RestaurantServer(int port) {
         super(port);
 
@@ -66,263 +65,163 @@ public class RestaurantServer extends AbstractServer {
             serverIp = InetAddress.getLocalHost().getHostAddress();
         } catch (UnknownHostException e) {
             serverIp = "UNKNOWN";
-            log("Could not determine server IP: " + e.getMessage());
         }
     }
 
+    // =====================
+    // Server lifecycle
+    // =====================
     @Override
     protected void serverStarted() {
+
         log("Server started on IP: " + serverIp);
         log("Listening on port " + getPort());
 
-        // Connect to DB
         conn.ConnectToDb();
-        
-        
+
         try {
-            // צריך לקבל Connection מתוך DBController
-            Connection sqlConn = conn.getConnection();  // אם אין מתודה כזו - תוסיפי (סעיף 4)
+            Connection sqlConn = conn.getConnection();
             if (sqlConn == null) {
-                log("DB connection failed - server cannot start.");
+                log("DB connection failed.");
                 return;
             }
-            
-            //Restaurant
+
+            // Restaurant
             Restaurant_DB_Controller rdb = new Restaurant_DB_Controller(sqlConn);
             restaurantController = new RestaurantController(rdb);
-            log("RestaurantController initialized.");
-            
-            //Reservation
+
+            // Reservation
             reservationDB = new Reservation_DB_Controller(sqlConn);
             reservationDB.createReservationsTable();
             reservationDB.createWaitingListTable();
-            log("Reservation initialized.");
-            
-            //Users
+
+            // Users
             userDB = new User_DB_Controller(sqlConn);
             userController = new UserController(userDB);
-            log("User controllers initialized.");
-            
-            
+
+            log("All controllers initialized.");
+
         } catch (Exception e) {
-            log("Failed: " + e.getMessage());
+            log("Initialization error: " + e.getMessage());
         }
-
-
-        // Create DB controllers for users
-       
     }
 
     @Override
     protected void serverStopped() {
-        log("Server has stopped listening.");
+        log("Server stopped.");
     }
 
     @Override
     protected synchronized void clientConnected(ConnectionToClient client) {
-        String clientIp = "UNKNOWN";
-        InetAddress addr = client.getInetAddress();
 
-        if (addr != null)
-            clientIp = addr.getHostAddress();
+        String ip = client.getInetAddress() != null
+                ? client.getInetAddress().getHostAddress()
+                : "UNKNOWN";
 
-        log("Client connected | Client IP: " + clientIp +
-            " | Server IP: " + serverIp +
-            " | Status: CONNECTED");
+        log("Client connected | IP: " + ip);
     }
 
-    @Override
-    protected synchronized void clientDisconnected(ConnectionToClient client) {
-        // nothing yet
-    }
-
+    // =====================
+    // Message handler
+    // =====================
     @Override
     protected void handleMessageFromClient(Object msg, ConnectionToClient client) {
 
-        log("Message received: " + msg + " from " + client);
-
         try {
-            if (msg instanceof ArrayList<?>) {
+            if (!(msg instanceof ArrayList<?>)) return;
 
-                ArrayList<?> arr = (ArrayList<?>) msg;
-                if (arr.isEmpty()) return;
+            ArrayList<?> arr = (ArrayList<?>) msg;
+            if (arr.isEmpty()) return;
 
-                String command = arr.get(0).toString().trim();
-                log("Command = '" + command + "'");
+            String command = arr.get(0).toString();
 
-                switch (command) {
+            switch (command) {
 
-                    // =====================
-                    //        LOGIN
-                    // =====================
-                    case "LOGIN": {
-                        log("Handling LOGIN request...");
+                // =====================
+                // LOGIN
+                // =====================
+                case "LOGIN": {
 
-                        Object response = userController.login(arr);
+                    // arr = ["LOGIN", username, password]
+                    String username = arr.get(1).toString();
+                    String password = arr.get(2).toString();
 
-                        client.sendToClient(response);
-                        break;
-                    }
+                    User user = userController.login(username, password);
 
-                    case "PRINT_ORDERS": {
-                        
-                        break;
-                    }
-
-                    case "UPDATE_DATE": {
-                        int orderNumber = Integer.parseInt(arr.get(1).toString());
-                        String dateStr = arr.get(2).toString();
-                        java.sql.Date newDate = java.sql.Date.valueOf(dateStr);
-
-                        
-                        break;
-                    }
-
-                    case "UPDATE_GUESTS": {
-                        int orderNumber = Integer.parseInt(arr.get(1).toString());
-                        int guests = Integer.parseInt(arr.get(2).toString());
-
-                      
-                        break;
-                    }
-
-                    case "CLIENT_LOGOUT": {
-                        String clientIp = "UNKNOWN";
-                        InetAddress addr = client.getInetAddress();
-
-                        if (addr != null)
-                            clientIp = addr.getHostAddress();
-
-                        log("Client logout | Client IP: " + clientIp);
-
-                        try {
-                            client.close();
-                        } catch (IOException e) {
-                            log("Error closing client: " + e.getMessage());
-                        }
-
-                        break;
-                    }
-                    case "RM_GET_TABLES": {
-                        try {
-                            if (restaurantController == null) {
-                                client.sendToClient("RM_ERROR|RestaurantController not initialized");
-                                break;
-                            }
-
-                            restaurantController.loadTablesFromDb();
-
-                            StringBuilder sb = new StringBuilder("RM_TABLES|");
-                            for (Table t : Restaurant.getInstance().getTables()) {
-                                sb.append(t.getTableNumber()).append(",")
-                                  .append(t.getSeatsAmount()).append(",")
-                                  .append(t.getIsAvailable() ? 1 : 0)
-                                  .append(";");
-                            }
-
-                            client.sendToClient(sb.toString());
-                        } catch (Exception e) {
-                            client.sendToClient("RM_ERROR|" + e.getMessage());
-                        }
-                        break;
-                    }
-
-                    case "RM_SAVE_TABLE": {
-                        try {
-                            if (restaurantController == null) {
-                                client.sendToClient("RM_ERROR|RestaurantController not initialized");
-                                break;
-                            }
-
-                            int num = Integer.parseInt(arr.get(1).toString());
-                            int seats = Integer.parseInt(arr.get(2).toString());
-                            boolean available = Boolean.parseBoolean(arr.get(3).toString());
-
-                            Table t = new Table();
-                            t.setTableNumber(num);
-                            t.setSeatsAmount(seats);
-                            t.setIsAvailable(available);
-
-                            // UPSERT ל-DB (יש לך ON DUPLICATE KEY UPDATE)
-                            // הכי נקי: להוסיף מתודה בלוגיקה שמשתמשת ב-db.saveTable
-                            restaurantController.saveOrUpdateTable(t);  // נוסיף עכשיו מתודה קטנה (סעיף 2)
-
-                            client.sendToClient("RM_OK|SAVED_OR_UPDATED");
-
-                        } catch (Exception e) {
-                            client.sendToClient("RM_ERROR|" + e.getMessage());
-                        }
-                        break;
-                    }
-
-
-                    case "RM_TOGGLE_AVAILABILITY": {
-                        try {
-                            if (restaurantController == null) {
-                                client.sendToClient("RM_ERROR|RestaurantController not initialized");
-                                break;
-                            }
-
-                            int num = Integer.parseInt(arr.get(1).toString());
-
-                            Table found = null;
-                            for (Table t : Restaurant.getInstance().getTables()) {
-                                if (t.getTableNumber() == num) { found = t; break; }
-                            }
-                            if (found == null) {
-                                client.sendToClient("RM_ERROR|Table not found");
-                                break;
-                            }
-
-                            found.setIsAvailable(!found.getIsAvailable());
-                            // עדכון DB – הכי פשוט כרגע
-                            restaurantController.syncAllTablesToDb();
-
-                            client.sendToClient("RM_OK|TOGGLED");
-
-                        } catch (Exception e) {
-                            client.sendToClient("RM_ERROR|" + e.getMessage());
-                        }
-                        break;
-                    }
-
-                    case "RM_DELETE_TABLE": {
-                        try {
-                            if (restaurantController == null) {
-                                client.sendToClient("RM_ERROR|RestaurantController not initialized");
-                                break;
-                            }
-
-                            int num = Integer.parseInt(arr.get(1).toString());
-                            boolean ok = restaurantController.removeTable(num);
-
-                            if (!ok) client.sendToClient("RM_ERROR|Table not found");
-                            else client.sendToClient("RM_OK|DELETED");
-
-                        } catch (Exception e) {
-                            client.sendToClient("RM_ERROR|" + e.getMessage());
-                        }
-                        break;
-                    }
-
-             
-
-                    default:
-                        log("Unknown command received: " + command);
-                        break;
+                    client.sendToClient(user);
+                    break;
                 }
+
+                // =====================
+                // CLIENT LOGOUT
+                // =====================
+                case "CLIENT_LOGOUT": {
+                    client.close();
+                    break;
+                }
+
+                // =====================
+                // RESTAURANT MANAGER
+                // =====================
+                case "RM_GET_TABLES": {
+
+                    restaurantController.loadTablesFromDb();
+
+                    StringBuilder sb = new StringBuilder("RM_TABLES|");
+                    for (Table t : Restaurant.getInstance().getTables()) {
+                        sb.append(t.getTableNumber()).append(",")
+                          .append(t.getSeatsAmount()).append(",")
+                          .append(t.getIsAvailable() ? 1 : 0)
+                          .append(";");
+                    }
+
+                    client.sendToClient(sb.toString());
+                    break;
+                }
+
+                case "RM_SAVE_TABLE": {
+
+                    int num = Integer.parseInt(arr.get(1).toString());
+                    int seats = Integer.parseInt(arr.get(2).toString());
+                    boolean available = Boolean.parseBoolean(arr.get(3).toString());
+
+                    Table t = new Table();
+                    t.setTableNumber(num);
+                    t.setSeatsAmount(seats);
+                    t.setIsAvailable(available);
+
+                    restaurantController.saveOrUpdateTable(t);
+                    client.sendToClient("RM_OK");
+                    break;
+                }
+
+                case "RM_DELETE_TABLE": {
+
+                    int num = Integer.parseInt(arr.get(1).toString());
+                    boolean ok = restaurantController.removeTable(num);
+
+                    client.sendToClient(ok ? "RM_OK" : "RM_ERROR");
+                    break;
+                }
+
+                default:
+                    log("Unknown command: " + command);
             }
 
         } catch (Exception e) {
-            log("Error in handleMessageFromClient: " + e.getMessage());
+            log("Error handling message: " + e.getMessage());
         }
     }
 
+    // =====================
+    // Main
+    // =====================
     public static void main(String[] args) {
+
         int port;
         try {
             port = Integer.parseInt(args[0]);
-        } catch (Throwable t) {
+        } catch (Exception e) {
             port = DEFAULT_PORT;
         }
 
@@ -331,7 +230,7 @@ public class RestaurantServer extends AbstractServer {
         try {
             server.listen();
         } catch (Exception e) {
-            server.log("ERROR - Could not listen for clients!");
+            server.log("ERROR: Could not start server");
         }
     }
 }

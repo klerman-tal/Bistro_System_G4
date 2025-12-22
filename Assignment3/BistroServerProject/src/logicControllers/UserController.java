@@ -14,10 +14,15 @@ public class UserController {
     public UserController(User_DB_Controller userDB) {
         this.userDB = userDB;
     }
-<<<<<<< HEAD
-=======
+
+
+	public User login(String username, String password) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+}
+
 
    
 
->>>>>>> branch 'dev' of https://github.com/klerman-tal/Bistro_System_G4.git
-}
+
