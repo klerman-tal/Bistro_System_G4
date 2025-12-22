@@ -4,7 +4,11 @@ import entities.Enums.UserRole;
 
 /**
  * Represents a subscriber entity.
+<<<<<<< HEAD
  * This class maps directly to the SUBSCRIBERS table in the database.
+=======
+ * This class maps directly to the SUBSCRIBERS table in the database.ש
+>>>>>>> branch 'dev' of https://github.com/klerman-tal/Bistro_System_G4.git
  * It contains only identification and personal information.
  */
 public class Subscriber {

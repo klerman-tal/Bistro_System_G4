@@ -376,4 +376,8 @@ public class User_DB_Controller {
 
 
 
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> branch 'dev' of https://github.com/klerman-tal/Bistro_System_G4.git

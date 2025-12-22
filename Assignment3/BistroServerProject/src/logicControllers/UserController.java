@@ -14,4 +14,10 @@ public class UserController {
     public UserController(User_DB_Controller userDB) {
         this.userDB = userDB;
     }
+<<<<<<< HEAD
+=======
+
+   
+
+>>>>>>> branch 'dev' of https://github.com/klerman-tal/Bistro_System_G4.git
 }
