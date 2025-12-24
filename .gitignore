@@ -3,6 +3,7 @@
 bin/
 tmp/
 *.class
+*.jar
 
 # Eclipse project files
 .classpath
