@@ -50,7 +50,7 @@ public class DBController {
             // ===== DEBUG / VERIFY (new) =====
             logCurrentDatabase();                 // prints which DB we're connected to
             logIfRestaurantTablesExists();        // prints YES/NO
-            ensureRestaurantTablesTableExists();  // creates only if missing
+            //ensureRestaurantTablesTableExists();  // creates only if missing
             logRestaurantTablesRowCount();        // prints row count
 
         } catch (SQLException ex) {
