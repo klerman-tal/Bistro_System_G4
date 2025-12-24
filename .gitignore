@@ -1,10 +1,15 @@
-# Java build outputs
-*.class
-bin/
-*/bin/
-
-# Eclipse
-.project
-.classpath
-.settings/
+# Eclipse metadata
 .metadata/
+bin/
+tmp/
+*.class
+*.jar
+
+# Eclipse project files
+.classpath
+.project
+.settings/
+
+# OS generated files
+.DS_Store
+Thumbs.db
