@@ -3,32 +3,49 @@ package application;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.sql.Connection;
 import java.util.ArrayList;
 
 import dbControllers.DBController;
+import dbControllers.Reservation_DB_Controller;
+import dbControllers.Restaurant_DB_Controller;
+import dbControllers.User_DB_Controller;
+
+import entities.Restaurant;
+import entities.Table;
+import entities.User;
 
 import javafx.application.Platform;
+
+import logicControllers.RestaurantController;
+import logicControllers.UserController;
+
 import ocsf.server.AbstractServer;
 import ocsf.server.ConnectionToClient;
 
 public class RestaurantServer extends AbstractServer {
-
+	//Tal test
+	//Tal test 2
     public static final int DEFAULT_PORT = 5556;
 
-    // Main DB controller (manages SQL connection)
+    // DB
     private DBController conn;
 
-    // GUI controller for server window
+    // Controllers
+    private RestaurantController restaurantController;
+    private User_DB_Controller userDB;
+    private UserController userController;
+    private Reservation_DB_Controller reservationDB;
+
+    // GUI (Server side)
     private gui.ServerGUIController uiController;
 
     private String serverIp;
 
-    // Allow UI controller to attach to server for logging
     public void setUiController(gui.ServerGUIController controller) {
         this.uiController = controller;
     }
 
-    // Unified logging method (console + GUI)
     public void log(String msg) {
         System.out.println(msg);
         if (uiController != null) {
@@ -36,134 +53,176 @@ public class RestaurantServer extends AbstractServer {
         }
     }
 
-    // Server constructor
+    // =====================
+    // Constructor
+    // =====================
     public RestaurantServer(int port) {
         super(port);
 
         conn = new DBController();
-        conn.setServer(this); // Attach server for logging
+        conn.setServer(this);
 
         try {
             serverIp = InetAddress.getLocalHost().getHostAddress();
         } catch (UnknownHostException e) {
             serverIp = "UNKNOWN";
-            log("Could not determine server IP: " + e.getMessage());
         }
     }
 
+    // =====================
+    // Server lifecycle
+    // =====================
     @Override
     protected void serverStarted() {
+
         log("Server started on IP: " + serverIp);
         log("Listening on port " + getPort());
 
-        // Open SQL connection
         conn.ConnectToDb();
 
-        log("Database connection initialized.");
+        try {
+            Connection sqlConn = conn.getConnection();
+            if (sqlConn == null) {
+                log("DB connection failed.");
+                return;
+            }
+
+            // Restaurant
+            Restaurant_DB_Controller rdb = new Restaurant_DB_Controller(sqlConn);
+            restaurantController = new RestaurantController(rdb);
+
+            // Reservation
+            reservationDB = new Reservation_DB_Controller(sqlConn);
+            reservationDB.createReservationsTable();
+            reservationDB.createWaitingListTable();
+
+            // Users
+            userDB = new User_DB_Controller(sqlConn);
+            userController = new UserController(userDB);
+
+            log("All controllers initialized.");
+
+        } catch (Exception e) {
+            log("Initialization error: " + e.getMessage());
+        }
     }
 
     @Override
     protected void serverStopped() {
-        log("Server has stopped listening.");
+        log("Server stopped.");
     }
 
     @Override
     protected synchronized void clientConnected(ConnectionToClient client) {
-        String clientIp = "UNKNOWN";
-        InetAddress addr = client.getInetAddress();
 
-        if (addr != null)
-            clientIp = addr.getHostAddress();
+        String ip = client.getInetAddress() != null
+                ? client.getInetAddress().getHostAddress()
+                : "UNKNOWN";
 
-        log("Client connected | Client IP: " + clientIp +
-            " | Server IP: " + serverIp +
-            " | Status: CONNECTED");
+        log("Client connected | IP: " + ip);
     }
 
-    @Override
-    protected synchronized void clientDisconnected(ConnectionToClient client) {
-        // No extra logic needed for now
-    }
-
+    // =====================
+    // Message handler
+    // =====================
     @Override
     protected void handleMessageFromClient(Object msg, ConnectionToClient client) {
 
-        log("Message received: " + msg + " from " + client);
-
         try {
-            if (msg instanceof ArrayList) {
+            if (!(msg instanceof ArrayList<?>)) return;
 
-                ArrayList<?> arr = (ArrayList<?>) msg;
-                if (arr.isEmpty()) return;
+            ArrayList<?> arr = (ArrayList<?>) msg;
+            if (arr.isEmpty()) return;
 
-                String command = arr.get(0).toString().trim();
-                log("Command = '" + command + "'");
+            String command = arr.get(0).toString();
 
-                switch (command) {
+            switch (command) {
 
-                    case "PRINT_ORDERS": {
-                        var orders = conn.getOrdersForClient();
-                        for (String order : orders)
-                            client.sendToClient(order);
-                        break;
-                    }
+                // =====================
+                // LOGIN
+                // =====================
+                case "LOGIN": {
 
-                    case "UPDATE_DATE": {
-                        int orderNumber = Integer.parseInt(arr.get(1).toString());
-                        String dateStr = arr.get(2).toString();
-                        java.sql.Date newDate = java.sql.Date.valueOf(dateStr);
+                    // arr = ["LOGIN", username, password]
+                    String username = arr.get(1).toString();
+                    String password = arr.get(2).toString();
 
-                        conn.UpdateOrderDate(orderNumber, newDate);
-                        client.sendToClient("Order " + orderNumber +
-                               " date updated to " + dateStr);
+                    User user = userController.login(username, password);
 
-                        break;
-                    }
-
-                    case "UPDATE_GUESTS": {
-                        int orderNumber = Integer.parseInt(arr.get(1).toString());
-                        int guests = Integer.parseInt(arr.get(2).toString());
-
-                        conn.UpdateNumberOfGuests(orderNumber, guests);
-                        client.sendToClient("Order " + orderNumber +
-                               " guest count updated to " + guests);
-
-                        break;
-                    }
-
-                    case "CLIENT_LOGOUT": {
-                        String clientIp = "UNKNOWN";
-                        InetAddress addr = client.getInetAddress();
-
-                        if (addr != null)
-                            clientIp = addr.getHostAddress();
-
-                        log("Client logout | Client IP: " + clientIp);
-
-                        try {
-                            client.close();
-                        } catch (IOException e) {
-                            log("Error closing client: " + e.getMessage());
-                        }
-                        break;
-                    }
-
-                    default:
-                        log("Unknown command received");
-                        break;
+                    client.sendToClient(user);
+                    break;
                 }
+
+                // =====================
+                // CLIENT LOGOUT
+                // =====================
+                case "CLIENT_LOGOUT": {
+                    client.close();
+                    break;
+                }
+
+                // =====================
+                // RESTAURANT MANAGER
+                // =====================
+                case "RM_GET_TABLES": {
+
+                    restaurantController.loadTablesFromDb();
+
+                    StringBuilder sb = new StringBuilder("RM_TABLES|");
+                    for (Table t : Restaurant.getInstance().getTables()) {
+                        sb.append(t.getTableNumber()).append(",")
+                          .append(t.getSeatsAmount()).append(",")
+                          .append(t.getIsAvailable() ? 1 : 0)
+                          .append(";");
+                    }
+
+                    client.sendToClient(sb.toString());
+                    break;
+                }
+
+                case "RM_SAVE_TABLE": {
+
+                    int num = Integer.parseInt(arr.get(1).toString());
+                    int seats = Integer.parseInt(arr.get(2).toString());
+                    boolean available = Boolean.parseBoolean(arr.get(3).toString());
+
+                    Table t = new Table();
+                    t.setTableNumber(num);
+                    t.setSeatsAmount(seats);
+                    t.setIsAvailable(available);
+
+                    restaurantController.saveOrUpdateTable(t);
+                    client.sendToClient("RM_OK");
+                    break;
+                }
+
+                case "RM_DELETE_TABLE": {
+
+                    int num = Integer.parseInt(arr.get(1).toString());
+                    boolean ok = restaurantController.removeTable(num);
+
+                    client.sendToClient(ok ? "RM_OK" : "RM_ERROR");
+                    break;
+                }
+
+                default:
+                    log("Unknown command: " + command);
             }
 
         } catch (Exception e) {
-            log("Error in handleMessageFromClient: " + e.getMessage());
+            log("Error handling message: " + e.getMessage());
         }
     }
 
+    // =====================
+    // Main
+    // =====================
     public static void main(String[] args) {
+
         int port;
         try {
             port = Integer.parseInt(args[0]);
-        } catch (Throwable t) {
+        } catch (Exception e) {
             port = DEFAULT_PORT;
         }
 
@@ -172,7 +231,7 @@ public class RestaurantServer extends AbstractServer {
         try {
             server.listen();
         } catch (Exception e) {
-            server.log("ERROR - Could not listen for clients!");
+            server.log("ERROR: Could not start server");
         }
     }
 }

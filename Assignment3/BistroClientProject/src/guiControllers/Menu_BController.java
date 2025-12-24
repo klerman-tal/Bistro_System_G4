@@ -1,6 +1,8 @@
 package guiControllers;
 
 import java.io.IOException;
+
+import interfaces.ClientActions;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -23,16 +25,30 @@ public class Menu_BController {
 
     @FXML private Label lblMessage;
 
+    private ClientActions clientActions;
+
+    public void setClientActions(ClientActions clientActions) {
+        this.clientActions = clientActions;
+    }
+
     private void openWindow(String fxmlName, String title) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
             Parent root = loader.load();
 
+            Object controller = loader.getController();
+            // אם למסך הבא יש setClientActions – מעבירים
+            if (controller instanceof RestaurantManagement_BController) {
+                ((RestaurantManagement_BController) controller).setClientActions(clientActions);
+            }
+            // בהמשך תעשי אותו דבר למסכים אחרים שצריכים שרת
+
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setTitle("Bistro - " + title);
             stage.setScene(new Scene(root));
             stage.show();
-        } catch (IOException e) {
+
+        } catch (Exception e) {
             e.printStackTrace();
             if (lblMessage != null) {
                 lblMessage.setText("Failed to open: " + fxmlName);
@@ -43,24 +59,16 @@ public class Menu_BController {
     }
 
     @FXML
-    private void onSelectReservationClicked() {
-        openWindow("TableReservation_B.fxml", "Table Reservation");
-    }
+    private void onSelectReservationClicked() { openWindow("TableReservation_B.fxml", "Table Reservation"); }
 
     @FXML
-    private void onSelectPaymentClicked() {
-        openWindow("Payment_B.fxml", "Payment");
-    }
+    private void onSelectPaymentClicked() { openWindow("Payment_B.fxml", "Payment"); }
 
     @FXML
-    private void onSelectPersonalDetailsClicked() {
-        openWindow("ClientDetails_B.fxml", "Client Details");
-    }
+    private void onSelectPersonalDetailsClicked() { openWindow("ClientDetails_B.fxml", "Client Details"); }
 
     @FXML
-    private void onSelectGetTableClicked() {
-        openWindow("GetTable_B.fxml", "Get Table");
-    }
+    private void onSelectGetTableClicked() { openWindow("GetTable_B.fxml", "Get Table"); }
 
     @FXML
     private void onSelectRestaurantManagementClicked() {

@@ -1,6 +1,7 @@
 package guiControllers;
 
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 import entities.Reservation;
 import entities.Subscriber;
@@ -12,19 +13,19 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
+
 import java.io.IOException;
 
 public class ClientDetails_BController {
 
     private Subscriber subscriber;
+    private List<Reservation> reservationHistory;
 
     @FXML private BorderPane rootPane;
 
     @FXML private TextField txtSubscriberNumber;
     @FXML private TextField txtUserName;
-    @FXML private TextArea txtPersonalDetails;
-    @FXML private TextField txtPhoneNumber;
-    @FXML private TextField txtEmail;
+    @FXML private TextArea txtContactDetails;
 
     @FXML private Label lblMessage;
 
@@ -39,6 +40,7 @@ public class ClientDetails_BController {
 
     @FXML
     private void initialize() {
+
         colDateTime.setCellValueFactory(res ->
                 new SimpleStringProperty(
                         res.getValue().getReservationTime() != null
@@ -53,7 +55,7 @@ public class ClientDetails_BController {
 
         colCode.setCellValueFactory(res ->
                 new SimpleStringProperty(
-                        String.valueOf(res.getValue().getConfarmationCode())
+                        String.valueOf(res.getValue().CreateConfirmationCode())
                 ));
 
         colStatus.setCellValueFactory(res ->
@@ -62,72 +64,84 @@ public class ClientDetails_BController {
                 ));
     }
 
+    /* =========================
+       DATA INJECTION FROM SERVER
+       ========================= */
+
     public void setSubscriber(Subscriber subscriber) {
         this.subscriber = subscriber;
-        ViewDetails();
-        ViewReservationHistory();
+        viewSubscriberDetails();
     }
 
-    public void ViewDetails() {
+    public void setReservationHistory(List<Reservation> history) {
+        this.reservationHistory = history;
+        viewReservationHistory();
+    }
+
+    /* =========================
+       VIEW METHODS
+       ========================= */
+
+    private void viewSubscriberDetails() {
         clearMessage();
 
         if (subscriber == null) {
-            showMessage("No subscriber found.");
+            showMessage("No subscriber data.");
             return;
         }
 
-        txtSubscriberNumber.setText(String.valueOf(subscriber.getSubscriberNumber()));
-        txtUserName.setText(subscriber.getUserName());
-        txtPersonalDetails.setText(subscriber.getPersonalDetails());
-        txtPhoneNumber.setText(subscriber.getPhoneNumber());
-        txtEmail.setText(subscriber.getEmail());
+        txtSubscriberNumber.setText(
+                String.valueOf(subscriber.getSubscriberId())
+        );
+
+        txtUserName.setText(
+                subscriber.getFirstName() + " " + subscriber.getLastName()
+        );
+
+        txtContactDetails.setText(
+                "Phone: " + subscriber.getPhone() + "\n" +
+                "Email: " + subscriber.getEmail()
+        );
     }
 
-    @FXML
-    private void onUpdateDetailsClicked() {
-        UpdateDetails();
-    }
+    private void viewReservationHistory() {
 
-    public void UpdateDetails() {
-        clearMessage();
-
-        if (subscriber == null) {
-            showMessage("No subscriber found.");
-            return;
-        }
-
-        subscriber.setPhoneNumber(txtPhoneNumber.getText().trim());
-        subscriber.setEmail(txtEmail.getText().trim());
-
-        showMessage("Details updated.");
-    }
-
-    public void ViewReservationHistory() {
-        clearMessage();
-
-        if (subscriber == null || subscriber.getReservationHistory() == null) {
+        if (reservationHistory == null) {
             tblReservationHistory.getItems().clear();
             return;
         }
 
-        tblReservationHistory.getItems().setAll(subscriber.getReservationHistory());
+        tblReservationHistory.getItems().setAll(reservationHistory);
     }
+
+    /* =========================
+       NAVIGATION
+       ========================= */
 
     @FXML
     private void onBackToMenuClicked() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
+
             Parent root = loader.load();
 
-            Stage stage = (Stage) rootPane.getScene().getWindow();
+            Stage stage =
+                    (Stage) rootPane.getScene().getWindow();
+
             stage.setTitle("Bistro - Main Menu");
             stage.setScene(new Scene(root));
             stage.show();
+
         } catch (IOException e) {
             e.printStackTrace();
             showMessage("Failed to open main menu.");
         }
     }
+
+    /* =========================
+       UI HELPERS
+       ========================= */
 
     private void showMessage(String msg) {
         lblMessage.setText(msg);
