@@ -12,28 +12,78 @@ import entities.Subscriber;
 public class User_DB_Controller {
 
     private Connection conn;
+    private Statement stmt;
 
+    // Constructor – receives an open DB connection from the server
     public User_DB_Controller(Connection conn) {
         this.conn = conn;
     }
 
-    /* =========================================================
-       LOGIN SUBSCRIBER
-       ========================================================= */
+    /*
+     * ===============================================================
+     * createGuestsTable
+     * Creates the GUESTS table if it does not already exist
+     * ===============================================================
+     */
+    public void createGuestsTable() throws SQLException {
 
+        String sql = "CREATE TABLE IF NOT EXISTS GUESTS (" +
+                "id INT AUTO_INCREMENT PRIMARY KEY, " +
+                "phone VARCHAR(15) NOT NULL, " +
+                "email VARCHAR(100) NOT NULL, " +
+                "first_name VARCHAR(50), " +
+                "last_name VARCHAR(50), " +
+                "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                "UNIQUE (phone, email))";
+
+        // Execute CREATE TABLE statement
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate(sql);
+        }
+    }
+
+    /*
+     * ===============================================================
+     * createSubscribersTable
+     * Creates the SUBSCRIBERS table if it does not already exist
+     * ===============================================================
+     */
+    public void createSubscribersTable() throws SQLException {
+
+        String sql = "CREATE TABLE IF NOT EXISTS SUBSCRIBERS (" +
+                "id INT AUTO_INCREMENT PRIMARY KEY, " +
+                "username VARCHAR(50) NOT NULL UNIQUE, " +
+                "password VARCHAR(255) NOT NULL, " +
+                "role ENUM('SUBSCRIBER','MANAGER','REPRESENTATIVE') NOT NULL, " +
+                "first_name VARCHAR(50), " +
+                "last_name VARCHAR(50), " +
+                "email VARCHAR(100), " +
+                "phone VARCHAR(15))";
+
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate(sql);
+        }
+    }
+
+    /*
+     * ===============================================================
+     * loginSubscriber
+     * Validates username and password and returns a Subscriber object
+     * ===============================================================
+     */
     public Subscriber loginSubscriber(String username, String password) {
 
-        String sql =
-                "SELECT * FROM SUBSCRIBERS " +
-                "WHERE username = ? AND password = ?";
+        String sql = "SELECT * FROM SUBSCRIBERS WHERE username = ? AND password = ?";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
 
+            // Bind credentials
             stmt.setString(1, username);
             stmt.setString(2, password);
 
             ResultSet rs = stmt.executeQuery();
 
+            // If user exists – build Subscriber object
             if (rs.next()) {
                 Subscriber subscriber = new Subscriber();
 
@@ -44,9 +94,7 @@ public class User_DB_Controller {
                 subscriber.setLastName(rs.getString("last_name"));
                 subscriber.setPhone(rs.getString("phone"));
                 subscriber.setEmail(rs.getString("email"));
-                subscriber.setRole(
-                        Enums.UserRole.valueOf(rs.getString("role"))
-                );
+                subscriber.setRole(Enums.UserRole.valueOf(rs.getString("role")));
 
                 return subscriber;
             }
@@ -58,14 +106,16 @@ public class User_DB_Controller {
         return null;
     }
 
-    /* =========================================================
-       GUEST METHODS
-       ========================================================= */
+    /*
+     * ===============================================================
+     * GUEST METHODS
+     * ===============================================================
+     */
 
+    // Checks whether a guest already exists by phone + email
     public boolean guestExists(String phone, String email) throws SQLException {
 
-        String sql =
-                "SELECT 1 FROM GUESTS WHERE phone = ? AND email = ?";
+        String sql = "SELECT 1 FROM GUESTS WHERE phone = ? AND email = ?";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
 
@@ -77,14 +127,14 @@ public class User_DB_Controller {
         }
     }
 
+    // Inserts a new guest only if it does not already exist
     public void enterAsGuest(String phone, String email) throws SQLException {
 
         if (guestExists(phone, email)) {
             return;
         }
 
-        String sql =
-                "INSERT INTO GUESTS (phone, email) VALUES (?, ?)";
+        String sql = "INSERT INTO GUESTS (phone, email) VALUES (?, ?)";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
 
@@ -94,10 +144,10 @@ public class User_DB_Controller {
         }
     }
 
+    // Deletes a guest by phone and email
     public boolean deleteGuest(String phone, String email) throws SQLException {
 
-        String sql =
-                "DELETE FROM GUESTS WHERE phone = ? AND email = ?";
+        String sql = "DELETE FROM GUESTS WHERE phone = ? AND email = ?";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
 
@@ -108,10 +158,10 @@ public class User_DB_Controller {
         }
     }
 
+    // Checks if a guest email already exists (used for validation)
     public boolean isGuestEmailExists(String email) {
 
-        String sql =
-                "SELECT 1 FROM GUESTS WHERE email = ? LIMIT 1";
+        String sql = "SELECT 1 FROM GUESTS WHERE email = ? LIMIT 1";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
 
@@ -125,27 +175,21 @@ public class User_DB_Controller {
         }
     }
 
-    /* =========================================================
-       REGISTER / LOAD SUBSCRIBER
-       ========================================================= */
+    /*
+     * ===============================================================
+     * REGISTER / LOAD SUBSCRIBER
+     * ===============================================================
+     */
 
-    public Subscriber registerSubscriber(
-            String username,
-            String password,
-            String firstName,
-            String lastName,
-            String phone,
-            String email,
-            Enums.UserRole role
-    ) throws SQLException {
+    // Registers a new subscriber and returns the created object
+    public Subscriber registerSubscriber(String username, String password, String firstName,
+            String lastName, String phone, String email, Enums.UserRole role) throws SQLException {
 
-        String sql =
-                "INSERT INTO SUBSCRIBERS " +
+        String sql = "INSERT INTO SUBSCRIBERS " +
                 "(username, password, first_name, last_name, phone, email, role) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
-        try (PreparedStatement stmt =
-                     conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             stmt.setString(1, username);
             stmt.setString(2, password);
@@ -157,6 +201,7 @@ public class User_DB_Controller {
 
             stmt.executeUpdate();
 
+            // Retrieve generated subscriber ID
             ResultSet keys = stmt.getGeneratedKeys();
             if (keys.next()) {
                 Subscriber subscriber = new Subscriber();
@@ -177,15 +222,14 @@ public class User_DB_Controller {
         throw new SQLException("Failed to register subscriber");
     }
 
+    // Loads a subscriber by ID
     public Subscriber getSubscriberById(int subscriberId) throws SQLException {
 
-        String sql =
-                "SELECT * FROM SUBSCRIBERS WHERE subscriber_id = ?";
+        String sql = "SELECT * FROM SUBSCRIBERS WHERE subscriber_id = ?";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, subscriberId);
-
             ResultSet rs = stmt.executeQuery();
 
             if (rs.next()) {
@@ -198,9 +242,7 @@ public class User_DB_Controller {
                 subscriber.setLastName(rs.getString("last_name"));
                 subscriber.setPhone(rs.getString("phone"));
                 subscriber.setEmail(rs.getString("email"));
-                subscriber.setRole(
-                        Enums.UserRole.valueOf(rs.getString("role"))
-                );
+                subscriber.setRole(Enums.UserRole.valueOf(rs.getString("role")));
 
                 return subscriber;
             }
@@ -209,16 +251,11 @@ public class User_DB_Controller {
         return null;
     }
 
-    public boolean updateSubscriberDetails(
-            int subscriberId,
-            String firstName,
-            String lastName,
-            String phone,
-            String email
-    ) throws SQLException {
+    // Updates editable subscriber details
+    public boolean updateSubscriberDetails(int subscriberId, String firstName,
+            String lastName, String phone, String email) throws SQLException {
 
-        String sql =
-                "UPDATE SUBSCRIBERS " +
+        String sql = "UPDATE SUBSCRIBERS " +
                 "SET first_name = ?, last_name = ?, phone = ?, email = ? " +
                 "WHERE subscriber_id = ?";
 
@@ -234,10 +271,10 @@ public class User_DB_Controller {
         }
     }
 
+    // Checks if a username already exists
     public boolean usernameExists(String username) throws SQLException {
 
-        String sql =
-                "SELECT 1 FROM SUBSCRIBERS WHERE username = ?";
+        String sql = "SELECT 1 FROM SUBSCRIBERS WHERE username = ?";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
 
@@ -247,6 +284,7 @@ public class User_DB_Controller {
         }
     }
 
+    // Returns all subscribers (used mainly for admin / future features)
     public ResultSet getAllSubscribers() throws SQLException {
 
         String sql = "SELECT * FROM SUBSCRIBERS";
