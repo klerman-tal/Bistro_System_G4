@@ -28,7 +28,6 @@ public class RestaurantServer extends AbstractServer {
 	//Tal test 2
 	//Tal test 3
 	//Tal test 4
-	//Lior test 5
     public static final int DEFAULT_PORT = 5556;
 
     // DB
