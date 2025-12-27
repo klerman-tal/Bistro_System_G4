@@ -77,37 +77,46 @@ public class RestaurantServer extends AbstractServer {
     @Override
     protected void serverStarted() {
 
+        // Log basic server info
         log("Server started on IP: " + serverIp);
         log("Listening on port " + getPort());
 
+        // Step 1: connect to the database
         conn.ConnectToDb();
 
         try {
+            // Step 2: get SQL connection object
             Connection sqlConn = conn.getConnection();
             if (sqlConn == null) {
                 log("DB connection failed.");
                 return;
             }
 
-            // Restaurant
+            // Step 3: initialize restaurant DB & logic
             Restaurant_DB_Controller rdb = new Restaurant_DB_Controller(sqlConn);
             restaurantController = new RestaurantController(rdb);
 
-            // Reservation
+            // Step 4: initialize reservation DB and create its tables
             reservationDB = new Reservation_DB_Controller(sqlConn);
             reservationDB.createReservationsTable();
             reservationDB.createWaitingListTable();
 
-            // Users
+            // Step 5: initialize user DB and create user tables
             userDB = new User_DB_Controller(sqlConn);
+            userDB.createSubscribersTable();   // SUBSCRIBERS table
+            userDB.createGuestsTable();        // GUESTS table
+
+            // Step 6: initialize user logic controller
             userController = new UserController(userDB);
 
-            log("All controllers initialized.");
+            // Step 7: final log
+            log("All controllers and database tables initialized.");
 
         } catch (Exception e) {
             log("Initialization error: " + e.getMessage());
         }
     }
+
 
     @Override
     protected void serverStopped() {
