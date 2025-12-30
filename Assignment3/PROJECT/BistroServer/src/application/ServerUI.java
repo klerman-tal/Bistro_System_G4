@@ -12,11 +12,6 @@ import dbControllers.DBController;
 import gui.ServerGUIController;
 
 public class ServerUI extends Application {
-	//Test ignoring class :)
-	//Test2
-	//Test3
-	//Testfinal
-	//TestAgain
 	
     private static ServerGUIController controller;
 
