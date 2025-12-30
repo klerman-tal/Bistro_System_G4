@@ -1,0 +1,17 @@
+# Eclipse
+.project
+.classpath
+.settings/
+
+# Build output
+bin/
+out/
+target/
+*.class
+
+# JavaFX / Libraries
+*.jar
+
+# OS
+.DS_Store
+Thumbs.db
