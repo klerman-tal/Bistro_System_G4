@@ -12,7 +12,7 @@ import dbControllers.DBController;
 import gui.ServerGUIController;
 
 public class ServerUI extends Application {
-	//Test ignoring class :)
+	//Test push to dev
     private static ServerGUIController controller;
 
     @Override
