@@ -4,7 +4,11 @@ import entities.Enums.UserRole;
 
 /**
  * Represents a subscriber entity.
+<<<<<<< HEAD
  * This class maps directly to the SUBSCRIBERS table in the database.
+=======
+ * This class maps directly to the SUBSCRIBERS table in the database.ש
+>>>>>>> branch 'dev' of https://github.com/klerman-tal/Bistro_System_G4.git
  * It contains only identification and personal information.
  */
 public class Subscriber {
@@ -16,6 +20,9 @@ public class Subscriber {
 
     /** Login username */
     private String username;
+
+    /** Encrypted password */
+    private String password;
 
     /** Subscriber first name */
     private String firstName;
@@ -29,19 +36,24 @@ public class Subscriber {
     /** Subscriber email address */
     private String email;
 
-    /** Role of the subscriber (SUBSCRIBER / REPRESENTATIVE / MANAGER) */
+    /** Role of the subscriber (SUBSCRIBER / RESTAURANT_REP / MANAGER) */
     private UserRole role;
 
     // ====== Constructors ======
 
-    /** Empty constructor required for DB mapping */
+    /**
+     * Empty constructor required for DB mapping.
+     */
     public Subscriber() {
     }
 
-    /** Full constructor */
+    /**
+     * Full constructor for creating a complete Subscriber object.
+     */
     public Subscriber(
             int subscriberId,
             String username,
+            String password,
             String firstName,
             String lastName,
             String phone,
@@ -50,6 +62,7 @@ public class Subscriber {
     ) {
         this.subscriberId = subscriberId;
         this.username = username;
+        this.password = password;
         this.firstName = firstName;
         this.lastName = lastName;
         this.phone = phone;
@@ -73,6 +86,14 @@ public class Subscriber {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public String getFirstName() {
