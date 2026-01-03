@@ -5,6 +5,8 @@ public class User {
 	// ====== Fields ======
 	private Integer userId;
 	private String phoneNumber;
+	private String userName;
+	private String password;
 	private String email;
 	private Enums.UserRole userRole;
 	private Reservation activeReservation;
@@ -12,12 +14,6 @@ public class User {
 	// ====== Properties ======
 	
 	
-	public User(String phone, String email) {
-		this.phoneNumber = phone;
-		this.email = email;
-		
-	}
-
 	public String getPhoneNumber() {
 		return phoneNumber;
 	}
@@ -48,6 +44,18 @@ public class User {
 	}
 	public void setUserId(Integer userId) {
 		this.userId = userId;
+	}
+	public String getPassword() {
+		return password;
+	}
+	public void setPassword(String password) {
+		this.password = password;
+	}
+	public String getUserName() {
+		return userName;
+	}
+	public void setUserName(String userName) {
+		this.userName = userName;
 	}
 	
 

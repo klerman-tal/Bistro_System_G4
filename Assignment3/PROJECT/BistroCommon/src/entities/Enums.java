@@ -23,5 +23,18 @@ public class Enums {
 		CreditCard,
 		Cash
 	}
+	
+	public enum ReservationStatus{
+		Active, 
+		Finished,
+		Cancelled
+	}
+	
+	public enum WaitingStatus {
+	    Waiting,   
+	    Seated,      
+	    Cancelled
+	}
+
 
 }
