@@ -19,7 +19,8 @@ public class User_DB_Controller {
     public User_DB_Controller(Connection conn) {
         this.conn = conn;
     }
-
+// חסר טיפול האם למחוק מנוי מהטבלה לאחר חודש ?
+    // חסר טיפול בקוד הזמנה + הרשאות
     /*
      * ===============================================================
      * TABLE CREATION METHODS
@@ -311,6 +312,23 @@ public class User_DB_Controller {
 
         return false;
     }
+    
+    public boolean deleteRestaurantAgent(int subscriberId) {
+
+        String sql = "DELETE FROM SUBSCRIBERS WHERE subscriber_id = ? AND role = 'RestaurantAgent'";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, subscriberId);
+            return stmt.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
 
     public boolean deleteSubscriber(int subscriberId) {
 
@@ -320,7 +338,7 @@ public class User_DB_Controller {
 
             stmt.setInt(1, subscriberId);
             return stmt.executeUpdate() > 0;
-
+ 
         } catch (SQLException e) {
             e.printStackTrace();
         }
