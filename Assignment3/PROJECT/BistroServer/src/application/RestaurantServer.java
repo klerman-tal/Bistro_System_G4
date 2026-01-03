@@ -147,20 +147,8 @@ public class RestaurantServer extends AbstractServer {
 
             switch (command) {
 
-                // =====================
-                // LOGIN
-                // =====================
-                case "LOGIN": {
-
-                    // arr = ["LOGIN", username, password]
-                    String username = arr.get(1).toString();
-                    String password = arr.get(2).toString();
-
-                    User user = userController.login(username, password);
-
-                    client.sendToClient(user);
-                    break;
-                }
+               
+              
 
                 // =====================
                 // CLIENT LOGOUT
