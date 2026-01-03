@@ -54,9 +54,8 @@ public class ClientDetails_BController {
                 ));
 
         colCode.setCellValueFactory(res ->
-                new SimpleStringProperty(
-                        String.valueOf(res.getValue().CreateConfirmationCode())
-                ));
+        new SimpleStringProperty(res.getValue().getConfirmationCode())
+);
 
         colStatus.setCellValueFactory(res ->
                 new SimpleStringProperty(

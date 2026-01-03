@@ -1,6 +1,5 @@
 package application;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.sql.Connection;
@@ -11,6 +10,7 @@ import dbControllers.Reservation_DB_Controller;
 import dbControllers.Restaurant_DB_Controller;
 import dbControllers.User_DB_Controller;
 
+import entities.OpeningHouers;
 import entities.Restaurant;
 import entities.Table;
 import entities.User;
@@ -24,22 +24,17 @@ import ocsf.server.AbstractServer;
 import ocsf.server.ConnectionToClient;
 
 public class RestaurantServer extends AbstractServer {
-	//Tal test
-	//Tal test 2
+
     public static final int DEFAULT_PORT = 5556;
 
-    // DB
     private DBController conn;
 
-    // Controllers
     private RestaurantController restaurantController;
     private User_DB_Controller userDB;
     private UserController userController;
     private Reservation_DB_Controller reservationDB;
 
-    // GUI (Server side)
     private gui.ServerGUIController uiController;
-
     private String serverIp;
 
     public void setUiController(gui.ServerGUIController controller) {
@@ -53,9 +48,6 @@ public class RestaurantServer extends AbstractServer {
         }
     }
 
-    // =====================
-    // Constructor
-    // =====================
     public RestaurantServer(int port) {
         super(port);
 
@@ -69,52 +61,47 @@ public class RestaurantServer extends AbstractServer {
         }
     }
 
-    // =====================
-    // Server lifecycle
-    // =====================
     @Override
     protected void serverStarted() {
-
-        // Log basic server info
         log("Server started on IP: " + serverIp);
         log("Listening on port " + getPort());
 
-        // Step 1: connect to the database
         conn.ConnectToDb();
 
         try {
-            // Step 2: get SQL connection object
             Connection sqlConn = conn.getConnection();
             if (sqlConn == null) {
                 log("DB connection failed.");
                 return;
             }
 
-            // Step 3: initialize restaurant DB & logic
             Restaurant_DB_Controller rdb = new Restaurant_DB_Controller(sqlConn);
             restaurantController = new RestaurantController(rdb);
 
-            // Step 4: initialize reservation DB and create its tables
             reservationDB = new Reservation_DB_Controller(sqlConn);
             reservationDB.createReservationsTable();
-            reservationDB.createWaitingListTable();
 
-            // Step 5: initialize user DB and create user tables
+
             userDB = new User_DB_Controller(sqlConn);
-            userDB.createSubscribersTable();   // SUBSCRIBERS table
-            userDB.createGuestsTable();        // GUESTS table
+            userDB.createSubscribersTable();
+            userDB.createGuestsTable();
 
-            // Step 6: initialize user logic controller
             userController = new UserController(userDB);
 
-            // Step 7: final log
             log("All controllers and database tables initialized.");
+
+            // ✅ (3) Always keep next 30 days + cleanup + schema ensure
+            try {
+                restaurantController.initAvailabilityGridNext30Days();
+                log("Availability grid ensured and initialized for the next 30 days.");
+            } catch (Exception e) {
+                log("Grid init failed: " + e.getMessage());
+            }
 
         } catch (Exception e) {
             log("Initialization error: " + e.getMessage());
         }
     }
-
 
     @Override
     protected void serverStopped() {
@@ -123,17 +110,12 @@ public class RestaurantServer extends AbstractServer {
 
     @Override
     protected synchronized void clientConnected(ConnectionToClient client) {
-
         String ip = client.getInetAddress() != null
                 ? client.getInetAddress().getHostAddress()
                 : "UNKNOWN";
-
         log("Client connected | IP: " + ip);
     }
 
-    // =====================
-    // Message handler
-    // =====================
     @Override
     protected void handleMessageFromClient(Object msg, ConnectionToClient client) {
 
@@ -147,41 +129,84 @@ public class RestaurantServer extends AbstractServer {
 
             switch (command) {
 
-                // =====================
-                // LOGIN
-                // =====================
-                case "LOGIN": {
+                // =========================
+                // LOGIN / LOGOUT
+                // =========================
 
-                    // arr = ["LOGIN", username, password]
+                case "LOGIN": {
                     String username = arr.get(1).toString();
                     String password = arr.get(2).toString();
 
                     User user = userController.login(username, password);
-
                     client.sendToClient(user);
                     break;
                 }
 
-                // =====================
-                // CLIENT LOGOUT
-                // =====================
                 case "CLIENT_LOGOUT": {
                     client.close();
                     break;
                 }
 
-                // =====================
-                // RESTAURANT MANAGER
-                // =====================
-                case "RM_GET_TABLES": {
+                // =========================
+                // TABLES CRUD
+                // =========================
 
+                case "RM_GET_TABLES": {
                     restaurantController.loadTablesFromDb();
 
                     StringBuilder sb = new StringBuilder("RM_TABLES|");
                     for (Table t : Restaurant.getInstance().getTables()) {
                         sb.append(t.getTableNumber()).append(",")
-                          .append(t.getSeatsAmount()).append(",")
-                          .append(t.getIsAvailable() ? 1 : 0)
+                          .append(t.getSeatsAmount())
+                          .append(";");
+                    }
+                    client.sendToClient(sb.toString());
+                    break;
+                }
+
+                case "RM_SAVE_TABLE": {
+                    int num = Integer.parseInt(arr.get(1).toString());
+                    int seats = Integer.parseInt(arr.get(2).toString());
+
+                    Table t = new Table();
+                    t.setTableNumber(num);
+                    t.setSeatsAmount(seats);
+
+                    restaurantController.saveOrUpdateTable(t);
+
+                    // ✅ after adding a table, ensure grid schema & keep month ahead
+                    try {
+                        restaurantController.initAvailabilityGridNext30Days();
+                    } catch (Exception ignored) {}
+
+                    client.sendToClient("RM_OK|");
+                    break;
+                }
+
+                case "RM_DELETE_TABLE": {
+                    int num = Integer.parseInt(arr.get(1).toString());
+                    boolean ok = restaurantController.removeTable(num);
+
+                    client.sendToClient(ok ? "RM_OK|" : "RM_ERROR|Delete failed");
+                    break;
+                }
+
+                // =========================
+                // OPENING HOURS
+                // =========================
+
+                case "RM_GET_OPENING_HOURS": {
+                    restaurantController.loadOpeningHoursFromDb();
+
+                    StringBuilder sb = new StringBuilder("RM_OPENING_HOURS|");
+                    for (OpeningHouers oh : Restaurant.getInstance().getOpeningHours()) {
+                        String day = oh.getDayOfWeek();
+                        String open = safeHHMM(oh.getOpenTime());
+                        String close = safeHHMM(oh.getCloseTime());
+
+                        sb.append(day).append(",")
+                          .append(open).append(",")
+                          .append(close)
                           .append(";");
                     }
 
@@ -189,28 +214,68 @@ public class RestaurantServer extends AbstractServer {
                     break;
                 }
 
-                case "RM_SAVE_TABLE": {
+                case "RM_UPDATE_OPENING_HOURS": {
+                    String day = arr.get(1).toString();
+                    String open = arr.get(2).toString();
+                    String close = arr.get(3).toString();
 
-                    int num = Integer.parseInt(arr.get(1).toString());
-                    int seats = Integer.parseInt(arr.get(2).toString());
-                    boolean available = Boolean.parseBoolean(arr.get(3).toString());
+                    OpeningHouers oh = new OpeningHouers();
+                    oh.setDayOfWeek(day);
+                    oh.setOpenTime(open);
+                    oh.setCloseTime(close);
 
-                    Table t = new Table();
-                    t.setTableNumber(num);
-                    t.setSeatsAmount(seats);
-                    t.setIsAvailable(available);
+                    restaurantController.updateOpeningHours(oh);
 
-                    restaurantController.saveOrUpdateTable(t);
-                    client.sendToClient("RM_OK");
+                    // ✅ hours changed -> rebuild month ahead for correct ranges
+                    try {
+                        restaurantController.initAvailabilityGridNext30Days();
+                    } catch (Exception ignored) {}
+
+                    client.sendToClient("RM_OK|");
                     break;
                 }
 
-                case "RM_DELETE_TABLE": {
+                // =========================
+                // AVAILABILITY GRID (DB) - WITH 4 ADDITIONS
+                // =========================
 
-                    int num = Integer.parseInt(arr.get(1).toString());
-                    boolean ok = restaurantController.removeTable(num);
+                // Force init month ahead (manual)
+                case "RM_INIT_AVAILABILITY_MONTH": {
+                    restaurantController.initAvailabilityGridNext30Days();
+                    client.sendToClient("RM_OK|");
+                    break;
+                }
 
-                    client.sendToClient(ok ? "RM_OK" : "RM_ERROR");
+                // ✅ (1) Get grid from DB for a date
+                // expected: ["RM_GET_GRID_FROM_DB", "YYYY-MM-DD"]
+                case "RM_GET_GRID_FROM_DB": {
+                    String dateStr = arr.get(1).toString();
+                    java.time.LocalDate date = java.time.LocalDate.parse(dateStr);
+
+                    String payload = restaurantController.getGridFromDbPayload(date);
+                    client.sendToClient("RM_GRID|" + payload);
+                    break;
+                }
+
+                // ✅ (4) Safe reserve (conditional update)
+                // expected: ["RM_TRY_RESERVE_SLOT", "YYYY-MM-DDTHH:MM", "<tableNumber>"]
+                case "RM_TRY_RESERVE_SLOT": {
+                    java.time.LocalDateTime slot = java.time.LocalDateTime.parse(arr.get(1).toString());
+                    int tableNum = Integer.parseInt(arr.get(2).toString());
+
+                    boolean success = restaurantController.tryReserveSlot(slot, tableNum);
+                    client.sendToClient(success ? "RM_OK|" : "RM_TAKEN|");
+                    break;
+                }
+
+                // Release slot (set free)
+                // expected: ["RM_RELEASE_SLOT", "YYYY-MM-DDTHH:MM", "<tableNumber>"]
+                case "RM_RELEASE_SLOT": {
+                    java.time.LocalDateTime slot = java.time.LocalDateTime.parse(arr.get(1).toString());
+                    int tableNum = Integer.parseInt(arr.get(2).toString());
+
+                    boolean ok = restaurantController.releaseSlot(slot, tableNum);
+                    client.sendToClient(ok ? "RM_OK|" : "RM_ERROR|Release failed");
                     break;
                 }
 
@@ -220,14 +285,21 @@ public class RestaurantServer extends AbstractServer {
 
         } catch (Exception e) {
             log("Error handling message: " + e.getMessage());
+            try {
+                client.sendToClient("RM_ERROR|" + e.getMessage());
+            } catch (Exception ignored) {}
         }
     }
 
-    // =====================
-    // Main
-    // =====================
-    public static void main(String[] args) {
+    private String safeHHMM(String t) {
+        if (t == null) return "";
+        t = t.trim();
+        if (t.matches("^\\d{2}:\\d{2}:\\d{2}$")) return t.substring(0, 5);
+        if (t.matches("^\\d{2}:\\d{2}$")) return t;
+        return t.length() >= 5 ? t.substring(0, 5) : t;
+    }
 
+    public static void main(String[] args) {
         int port;
         try {
             port = Integer.parseInt(args[0]);
