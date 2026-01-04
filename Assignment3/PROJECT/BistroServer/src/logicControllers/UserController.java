@@ -46,7 +46,7 @@ public class UserController {
         }
 
         // Generate a global user ID
-        int guestId = Restaurant.getInstance().generateNewUserId();
+        int guestId = Restaurant.getInstance().getNextUserId();
 
         // Delegate guest creation to DB layer
         User guest = userDB.loginGuest(guestId, phone, email);
@@ -96,7 +96,7 @@ public class UserController {
         }
 
         // Generate global subscriber ID
-        int subscriberId = Restaurant.getInstance().generateNewUserId();
+        int subscriberId = Restaurant.getInstance().getNextUserId();
 
         // Delegate persistence to DB layer
         return userDB.registerSubscriber(
@@ -138,7 +138,7 @@ public class UserController {
         }
 
         // Generate global ID
-        int agentId = Restaurant.getInstance().generateNewUserId();
+        int agentId = Restaurant.getInstance().getNextUserId();
 
         // Delegate creation to DB layer
         return userDB.registerSubscriber(
