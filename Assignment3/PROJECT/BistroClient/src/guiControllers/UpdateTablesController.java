@@ -26,11 +26,9 @@ public class UpdateTablesController implements ChatIF {
     @FXML private TableView<Table> tblTables;
     @FXML private TableColumn<Table, Integer> colNumber;
     @FXML private TableColumn<Table, Integer> colSeats;
-    @FXML private TableColumn<Table, Boolean> colAvailable;
 
     @FXML private TextField txtTableNumber;
     @FXML private TextField txtSeats;
-    @FXML private CheckBox chkAvailable;
 
     @FXML private Label lblMsg;
 
@@ -44,12 +42,10 @@ public class UpdateTablesController implements ChatIF {
 
     @FXML
     public void initialize() {
-        // המסך הזה יקבל הודעות מהשרת
         ClientUI.setActiveController(this);
 
         colNumber.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
         colSeats.setCellValueFactory(new PropertyValueFactory<>("seatsAmount"));
-        colAvailable.setCellValueFactory(new PropertyValueFactory<>("isAvailable"));
 
         tblTables.setItems(tables);
 
@@ -57,11 +53,8 @@ public class UpdateTablesController implements ChatIF {
             if (newV != null) {
                 txtTableNumber.setText(String.valueOf(newV.getTableNumber()));
                 txtSeats.setText(String.valueOf(newV.getSeatsAmount()));
-                chkAvailable.setSelected(newV.getIsAvailable());
             }
         });
-
-        // ⚠️ לא עושים onRefresh() פה (clientActions עוד לא הוזרק)
     }
 
     @FXML
@@ -70,15 +63,12 @@ public class UpdateTablesController implements ChatIF {
         Integer seats = parseInt(txtSeats.getText(), "Seats");
         if (num == null || seats == null) return;
 
-        boolean available = chkAvailable.isSelected();
-
         if (clientActions == null) { show("clientActions not set"); return; }
 
         ArrayList<String> msg = new ArrayList<>();
         msg.add("RM_SAVE_TABLE");
         msg.add(String.valueOf(num));
         msg.add(String.valueOf(seats));
-        msg.add(String.valueOf(available));
         clientActions.sendToServer(msg);
 
         show("Sent RM_SAVE_TABLE");
@@ -109,14 +99,12 @@ public class UpdateTablesController implements ChatIF {
         show("Sent RM_GET_TABLES");
     }
 
-    // BACK  כמו שהיה לך קודם (ללא העברת לוגיקה נוספת)
     @FXML
     private void onBack() {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/RestaurantManagement_B.fxml"));
             Parent root = loader.load();
 
-            // להעביר clientActions למסך הקודם (כדי שלא "יאבד" לך)
             Object controller = loader.getController();
             if (controller instanceof RestaurantManagement_BController) {
                 ((RestaurantManagement_BController) controller).setClientActions(clientActions);
@@ -129,11 +117,8 @@ public class UpdateTablesController implements ChatIF {
 
         } catch (IOException e) {
             e.printStackTrace();
-            // אם יש לך lblMsg במסך הזה:
-            // showMessage("Failed to go back.");
         }
     }
-
 
     @Override
     public void display(String message) {
@@ -148,7 +133,7 @@ public class UpdateTablesController implements ChatIF {
         if (message.startsWith("RM_OK|")) {
             Platform.runLater(() -> {
                 hideMsg();
-                onRefresh(); // רענון אחרי הצלחה
+                onRefresh();
             });
             return;
         }
@@ -163,18 +148,15 @@ public class UpdateTablesController implements ChatIF {
                     if (row == null || row.isBlank()) continue;
 
                     String[] parts = row.split(",");
-                    if (parts.length < 3) continue;
+                    if (parts.length < 2) continue; // רק tableNum,seats
 
                     try {
                         int tableNum = Integer.parseInt(parts[0].trim());
                         int seats = Integer.parseInt(parts[1].trim());
-                        boolean available = "1".equals(parts[2].trim()) ||
-                                "true".equalsIgnoreCase(parts[2].trim());
 
                         Table t = new Table();
                         t.setTableNumber(tableNum);
                         t.setSeatsAmount(seats);
-                        t.setIsAvailable(available);
 
                         newTables.add(t);
                     } catch (Exception ignored) {}

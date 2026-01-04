@@ -26,8 +26,13 @@ public class RestaurantManagement_BController {
             Parent root = loader.load();
 
             Object controller = loader.getController();
+
             if (controller instanceof UpdateTablesController) {
                 ((UpdateTablesController) controller).setClientActions(clientActions);
+            } else if (controller instanceof OpeningHoursController) {
+                ((OpeningHoursController) controller).setClientActions(clientActions);
+            } else if (controller instanceof Login_BController) {
+                ((Login_BController) controller).setClientActions(clientActions);
             }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
@@ -39,7 +44,7 @@ public class RestaurantManagement_BController {
             e.printStackTrace();
             showMessage("Failed to open: " + fxmlName);
         }
-    } 
+    }
 
     @FXML
     private void onUpdateTablesClicked() {
@@ -47,13 +52,21 @@ public class RestaurantManagement_BController {
     }
 
     @FXML
-    private void onUpdateOpeningHoursClicked() { showMessage("Not implemented yet"); }
+    private void onUpdateOpeningHoursClicked() {
+        openWindow("opening.fxml", "Opening Hours");
+    }
 
     @FXML
-    private void onManageUsersClicked() { showMessage("Not implemented yet"); }
+    private void onManageUsersClicked() {
+        openWindow("selectUser.fxml", "select User Menu");
+
+    }
 
     @FXML
-    private void onManageReservationClicked() { showMessage("Not implemented yet"); }
+    private void onManageReservationClicked() {
+        openWindow("ManageReservation.fxml", "Manage Reservations");
+    }
+
 
     @FXML
     private void onBackToMenuClicked() {
