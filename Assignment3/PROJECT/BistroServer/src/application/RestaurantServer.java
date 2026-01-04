@@ -129,6 +129,7 @@ public class RestaurantServer extends AbstractServer {
 
             switch (command) {
 
+<<<<<<< HEAD
                 // =========================
                 // LOGIN / LOGOUT
                 // =========================
@@ -141,6 +142,10 @@ public class RestaurantServer extends AbstractServer {
                     client.sendToClient(user);
                     break;
                 }
+=======
+               
+              
+>>>>>>> branch 'dev' of https://github.com/klerman-tal/Bistro_System_G4.git
 
                 case "CLIENT_LOGOUT": {
                     client.close();
