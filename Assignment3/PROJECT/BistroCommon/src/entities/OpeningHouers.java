@@ -29,4 +29,8 @@ public class OpeningHouers {
     public void setCloseTime(String closeTime) {
         this.closeTime = closeTime;
     }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> refs/heads/Michal
