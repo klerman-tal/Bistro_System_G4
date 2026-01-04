@@ -5,50 +5,60 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.List;
 
 import entities.Enums;
 import entities.Subscriber;
-import entities.User;
 
 public class User_DB_Controller {
 
     private Connection conn;
+    private Statement stmt;
 
+    // Constructor – receives an open DB connection from the server
     public User_DB_Controller(Connection conn) {
         this.conn = conn;
     }
-// חסר טיפול האם למחוק מנוי מהטבלה לאחר חודש ?
-    // חסר טיפול בקוד הזמנה + הרשאות
+
     /*
      * ===============================================================
-     * TABLE CREATION METHODS
+     * createGuestsTable
+     * Creates the GUESTS table if it does not already exist
      * ===============================================================
      */
-
     public void createGuestsTable() throws SQLException {
 
         String sql = "CREATE TABLE IF NOT EXISTS GUESTS (" +
-                     "guest_id INT PRIMARY KEY, " +
-                     "phone VARCHAR(15) NOT NULL, " +
-                     "email VARCHAR(100) NOT NULL)";
+                "id INT AUTO_INCREMENT PRIMARY KEY, " +
+                "phone VARCHAR(15) NOT NULL, " +
+                "email VARCHAR(100) NOT NULL, " +
+                "first_name VARCHAR(50), " +
+                "last_name VARCHAR(50), " +
+                "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                "UNIQUE (phone, email))";
 
+        // Execute CREATE TABLE statement
         try (Statement stmt = conn.createStatement()) {
             stmt.executeUpdate(sql);
         }
     }
 
+    /*
+     * ===============================================================
+     * createSubscribersTable
+     * Creates the SUBSCRIBERS table if it does not already exist
+     * ===============================================================
+     */
     public void createSubscribersTable() throws SQLException {
 
         String sql = "CREATE TABLE IF NOT EXISTS SUBSCRIBERS (" +
-                     "subscriber_id INT PRIMARY KEY, " +
-                     "username VARCHAR(50) NOT NULL UNIQUE, " +
-                     "first_name VARCHAR(50), " +
-                     "last_name VARCHAR(50), " +
-                     "phone VARCHAR(15), " +
-                     "email VARCHAR(100), " +
-                     "role ENUM('SUBSCRIBER','MANAGER','REPRESENTATIVE') NOT NULL)";
+                "id INT AUTO_INCREMENT PRIMARY KEY, " +
+                "username VARCHAR(50) NOT NULL UNIQUE, " +
+                "password VARCHAR(255) NOT NULL, " +
+                "role ENUM('SUBSCRIBER','MANAGER','REPRESENTATIVE') NOT NULL, " +
+                "first_name VARCHAR(50), " +
+                "last_name VARCHAR(50), " +
+                "email VARCHAR(100), " +
+                "phone VARCHAR(15))";
 
         try (Statement stmt = conn.createStatement()) {
             stmt.executeUpdate(sql);
@@ -57,23 +67,36 @@ public class User_DB_Controller {
 
     /*
      * ===============================================================
-     * AUTHENTICATION / LOGIN METHODS
+     * loginSubscriber
+     * Validates username and password and returns a Subscriber object
      * ===============================================================
      */
+    public Subscriber loginSubscriber(String username, String password) {
 
-    public Subscriber loginSubscriber(int subscriberId, String username) {
-
-        String sql = "SELECT * FROM SUBSCRIBERS WHERE subscriber_id = ? AND username = ?";
+        String sql = "SELECT * FROM SUBSCRIBERS WHERE username = ? AND password = ?";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setInt(1, subscriberId);
-            stmt.setString(2, username);
+            // Bind credentials
+            stmt.setString(1, username);
+            stmt.setString(2, password);
 
             ResultSet rs = stmt.executeQuery();
 
+            // If user exists – build Subscriber object
             if (rs.next()) {
-                return mapRowToSubscriber(rs);
+                Subscriber subscriber = new Subscriber();
+
+                subscriber.setSubscriberId(rs.getInt("subscriber_id"));
+                subscriber.setUsername(rs.getString("username"));
+                subscriber.setPassword(rs.getString("password"));
+                subscriber.setFirstName(rs.getString("first_name"));
+                subscriber.setLastName(rs.getString("last_name"));
+                subscriber.setPhone(rs.getString("phone"));
+                subscriber.setEmail(rs.getString("email"));
+                subscriber.setRole(Enums.UserRole.valueOf(rs.getString("role")));
+
+                return subscriber;
             }
 
         } catch (SQLException e) {
@@ -83,53 +106,93 @@ public class User_DB_Controller {
         return null;
     }
 
-    public User loginGuest(int guestId, String phone, String email) {
+    /*
+     * ===============================================================
+     * GUEST METHODS
+     * ===============================================================
+     */
 
-        String sql = "INSERT INTO GUESTS (guest_id, phone, email) VALUES (?, ?, ?)";
+    // Checks whether a guest already exists by phone + email
+    public boolean guestExists(String phone, String email) throws SQLException {
+
+        String sql = "SELECT 1 FROM GUESTS WHERE phone = ? AND email = ?";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setInt(1, guestId);
-            stmt.setString(2, phone);
-            stmt.setString(3, email);
+            stmt.setString(1, phone);
+            stmt.setString(2, email);
+
+            ResultSet rs = stmt.executeQuery();
+            return rs.next();
+        }
+    }
+
+    // Inserts a new guest only if it does not already exist
+    public void enterAsGuest(String phone, String email) throws SQLException {
+
+        if (guestExists(phone, email)) {
+            return;
+        }
+
+        String sql = "INSERT INTO GUESTS (phone, email) VALUES (?, ?)";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, phone);
+            stmt.setString(2, email);
             stmt.executeUpdate();
+        }
+    }
 
-            User user = new User(phone, email);
-            user.setUserId(guestId);
-            user.setUserRole(Enums.UserRole.RandomClient);
+    // Deletes a guest by phone and email
+    public boolean deleteGuest(String phone, String email) throws SQLException {
 
-            return user;
+        String sql = "DELETE FROM GUESTS WHERE phone = ? AND email = ?";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, phone);
+            stmt.setString(2, email);
+
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    // Checks if a guest email already exists (used for validation)
+    public boolean isGuestEmailExists(String email) {
+
+        String sql = "SELECT 1 FROM GUESTS WHERE email = ? LIMIT 1";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, email);
+            ResultSet rs = stmt.executeQuery();
+            return rs.next();
 
         } catch (SQLException e) {
             e.printStackTrace();
+            return false;
         }
-
-        return null;
     }
 
     /*
      * ===============================================================
-     * REGISTRATION METHODS
+     * REGISTER / LOAD SUBSCRIBER
      * ===============================================================
      */
 
-    public Subscriber registerSubscriber(
-            int subscriberId,
-            String username,
-            String firstName,
-            String lastName,
-            String phone,
-            String email,
-            Enums.UserRole role) {
+    // Registers a new subscriber and returns the created object
+    public Subscriber registerSubscriber(String username, String password, String firstName,
+            String lastName, String phone, String email, Enums.UserRole role) throws SQLException {
 
         String sql = "INSERT INTO SUBSCRIBERS " +
-                     "(subscriber_id, username, first_name, last_name, phone, email, role) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?)";
+                "(username, password, first_name, last_name, phone, email, role) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            stmt.setInt(1, subscriberId);
-            stmt.setString(2, username);
+            stmt.setString(1, username);
+            stmt.setString(2, password);
             stmt.setString(3, firstName);
             stmt.setString(4, lastName);
             stmt.setString(5, phone);
@@ -138,30 +201,29 @@ public class User_DB_Controller {
 
             stmt.executeUpdate();
 
-            return new Subscriber(
-                    subscriberId,
-                    username,
-                    firstName,
-                    lastName,
-                    phone,
-                    email,
-                    role
-            );
+            // Retrieve generated subscriber ID
+            ResultSet keys = stmt.getGeneratedKeys();
+            if (keys.next()) {
+                Subscriber subscriber = new Subscriber();
 
-        } catch (SQLException e) {
-            e.printStackTrace();
+                subscriber.setSubscriberId(keys.getInt(1));
+                subscriber.setUsername(username);
+                subscriber.setPassword(password);
+                subscriber.setFirstName(firstName);
+                subscriber.setLastName(lastName);
+                subscriber.setPhone(phone);
+                subscriber.setEmail(email);
+                subscriber.setRole(role);
+
+                return subscriber;
+            }
         }
 
-        return null;
+        throw new SQLException("Failed to register subscriber");
     }
 
-    /*
-     * ===============================================================
-     * RETRIEVAL (SELECT) METHODS
-     * ===============================================================
-     */
-
-    public Subscriber getSubscriberById(int subscriberId) {
+    // Loads a subscriber by ID
+    public Subscriber getSubscriberById(int subscriberId) throws SQLException {
 
         String sql = "SELECT * FROM SUBSCRIBERS WHERE subscriber_id = ?";
 
@@ -171,110 +233,46 @@ public class User_DB_Controller {
             ResultSet rs = stmt.executeQuery();
 
             if (rs.next()) {
-                return mapRowToSubscriber(rs);
-            }
+                Subscriber subscriber = new Subscriber();
 
-        } catch (SQLException e) {
-            e.printStackTrace();
+                subscriber.setSubscriberId(rs.getInt("subscriber_id"));
+                subscriber.setUsername(rs.getString("username"));
+                subscriber.setPassword(rs.getString("password"));
+                subscriber.setFirstName(rs.getString("first_name"));
+                subscriber.setLastName(rs.getString("last_name"));
+                subscriber.setPhone(rs.getString("phone"));
+                subscriber.setEmail(rs.getString("email"));
+                subscriber.setRole(Enums.UserRole.valueOf(rs.getString("role")));
+
+                return subscriber;
+            }
         }
 
         return null;
     }
 
-    public Subscriber getSubscriberByUsernameAndPhone(String username, String phone) {
+    // Updates editable subscriber details
+    public boolean updateSubscriberDetails(int subscriberId, String firstName,
+            String lastName, String phone, String email) throws SQLException {
 
-        String sql = "SELECT * FROM SUBSCRIBERS WHERE username = ? AND phone = ?";
-
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, username);
-            stmt.setString(2, phone);
-
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                return mapRowToSubscriber(rs);
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return null;
-    }
-
-    public List<Subscriber> getAllSubscribers() {
-
-        List<Subscriber> subscribers = new ArrayList<>();
-        String sql = "SELECT * FROM SUBSCRIBERS";
+        String sql = "UPDATE SUBSCRIBERS " +
+                "SET first_name = ?, last_name = ?, phone = ?, email = ? " +
+                "WHERE subscriber_id = ?";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                subscribers.add(mapRowToSubscriber(rs));
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return subscribers;
-    }
-
-    /*
-     * ===============================================================
-     * UPDATE METHODS
-     * ===============================================================
-     */
-
-    public boolean updateSubscriberContactDetails(
-            int subscriberId,
-            String phone,
-            String email) {
-
-        String sql = "UPDATE SUBSCRIBERS SET phone = ?, email = ? WHERE subscriber_id = ?";
-
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, phone);
-            stmt.setString(2, email);
-            stmt.setInt(3, subscriberId);
+            stmt.setString(1, firstName);
+            stmt.setString(2, lastName);
+            stmt.setString(3, phone);
+            stmt.setString(4, email);
+            stmt.setInt(5, subscriberId);
 
             return stmt.executeUpdate() > 0;
-
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
-
-        return false;
     }
 
-    /*
-     * ===============================================================
-     * EXISTENCE CHECK METHODS
-     * ===============================================================
-     */
-
-    public boolean subscriberExistsById(int subscriberId) {
-
-        String sql = "SELECT 1 FROM SUBSCRIBERS WHERE subscriber_id = ?";
-
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, subscriberId);
-            ResultSet rs = stmt.executeQuery();
-            return rs.next();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return false;
-    }
-
-    public boolean subscriberExistsByUsername(String username) {
+    // Checks if a username already exists
+    public boolean usernameExists(String username) throws SQLException {
 
         String sql = "SELECT 1 FROM SUBSCRIBERS WHERE username = ?";
 
@@ -283,85 +281,14 @@ public class User_DB_Controller {
             stmt.setString(1, username);
             ResultSet rs = stmt.executeQuery();
             return rs.next();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
-
-        return false;
     }
 
-    /*
-     * ===============================================================
-     * DELETE METHODS
-     * ===============================================================
-     */
+    // Returns all subscribers (used mainly for admin / future features)
+    public ResultSet getAllSubscribers() throws SQLException {
 
-    public boolean deleteGuest(int guestId) {
-
-        String sql = "DELETE FROM GUESTS WHERE guest_id = ?";
-
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, guestId);
-            return stmt.executeUpdate() > 0;
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return false;
-    }
-    
-    public boolean deleteRestaurantAgent(int subscriberId) {
-
-        String sql = "DELETE FROM SUBSCRIBERS WHERE subscriber_id = ? AND role = 'RestaurantAgent'";
-
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, subscriberId);
-            return stmt.executeUpdate() > 0;
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return false;
-    }
-
-
-    public boolean deleteSubscriber(int subscriberId) {
-
-        String sql = "DELETE FROM SUBSCRIBERS WHERE subscriber_id = ?";
-
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, subscriberId);
-            return stmt.executeUpdate() > 0;
- 
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return false;
-    }
-
-    /*
-     * ===============================================================
-     * INTERNAL HELPER METHODS
-     * ===============================================================
-     */
-
-    private Subscriber mapRowToSubscriber(ResultSet rs) throws SQLException {
-
-        return new Subscriber(
-                rs.getInt("subscriber_id"),
-                rs.getString("username"),
-                rs.getString("first_name"),
-                rs.getString("last_name"),
-                rs.getString("phone"),
-                rs.getString("email"),
-                Enums.UserRole.valueOf(rs.getString("role"))
-        );
+        String sql = "SELECT * FROM SUBSCRIBERS";
+        PreparedStatement stmt = conn.prepareStatement(sql);
+        return stmt.executeQuery();
     }
 }
