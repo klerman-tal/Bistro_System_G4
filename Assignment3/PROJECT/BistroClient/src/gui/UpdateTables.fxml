@@ -5,7 +5,7 @@
 <?import javafx.scene.layout.*?>
 
 <BorderPane fx:id="rootPane"
-			xmlns="http://javafx.com/javafx/21"
+            xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="guiControllers.UpdateTablesController"
             stylesheets="@Style.css">
@@ -25,16 +25,14 @@
 
             <TableView fx:id="tblTables" prefHeight="320">
                 <columns>
-                    <TableColumn fx:id="colNumber" text="Table #" prefWidth="120"/>
-                    <TableColumn fx:id="colSeats" text="Seats" prefWidth="120"/>
-                    <TableColumn fx:id="colAvailable" text="Available" prefWidth="160"/>
+                    <TableColumn fx:id="colNumber" text="Table #" prefWidth="150"/>
+                    <TableColumn fx:id="colSeats" text="Seats" prefWidth="150"/>
                 </columns>
             </TableView>
 
             <HBox spacing="10">
                 <TextField fx:id="txtTableNumber" promptText="Table #"/>
                 <TextField fx:id="txtSeats" promptText="Seats"/>
-                <CheckBox fx:id="chkAvailable" text="Available"/>
                 <Button text="Add/Save" onAction="#onAddOrSave"/>
             </HBox>
 

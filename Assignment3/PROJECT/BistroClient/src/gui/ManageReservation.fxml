@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane fx:id="rootPane"
+            xmlns="http://javafx.com/javafx/25"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="guiControllers.ManageReservationController">
+
+    <top>
+        <HBox alignment="CENTER_LEFT" prefHeight="42.0" prefWidth="1073.0" spacing="12">
+            <padding>
+                <Insets bottom="12" left="12" right="12" top="12" />
+            </padding>
+            <Label style="-fx-font-size: 18px; -fx-font-weight: bold;" text="Manage Reservations" />
+
+            <Region HBox.hgrow="ALWAYS" />
+            <Label fx:id="lblStatus" managed="false" text="" visible="false" />
+        </HBox>
+    </top>
+
+    <center>
+        <VBox spacing="10">
+            <padding>
+                <Insets bottom="12" left="12" right="12" top="12" />
+            </padding>
+
+            <TableView fx:id="tblReservations" prefHeight="420">
+                <columns>
+                    <TableColumn fx:id="colReservationId" prefWidth="110" text="reservation_id" />
+                    <TableColumn fx:id="colDate" prefWidth="140" text="reservation_date" />
+                    <TableColumn fx:id="colTime" prefWidth="140" text="reservation_time" />
+                    <TableColumn fx:id="colGuests" prefWidth="140" text="number_of_guests" />
+                    <TableColumn fx:id="colCode" prefWidth="150" text="confirmation_code" />
+                    <TableColumn fx:id="colCreatedBy" prefWidth="160" text="created_by" />
+                    <TableColumn fx:id="colConfirmed" prefWidth="120" text="is_confirmed" />
+                    <TableColumn fx:id="colTableNumber" prefWidth="120" text="table_number" />
+                </columns>
+            </TableView>
+        </VBox>
+    </center>
+
+    <bottom>
+        <VBox prefHeight="202.0" prefWidth="1042.0" spacing="10">
+            <padding>
+                <Insets bottom="12" left="12" right="12" top="10" />
+            </padding>
+
+            <Separator />
+
+            <GridPane hgap="10" vgap="10">
+                <columnConstraints>
+                    <ColumnConstraints prefWidth="140" />
+                    <ColumnConstraints prefWidth="220" />
+                    <ColumnConstraints prefWidth="140" />
+                    <ColumnConstraints prefWidth="220" />
+                </columnConstraints>
+
+                <Label text="Reservation ID:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                <TextField fx:id="txtReservationId" promptText="(for update/delete)" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+
+                <Label text="Confirmation Code:" GridPane.columnIndex="2" GridPane.rowIndex="0" />
+                <TextField fx:id="txtConfirmationCode" promptText="required" GridPane.columnIndex="3" GridPane.rowIndex="0" />
+
+                <Label text="Date:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                <DatePicker fx:id="dpDate" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+
+                <Label text="Time (HH:mm):" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+                <TextField fx:id="txtTime" promptText="19:30" GridPane.columnIndex="3" GridPane.rowIndex="1" />
+
+                <Label text="Guests:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                <TextField fx:id="txtGuests" promptText="e.g. 4" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+
+                <Label text="Created By:" GridPane.columnIndex="2" GridPane.rowIndex="2" />
+                <TextField fx:id="txtCreatedBy" promptText="username/email" GridPane.columnIndex="3" GridPane.rowIndex="2" />
+
+                <Label text="Confirmed:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                <CheckBox fx:id="chkConfirmed" text="is_confirmed" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+
+                <Label text="Table Number (optional):" GridPane.columnIndex="2" GridPane.rowIndex="3" />
+                <TextField fx:id="txtTableNumber" promptText="nullable" GridPane.columnIndex="3" GridPane.rowIndex="3" />
+
+                <rowConstraints>
+                    <RowConstraints />
+                    <RowConstraints />
+                    <RowConstraints />
+                    <RowConstraints />
+                </rowConstraints>
+            </GridPane>
+
+            <HBox alignment="CENTER_RIGHT" spacing="10">
+                <Region HBox.hgrow="ALWAYS" />
+                <Button fx:id="btnAdd" onAction="#onAddClicked" text="Add Reservation" />
+                <Button fx:id="btnUpdate" onAction="#onUpdateClicked" text="Update Reservation" />
+                <Button fx:id="btnDelete" onAction="#onDeleteClicked" text="Delete Reservation" />
+                <Button fx:id="btnBack" onAction="#onBackClicked" prefHeight="30" text=" Back" />
+            </HBox>
+
+        </VBox>
+    </bottom>
+
+</BorderPane>
