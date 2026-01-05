@@ -220,9 +220,18 @@ public class RestaurantServer extends AbstractServer {
                         restaurantController.initAvailabilityGridNext30Days();
                     } catch (Exception ignored) {}
 
+                    // ⭐⭐⭐ ADD: TEST NOTIFICATION (Opening Hours) ⭐⭐⭐
+                    //client.sendToClient(new entities.Notification(
+                     //       entities.Notification.Type.SUCCESS,
+                       //     "🕒 שעות הפתיחה עודכנו בהצלחה ליום " + day +
+                         //   "\nפתיחה: " + open + " | סגירה: " + close
+                   // ));
+                    
                     client.sendToClient("RM_OK|");
                     break;
                 }
+
+                
 
                 // =========================
                 // AVAILABILITY GRID (DB) - WITH 4 ADDITIONS
@@ -267,7 +276,7 @@ public class RestaurantServer extends AbstractServer {
                     client.sendToClient(ok ? "RM_OK|" : "RM_ERROR|Release failed");
                     break;
                 }
-
+              
                 default:
                     log("Unknown command: " + command);
             }
