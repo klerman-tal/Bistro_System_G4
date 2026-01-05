@@ -55,7 +55,7 @@ public class Restaurant_DB_Controller {
      * - closeTime (יכול להיות NULL)
      */
     public void createOpeningHoursTable() {
-        String sql = """
+        String createSql = """
             CREATE TABLE IF NOT EXISTS openinghours (
                 dayOfWeek VARCHAR(10) NOT NULL,
                 openTime TIME NULL,
@@ -65,11 +65,34 @@ public class Restaurant_DB_Controller {
             """;
 
         try (Statement stmt = conn.createStatement()) {
-            stmt.execute(sql);
+            stmt.execute(createSql);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return;
+        }
+
+        // ⭐⭐⭐ NEW: seed 7 days (English) with NULL times ⭐⭐⭐
+        String seedSql = """
+            INSERT INTO openinghours (dayOfWeek, openTime, closeTime)
+            VALUES (?, NULL, NULL)
+            ON DUPLICATE KEY UPDATE dayOfWeek = dayOfWeek;
+            """;
+
+        String[] days = {
+            "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
+        };
+
+        try (PreparedStatement ps = conn.prepareStatement(seedSql)) {
+            for (String d : days) {
+                ps.setString(1, d);
+                ps.addBatch();
+            }
+            ps.executeBatch();
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
+
 
     // =========================
     // TABLES: LOAD / UPSERT / DELETE
@@ -81,7 +104,6 @@ public class Restaurant_DB_Controller {
      */
     public void loadTables() throws SQLException {
         createRestaurantTablesTable();
-
         Restaurant r = Restaurant.getInstance();
 
         String sql = "SELECT table_number, seats_amount FROM restaurant_tables";
@@ -98,7 +120,7 @@ public class Restaurant_DB_Controller {
             }
         }
 
-        r.setTables(tables);
+        r.setTables(tables); 
     }
 
     /**
@@ -120,17 +142,74 @@ public class Restaurant_DB_Controller {
         }
     }
 
-    /**
-     * מוחק שולחן לפי table_number מהטבלה restaurant_tables.
-     * מחזיר true אם נמחקה בדיוק שורה אחת, אחרת false.
-     */
-    public boolean deleteTable(int tableNumber) throws SQLException {
-        String sql = "DELETE FROM restaurant_tables WHERE table_number=?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, tableNumber);
-            return ps.executeUpdate() == 1;
-        }
-    }
+  
+    
+ // =========================
+ // TABLE DELETE SAFETY (NEXT 30 DAYS)
+ // =========================
+
+ /**
+  * בודק האם לשולחן יש סלוטים תפוסים (0) ב-30 ימים הקרובים.
+  * בטבלת הגריד: 1=פנוי, 0=תפוס.
+  *
+  * @return true אם יש לפחות סלוט אחד תפוס בחודש הקרוב, אחרת false
+  */
+ public boolean hasReservedSlotsInNextDays(int tableNumber, int days) throws SQLException {
+     String col = "t_" + tableNumber;
+
+     String sql =
+         "SELECT 1 " +
+         "FROM table_availability_grid " +
+         "WHERE slot_datetime >= NOW() " +
+         "  AND slot_datetime < (NOW() + INTERVAL ? DAY) " +
+         "  AND " + col + " = 0 " +
+         "LIMIT 1";
+
+     try (PreparedStatement ps = conn.prepareStatement(sql)) {
+         ps.setInt(1, days);
+         try (ResultSet rs = ps.executeQuery()) {
+             return rs.next();
+         }
+     }
+ }
+
+ /**
+  * מוחק שולחן לפי table_number מהטבלה restaurant_tables.
+  * ❗ לא מאפשר מחיקה אם לשולחן יש תפוסים בחודש הקרוב בגריד.
+  *
+  * @return true אם נמחק, false אם חסום (תפוס) או לא נמצא
+  */
+ public boolean deleteTable(int tableNumber) throws SQLException {
+
+     // אם אין גריד/אין עמודה - זה יכול לזרוק שגיאה.
+     // לכן מומלץ לוודא לפני: ensureAvailabilityGridSchema(...)
+     // (ב-RestaurantController את כבר עושה לפני רוב הפעולות)
+     if (hasReservedSlotsInNextDays(tableNumber, 30)) {
+         return false; // חסום: יש תפוסים בחודש הקרוב
+     }
+
+     String sql = "DELETE FROM restaurant_tables WHERE table_number=?";
+     try (PreparedStatement ps = conn.prepareStatement(sql)) {
+         ps.setInt(1, tableNumber);
+         return ps.executeUpdate() == 1;
+     }
+ }
+
+ /**
+  * אופציונלי: אם את רוצה לנקות גם את העמודה של השולחן מהגריד.
+  * להריץ רק אחרי שמותר למחוק ושבאמת מחקת את השולחן.
+  */
+ public void dropTableColumnFromGrid(int tableNumber) throws SQLException {
+     String col = "t_" + tableNumber;
+     String sql = "ALTER TABLE table_availability_grid DROP COLUMN " + col;
+
+     try (Statement stmt = conn.createStatement()) {
+         stmt.execute(sql);
+     }
+ }
+
+    
+    
 
     // =========================
     // OPENING HOURS: LOAD / UPDATE
@@ -144,9 +223,17 @@ public class Restaurant_DB_Controller {
      * הערה: openTime/closeTime יכולים להיות NULL במסד ולכן קוראים באמצעות readTimeAsString.
      */
     public void loadOpeningHours() throws SQLException {
+    	 createOpeningHoursTable();
         Restaurant r = Restaurant.getInstance();
 
-        String sql = "SELECT dayOfWeek, openTime, closeTime FROM openinghours";
+        String sql = """
+        	    SELECT dayOfWeek, openTime, closeTime
+        	    FROM openinghours
+        	    ORDER BY FIELD(dayOfWeek,
+        	        'Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'
+        	    )
+        	    """;
+
         ArrayList<OpeningHouers> hours = new ArrayList<>();
 
         try (PreparedStatement ps = conn.prepareStatement(sql);
@@ -168,7 +255,9 @@ public class Restaurant_DB_Controller {
 
         r.setOpeningHours(hours);
     }
-
+    
+    
+  
     /**
      * מעדכן שעות פתיחה/סגירה עבור יום מסוים בטבלה openinghours.
      * אם openTime/closeTime ריקים/NULL - מכניס NULL למסד.
@@ -176,7 +265,8 @@ public class Restaurant_DB_Controller {
      * הערה: השמירה מתבצעת בפורמט HH:MM (גם אם הגיע HH:MM:SS).
      */
     public void updateOpeningHours(OpeningHouers oh) throws SQLException {
-        String sql = """
+    	 createOpeningHoursTable();
+    	String sql = """
             UPDATE openinghours
             SET openTime = ?, closeTime = ?
             WHERE dayOfWeek = ?
@@ -537,7 +627,7 @@ public class Restaurant_DB_Controller {
      */
     private void setTimeParamAsHHMM(PreparedStatement ps, int idx, String timeStr) throws SQLException {
         if (timeStr == null || timeStr.isBlank()) {
-            ps.setNull(idx, Types.VARCHAR);
+        	ps.setNull(idx, Types.TIME);;
             return;
         }
 

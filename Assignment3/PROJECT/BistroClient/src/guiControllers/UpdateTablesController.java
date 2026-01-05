@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import application.ClientUI;
+import entities.Notification;
 import entities.Table;
 import interfaces.ChatIF;
 import interfaces.ClientActions;
@@ -120,7 +121,8 @@ public class UpdateTablesController implements ChatIF {
         }
     }
 
-    @Override
+    
+    
     public void display(String message) {
         if (message == null) return;
 
@@ -130,7 +132,7 @@ public class UpdateTablesController implements ChatIF {
             return;
         }
 
-        if (message.startsWith("RM_OK|")) {
+        if (message.startsWith("RM_OK") || message.startsWith("RM_OK|")) {
             Platform.runLater(() -> {
                 hideMsg();
                 onRefresh();
@@ -148,7 +150,7 @@ public class UpdateTablesController implements ChatIF {
                     if (row == null || row.isBlank()) continue;
 
                     String[] parts = row.split(",");
-                    if (parts.length < 2) continue; // רק tableNum,seats
+                    if (parts.length < 2) continue;
 
                     try {
                         int tableNum = Integer.parseInt(parts[0].trim());
@@ -170,8 +172,10 @@ public class UpdateTablesController implements ChatIF {
             return;
         }
 
-        System.out.println("UpdateTables got from server: " + message);
+        System.out.println("UpdateTables got: " + message);
     }
+
+
 
     private Integer parseInt(String s, String field) {
         try {
@@ -194,4 +198,26 @@ public class UpdateTablesController implements ChatIF {
         lblMsg.setVisible(false);
         lblMsg.setManaged(false);
     }
+    private void showNotification(Notification n) {
+        lblMsg.setText(n.getMessage());
+        lblMsg.setVisible(true);
+        lblMsg.setManaged(true);
+
+        switch (n.getType()) {
+            case SUCCESS -> lblMsg.setStyle(
+                "-fx-background-color:#d6ffe1; -fx-text-fill:#0b5a1a; -fx-padding:8; -fx-background-radius:6;"
+            );
+            case ERROR -> lblMsg.setStyle(
+                "-fx-background-color:#ffd6d6; -fx-text-fill:#7a0000; -fx-padding:8; -fx-background-radius:6;"
+            );
+            case WARNING -> lblMsg.setStyle(
+                "-fx-background-color:#fff3cd; -fx-text-fill:#856404; -fx-padding:8; -fx-background-radius:6;"
+            );
+            case INFO -> lblMsg.setStyle(
+                "-fx-background-color:#e7f1ff; -fx-text-fill:#084298; -fx-padding:8; -fx-background-radius:6;"
+            );
+        }
+    }
+
+
 }
