@@ -13,6 +13,9 @@ public class Restaurant_DB_Controller {
 
     private final Connection conn;
 
+    /**
+     * בנאי: מקבל Connection פעיל למסד הנתונים ושומר אותו לשימוש בכל השאילתות.
+     */
     public Restaurant_DB_Controller(Connection conn) {
         this.conn = conn;
     }
@@ -21,6 +24,12 @@ public class Restaurant_DB_Controller {
     // CREATE TABLES (SAFE)
     // =========================
 
+    /**
+     * יוצר את הטבלה restaurant_tables אם היא לא קיימת.
+     * הטבלה מכילה:
+     * - table_number (PK)
+     * - seats_amount
+     */
     public void createRestaurantTablesTable() {
         String sql = """
             CREATE TABLE IF NOT EXISTS restaurant_tables (
@@ -38,6 +47,13 @@ public class Restaurant_DB_Controller {
         }
     }
 
+    /**
+     * יוצר את הטבלה openinghours אם היא לא קיימת.
+     * הטבלה מכילה:
+     * - dayOfWeek (PK) לדוגמה: "Sunday"
+     * - openTime (יכול להיות NULL)
+     * - closeTime (יכול להיות NULL)
+     */
     public void createOpeningHoursTable() {
         String sql = """
             CREATE TABLE IF NOT EXISTS openinghours (
@@ -59,6 +75,10 @@ public class Restaurant_DB_Controller {
     // TABLES: LOAD / UPSERT / DELETE
     // =========================
 
+    /**
+     * טוען את כל השולחנות מהטבלה restaurant_tables
+     * ובונה רשימת Table, ואז מעדכן את Restaurant Singleton (r.setTables).
+     */
     public void loadTables() throws SQLException {
         createRestaurantTablesTable();
 
@@ -81,6 +101,10 @@ public class Restaurant_DB_Controller {
         r.setTables(tables);
     }
 
+    /**
+     * מכניס שולחן חדש או מעדכן שולחן קיים (UPSERT) בטבלה restaurant_tables.
+     * אם כבר קיים PK עם אותו table_number - יעדכן seats_amount.
+     */
     public void saveTable(Table t) throws SQLException {
         String sql = """
             INSERT INTO restaurant_tables (table_number, seats_amount)
@@ -96,6 +120,10 @@ public class Restaurant_DB_Controller {
         }
     }
 
+    /**
+     * מוחק שולחן לפי table_number מהטבלה restaurant_tables.
+     * מחזיר true אם נמחקה בדיוק שורה אחת, אחרת false.
+     */
     public boolean deleteTable(int tableNumber) throws SQLException {
         String sql = "DELETE FROM restaurant_tables WHERE table_number=?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -108,6 +136,13 @@ public class Restaurant_DB_Controller {
     // OPENING HOURS: LOAD / UPDATE
     // =========================
 
+    /**
+     * טוען את שעות הפתיחה מהטבלה openinghours,
+     * בונה ArrayList של OpeningHouers,
+     * ומעדכן את Restaurant Singleton (r.setOpeningHours).
+     *
+     * הערה: openTime/closeTime יכולים להיות NULL במסד ולכן קוראים באמצעות readTimeAsString.
+     */
     public void loadOpeningHours() throws SQLException {
         Restaurant r = Restaurant.getInstance();
 
@@ -134,6 +169,12 @@ public class Restaurant_DB_Controller {
         r.setOpeningHours(hours);
     }
 
+    /**
+     * מעדכן שעות פתיחה/סגירה עבור יום מסוים בטבלה openinghours.
+     * אם openTime/closeTime ריקים/NULL - מכניס NULL למסד.
+     *
+     * הערה: השמירה מתבצעת בפורמט HH:MM (גם אם הגיע HH:MM:SS).
+     */
     public void updateOpeningHours(OpeningHouers oh) throws SQLException {
         String sql = """
             UPDATE openinghours
@@ -151,20 +192,18 @@ public class Restaurant_DB_Controller {
 
     // =========================
     // AVAILABILITY GRID (WIDE TABLE)
-    // table_availability_grid:
-    // slot_datetime (PK) + t_<tableNumber> columns, default TRUE (1)
     // =========================
 
     /**
-     * ✅ ensures table exists AND adds missing columns for new tables.
-     * (Create-if-not-exists + ALTER add missing cols)
+     * מוודא שטבלת הגריד table_availability_grid קיימת ושיש לה עמודות לכל השולחנות הקיימים.
+     * עושה:
+     * 1) CREATE TABLE IF NOT EXISTS (עם העמודות הנוכחיות)
+     * 2) בדיקה ב־INFORMATION_SCHEMA אילו עמודות קיימות
+     * 3) ALTER TABLE כדי להוסיף עמודות חסרות עבור שולחנות חדשים
      */
     public void ensureAvailabilityGridSchema(List<Table> tables) throws SQLException {
-
-        // 1) Create if not exists (with current tables)
         createAvailabilityGridTableIfNotExists(tables);
 
-        // 2) Add missing columns
         Set<String> existingCols = getExistingGridColumns();
         for (Table t : tables) {
             String col = "t_" + t.getTableNumber();
@@ -180,6 +219,12 @@ public class Restaurant_DB_Controller {
         }
     }
 
+    /**
+     * יוצר את table_availability_grid אם היא לא קיימת.
+     * הטבלה בנויה "רחב":
+     * - slot_datetime הוא ה־PK
+     * - לכל שולחן יש עמודה t_<tableNumber> (1=פנוי, 0=תפוס) עם DEFAULT 1
+     */
     private void createAvailabilityGridTableIfNotExists(List<Table> tables) throws SQLException {
         StringBuilder sb = new StringBuilder();
         sb.append("CREATE TABLE IF NOT EXISTS table_availability_grid (")
@@ -197,6 +242,11 @@ public class Restaurant_DB_Controller {
         }
     }
 
+    /**
+     * מחזיר סט של כל שמות העמודות שקיימות בפועל בטבלה table_availability_grid,
+     * באמצעות INFORMATION_SCHEMA.
+     * משתמשים בזה כדי לזהות האם חסרות עמודות של שולחנות.
+     */
     private Set<String> getExistingGridColumns() throws SQLException {
         Set<String> cols = new HashSet<>();
         String sql = """
@@ -216,7 +266,8 @@ public class Restaurant_DB_Controller {
     }
 
     /**
-     * ✅ delete old slots so the table doesn't grow forever.
+     * מוחק סלוטים ישנים מהגריד (slot_datetime לפני הזמן הנוכחי),
+     * כדי שהטבלה לא תתנפח לאורך זמן.
      */
     public void deletePastSlots() throws SQLException {
         String sql = "DELETE FROM table_availability_grid WHERE slot_datetime < NOW()";
@@ -226,8 +277,10 @@ public class Restaurant_DB_Controller {
     }
 
     /**
-     * Insert slots for a single day.
-     * Only inserts slot_datetime, so all t_# get DEFAULT 1 (free).
+     * מאתחל סלוטים של חצי שעה ליום אחד, בטווח open..close.
+     * מכניס רק את slot_datetime, וכל העמודות t_# יקבלו DEFAULT 1 (פנוי).
+     *
+     * הערה: אם close מוקדם מדי (אין סלוטים), לא עושה כלום.
      */
     public void initGridForDate(LocalDate date, LocalTime open, LocalTime close) throws SQLException {
         LocalTime lastStart = close.minusMinutes(30);
@@ -252,7 +305,11 @@ public class Restaurant_DB_Controller {
     }
 
     /**
-     * Initialize grid for next N days (e.g., 30 days), based on each day's OpeningHouers.
+     * מאתחל את הגריד ל־N ימים קדימה החל מ־startDate.
+     * לכל יום:
+     * - מקבל שעות פתיחה/סגירה דרך hoursProvider
+     * - אם אין שעות (NULL/ריק) מדלג על אותו יום
+     * - אחרת קורא ל־initGridForDate
      */
     public void initGridForNextDays(LocalDate startDate,
                                     int days,
@@ -275,8 +332,10 @@ public class Restaurant_DB_Controller {
     }
 
     /**
-     * ✅ reserve with conditional update (prevents double booking).
-     * returns true if success, false if already taken.
+     * ניסיון להזמנה בטוח (מונע הזמנה כפולה):
+     * מעדכן את העמודה של השולחן ל־0 רק אם היא עדיין 1.
+     *
+     * מחזיר true אם הצליח (היה פנוי), false אם לא (כבר תפוס).
      */
     public boolean tryReserveSlot(LocalDateTime slot, int tableNumber) throws SQLException {
         String col = "t_" + tableNumber;
@@ -290,8 +349,10 @@ public class Restaurant_DB_Controller {
     }
 
     /**
-     * Release / set free or busy explicitly (unconditional).
-     * returns true if row existed and updated.
+     * משנה זמינות של שולחן בסלוט מסוים בצורה לא-מותנית (unconditional).
+     * isFree=true -> מגדיר 1 (פנוי), isFree=false -> מגדיר 0 (תפוס).
+     *
+     * מחזיר true אם עודכנה שורה קיימת, אחרת false.
      */
     public boolean setTableAvailability(LocalDateTime slot, int tableNumber, boolean isFree) throws SQLException {
         String col = "t_" + tableNumber;
@@ -305,16 +366,15 @@ public class Restaurant_DB_Controller {
     }
 
     /**
-     * Read grid from DB for a specific date and return payload:
-     * each row: "YYYY-MM-DDTHH:MM,<t_#>,<t_#>...;"
-     *
-     * IMPORTANT: tables must be sorted in the order you want in the GUI.
+     * מחזיר Payload יומי לגריד (לטובת GUI).
+     * עבור כל שורה (slot) מחזיר:
+     * "YYYY-MM-DDTHH:MM,1,0,1,...;"
+     * לפי סדר השולחנות שנשלח במערך tables.
      */
     public String getGridPayloadForDate(LocalDate date, List<Table> tables) throws SQLException {
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.plusDays(1).atStartOfDay();
 
-        // build SELECT: slot_datetime, t_1, t_2...
         StringBuilder select = new StringBuilder("SELECT slot_datetime");
         for (Table t : tables) {
             select.append(", t_").append(t.getTableNumber());
@@ -337,7 +397,7 @@ public class Restaurant_DB_Controller {
 
                     out.append(slot.toString(), 0, 16); // yyyy-MM-ddTHH:mm
 
-                    int colIdx = 2; // after slot_datetime
+                    int colIdx = 2; // אחרי slot_datetime
                     for (int i = 0; i < tables.size(); i++) {
                         boolean isFree = rs.getBoolean(colIdx++);
                         out.append(",").append(isFree ? "1" : "0");
@@ -351,9 +411,109 @@ public class Restaurant_DB_Controller {
     }
 
     // =========================
+    // ✅ NEW METHODS
+    // =========================
+
+    /**
+     * מחפש ומחזיר מספר שולחן פנוי אחד בסלוט ספציפי (תאריך+שעה).
+     * הבחירה: "השולחן הראשון הפנוי" לפי סדר הרשימה tables (לכן חשוב שהיא תהיה ממוינת מראש).
+     *
+     * מחזיר:
+     * - Integer (מספר שולחן) אם נמצא שולחן פנוי
+     * - null אם אין שולחן פנוי או שאין בכלל שורה לסלוט (לא אותחל)
+     */
+    public Integer findOneFreeTableNumberAtSlot(LocalDateTime slot, List<Table> tables) throws SQLException {
+        if (slot == null || tables == null || tables.isEmpty()) return null;
+
+        StringBuilder select = new StringBuilder("SELECT ");
+        for (int i = 0; i < tables.size(); i++) {
+            if (i > 0) select.append(", ");
+            select.append("t_").append(tables.get(i).getTableNumber());
+        }
+        select.append(" FROM table_availability_grid WHERE slot_datetime = ?");
+
+        try (PreparedStatement ps = conn.prepareStatement(select.toString())) {
+            ps.setTimestamp(1, Timestamp.valueOf(slot));
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null; // אין שורה לסלוט
+
+                for (int i = 0; i < tables.size(); i++) {
+                    boolean isFree = rs.getBoolean(i + 1);
+                    if (isFree) {
+                        return tables.get(i).getTableNumber();
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * ליום שלם: מחזיר Map של "שעה (slot_datetime)" -> "מספר שולחן פנוי אחד".
+     * עבור כל סלוט באותו יום:
+     * - אם יש לפחות שולחן אחד פנוי, בוחר את הראשון הפנוי (לפי סדר tables) ושומר במפה.
+     * - אם אין שולחן פנוי, מדלג ולא מוסיף את השעה למפה.
+     *
+     * מחזיר תמיד Map (יכול להיות ריק אם אין אף סלוט פנוי).
+     */
+    public Map<LocalDateTime, Integer> findOneFreeTableNumberPerSlotForDate(LocalDate date, List<Table> tables) throws SQLException {
+        Map<LocalDateTime, Integer> out = new LinkedHashMap<>();
+        if (date == null || tables == null || tables.isEmpty()) return out;
+
+        LocalDateTime start = date.atStartOfDay();
+        LocalDateTime end = date.plusDays(1).atStartOfDay();
+
+        StringBuilder select = new StringBuilder("SELECT slot_datetime");
+        for (Table t : tables) {
+            select.append(", t_").append(t.getTableNumber());
+        }
+
+        select.append(" FROM table_availability_grid ")
+              .append("WHERE slot_datetime >= ? AND slot_datetime < ? ")
+              .append("ORDER BY slot_datetime");
+
+        try (PreparedStatement ps = conn.prepareStatement(select.toString())) {
+            ps.setTimestamp(1, Timestamp.valueOf(start));
+            ps.setTimestamp(2, Timestamp.valueOf(end));
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    LocalDateTime slot = rs.getTimestamp("slot_datetime").toLocalDateTime();
+
+                    Integer chosen = null;
+
+                    int colIdx = 2; // אחרי slot_datetime
+                    for (int i = 0; i < tables.size(); i++) {
+                        boolean isFree = rs.getBoolean(colIdx++);
+                        if (isFree) {
+                            chosen = tables.get(i).getTableNumber();
+                            break;
+                        }
+                    }
+
+                    if (chosen != null) {
+                        out.put(slot, chosen);
+                    }
+                }
+            }
+        }
+
+        return out;
+    }
+
+    // =========================
     // Helpers (Opening Hours)
     // =========================
 
+    /**
+     * קורא ערך זמן (TIME) מ־ResultSet ומחזיר אותו כ־String.
+     * מתמודד עם:
+     * - NULL
+     * - java.sql.Time
+     * - מחרוזת בפורמטים HH:MM או HH:MM:SS
+     */
     private String readTimeAsString(ResultSet rs, String col) throws SQLException {
         Object val = rs.getObject(col);
         if (val == null) return null;
@@ -368,6 +528,13 @@ public class Restaurant_DB_Controller {
         return normalizeTimeString(s);
     }
 
+    /**
+     * מגדיר פרמטר זמן ל־PreparedStatement בפורמט HH:MM.
+     * אם timeStr ריק/NULL -> מכניס NULL למסד.
+     * אחרת:
+     * - מנרמל ל־HH:MM:SS
+     * - לוקח רק HH:MM ושולח כמחרוזת
+     */
     private void setTimeParamAsHHMM(PreparedStatement ps, int idx, String timeStr) throws SQLException {
         if (timeStr == null || timeStr.isBlank()) {
             ps.setNull(idx, Types.VARCHAR);
@@ -379,6 +546,15 @@ public class Restaurant_DB_Controller {
         ps.setString(idx, hhmm);
     }
 
+    /**
+     * מנרמל מחרוזת זמן לפורמט HH:MM:SS.
+     * תומך ב:
+     * - "HH:MM:SS" (מחזיר כמו שהוא)
+     * - "HH:MM" (מוסיף ":00")
+     * - "HH:MM:SS.xxx..." (חותך ל־8 תווים)
+     *
+     * זורק IllegalArgumentException אם הפורמט לא תקין.
+     */
     private String normalizeTimeString(String s) {
         s = s.trim();
 
@@ -392,6 +568,11 @@ public class Restaurant_DB_Controller {
         throw new IllegalArgumentException("Bad time format: '" + s + "'. Expected HH:MM or HH:MM:SS");
     }
 
+    /**
+     * מחלץ HH:MM ממחרוזת זמן שיכולה להיות HH:MM:SS או HH:MM.
+     * אם הזמן ריק/NULL מחזיר מחרוזת ריקה.
+     * אם יש פורמט מוזר - מנסה לחלץ את 5 התווים הראשונים (אם קיימים).
+     */
     private String safeHHMM(String t) {
         if (t == null) return "";
         t = t.trim();

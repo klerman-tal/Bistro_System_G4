@@ -129,23 +129,7 @@ public class RestaurantServer extends AbstractServer {
 
             switch (command) {
 
-<<<<<<< HEAD
-                // =========================
-                // LOGIN / LOGOUT
-                // =========================
 
-                case "LOGIN": {
-                    String username = arr.get(1).toString();
-                    String password = arr.get(2).toString();
-
-                    User user = userController.login(username, password);
-                    client.sendToClient(user);
-                    break;
-                }
-=======
-               
-              
->>>>>>> branch 'dev' of https://github.com/klerman-tal/Bistro_System_G4.git
 
                 case "CLIENT_LOGOUT": {
                     client.close();
