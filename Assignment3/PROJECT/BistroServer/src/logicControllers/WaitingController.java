@@ -6,6 +6,7 @@ import java.util.ArrayList;
 
 import application.RestaurantServer;
 import dbControllers.Waiting_DB_Controller;
+import entities.Table;
 import entities.User;
 import entities.Waiting;
 
@@ -94,7 +95,7 @@ public class WaitingController {
     }
 
     // Called when the client arrives and enters the confirmation code
-    public boolean confirmArrivalAndSeat(String confirmationCode) {
+    public boolean markAsSeated(String confirmationCode) {
         try {
             boolean seated = db.markWaitingAsSeated(confirmationCode);
 
@@ -153,4 +154,30 @@ public class WaitingController {
             return null;
         }
     }
+    
+    public boolean handleTableFreed(Table freedTable) {
+        if (freedTable == null) return false;
+
+        try {
+            Waiting next = db.getNextWaitingForSeats(freedTable.getSeatsAmount());
+            if (next == null) return false;
+
+            boolean updated = db.setTableFreedForWaiting(
+                    next.getConfirmationCode(),
+                    LocalDateTime.now(),
+                    freedTable.getTableNumber()
+            );
+
+            if (updated) {
+                server.log("Assigned freed table to waiting. WaitingCode=" + next.getConfirmationCode() +
+                           ", Table=" + freedTable.getTableNumber());
+            }
+            return updated;
+
+        } catch (SQLException e) {
+            server.log("ERROR: handleTableFreed failed. " + e.getMessage());
+            return false;
+        }
+    }
+
 }

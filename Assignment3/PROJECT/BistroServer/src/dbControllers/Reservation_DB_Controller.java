@@ -34,7 +34,6 @@ public class Reservation_DB_Controller {
 
                 reservation_datetime DATETIME NOT NULL,
                 number_of_guests INT NOT NULL,
-                confirmation_code VARCHAR(20) NOT NULL,
 
                 created_by INT NOT NULL,
                 created_by_role ENUM(
@@ -105,7 +104,7 @@ public class Reservation_DB_Controller {
              table_number,
              reminder_at,
              reminder_sent)
-            VALUES (?, ?, ?, ?, ?, 0, 1, ?, DATE_SUB(?, INTERVAL 2 HOUR), 0);
+            VALUES (?, ?, ?, ?, ?, 1, 1, ?, DATE_SUB(?, INTERVAL 2 HOUR), 0);
             """;
 
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -129,6 +128,28 @@ public class Reservation_DB_Controller {
         }
         return -1;
     }
+    
+    // =====================================================
+    // CANCEL
+    // =====================================================
+
+    
+    public boolean cancelReservationByConfirmationCode(String confirmationCode) throws SQLException {
+        String sql = """
+            UPDATE reservations
+            SET is_active = 0,
+                reservation_status = 'Cancelled'
+            WHERE confirmation_code = ?
+              AND is_active = 1
+              AND reservation_status = 'Active';
+            """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, confirmationCode);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
 
     // =====================================================
     // REMINDERS
@@ -302,21 +323,6 @@ public class Reservation_DB_Controller {
     // UPDATE
     // =====================================================
 
-    /**
-     * Soft-deletes a reservation by confirmation code (sets is_active=0).
-     */
-    public boolean deactivateReservationByConfirmationCode(String confirmationCode) throws SQLException {
-        String sql = """
-            UPDATE reservations
-            SET is_active = 0
-            WHERE confirmation_code = ?;
-            """;
-
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, confirmationCode);
-            return ps.executeUpdate() == 1;
-        }
-    }
 
     /**
      * Updates the check-in time for a reservation_id.
@@ -399,12 +405,24 @@ public class Reservation_DB_Controller {
         r.setReservationId(rs.getInt("reservation_id"));
         r.setConfirmationCode(rs.getString("confirmation_code"));
         r.setGuestAmount(rs.getInt("number_of_guests"));
-        r.setConfirmed(rs.getInt("is_confirmed") == 1);
+
         r.setReservationTime(rs.getTimestamp("reservation_datetime").toLocalDateTime());
+
         r.setCreatedByUserId(rs.getInt("created_by"));
+        r.setCreatedByRole(Enums.UserRole.valueOf(rs.getString("created_by_role")));
+
+        r.setConfirmed(rs.getInt("is_confirmed") == 1);
+        r.setActive(rs.getInt("is_active") == 1);
+
+        String status = rs.getString("reservation_status");
+        if (status != null) r.setReservationStatus(ReservationStatus.valueOf(status));
+
+        int tableNum = rs.getInt("table_number");
+        r.setTableNumber(rs.wasNull() ? null : tableNum);
 
         return r;
     }
+
 
     /**
      * Executes a SELECT query that returns a list of reservations and maps each row.
@@ -419,4 +437,24 @@ public class Reservation_DB_Controller {
         }
         return list;
     }
+    
+    public boolean finishReservationByConfirmationCode(String confirmationCode, LocalDateTime checkoutTime) throws SQLException {
+        String sql = """
+            UPDATE reservations
+            SET reservation_status = 'Finished',
+                checkout = ?,
+                is_active = 0
+            WHERE confirmation_code = ?
+              AND is_active = 1
+              AND reservation_status = 'Active';
+            """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setTimestamp(1, Timestamp.valueOf(checkoutTime));
+            ps.setString(2, confirmationCode);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+
 }

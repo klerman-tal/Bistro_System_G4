@@ -2,6 +2,7 @@ package entities;
 
 import java.time.LocalDateTime;
 import java.util.Random;
+import entities.Enums.UserRole;
 
 import entities.Enums.ReservationStatus;
 
@@ -15,6 +16,9 @@ public class Reservation {
     private int guestAmount;
     private boolean isConfirmed;
     private ReservationStatus reservationStatus;
+    private Integer tableNumber;          // nullable
+    private boolean isActive;             // from DB is_active
+    private UserRole createdByRole;       // from DB created_by_role
 
     // ===== Constructor =====
     public Reservation() {
@@ -22,9 +26,15 @@ public class Reservation {
         createdByUserId = -1;
         reservationTime = null;
         guestAmount = 0;
-        isConfirmed = false;
+
+        isConfirmed = true; // אם החלטת "כל עוד לא בוטל = מאושר"
+        isActive = true;
         reservationStatus = ReservationStatus.Active;
+
+        tableNumber = null;
+        createdByRole = null;
     }
+
 
     // ===== Getters / Setters =====
     public int getReservationId() {
@@ -82,6 +92,15 @@ public class Reservation {
 	public void setReservationStatus(ReservationStatus reservationStatus) {
 		this.reservationStatus = reservationStatus;
 	}
+	
+	public Integer getTableNumber() { return tableNumber; }
+	public void setTableNumber(Integer tableNumber) { this.tableNumber = tableNumber; }
+
+	public boolean isActive() { return isActive; }
+	public void setActive(boolean active) { isActive = active; }
+
+	public UserRole getCreatedByRole() { return createdByRole; }
+	public void setCreatedByRole(UserRole createdByRole) { this.createdByRole = createdByRole; }
 
     // ===== Utils =====
     private String createConfirmationCode() {
