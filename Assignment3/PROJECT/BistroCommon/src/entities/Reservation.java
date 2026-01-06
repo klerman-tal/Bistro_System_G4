@@ -39,8 +39,8 @@ public class Reservation {
         return confirmationCode;
     }
 
-    public void setConfirmationCode(String confarmationCode) {
-        this.confirmationCode = confarmationCode;
+    public void setConfirmationCode(String confirmationCode) {
+        this.confirmationCode = confirmationCode;
     }
 
     public int getCreatedByUserId() {
