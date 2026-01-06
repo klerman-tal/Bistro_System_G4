@@ -1,5 +1,5 @@
 package logicControllers;
-//Test
+
 import java.util.ArrayList;
 import java.util.List;   // ✅ FIX: correct List import
 
@@ -10,7 +10,7 @@ import entities.Subscriber;
 import entities.User;
 
 public class UserController {
-///liortest
+
     private User_DB_Controller userDB;
 
     public UserController(User_DB_Controller userDB) {
@@ -237,7 +237,7 @@ public class UserController {
         // Delegate deletion to DB layer
         return userDB.deleteRestaurantAgent(agentId);
     }
-//T
+
     
     
 

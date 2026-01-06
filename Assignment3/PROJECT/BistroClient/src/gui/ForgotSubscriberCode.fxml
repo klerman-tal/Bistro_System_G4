@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<VBox alignment="CENTER" spacing="15.0" style="-fx-background-color: white; -fx-border-color: #3498db; -fx-border-width: 2; -fx-border-radius: 10; -fx-background-radius: 10;" 
+      xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" 
+      fx:controller="guiControllers.ForgotCodeController">
+   <children>
+      <Label text="Subscriber Code Recovery" style="-fx-font-weight: bold; -fx-text-fill: #2c3e50;">
+         <font>
+            <Font size="20.0" />
+         </font>
+      </Label>
+      <Label text="Enter details to recover your code:" style="-fx-text-fill: #7f8c8d;" />
+      
+      <TextField fx:id="usernameField" promptText="Username" style="-fx-background-radius: 5;" />
+      <TextField fx:id="phoneField" promptText="Phone Number" style="-fx-background-radius: 5;" />
+      <TextField fx:id="emailField" promptText="Email Address" style="-fx-background-radius: 5;" />
+      
+      <Label fx:id="lblError" textFill="#ff4757" visible="false" managed="false" />
+      
+      <HBox alignment="CENTER" spacing="15.0">
+         <children>
+            <Button onAction="#handleRecover" prefWidth="100.0" style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="RECOVER" />
+            <Button onAction="#handleCancel" prefWidth="100.0" style="-fx-background-color: #ecf0f1; -fx-text-fill: #7f8c8d; -fx-cursor: hand;" text="CANCEL" />
+         </children>
+      </HBox>
+   </children>
+   <padding>
+      <Insets bottom="30.0" left="30.0" right="30.0" top="20.0" />
+   </padding>
+</VBox>
