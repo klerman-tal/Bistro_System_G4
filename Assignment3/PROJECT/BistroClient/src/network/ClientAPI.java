@@ -32,11 +32,11 @@ public class ClientAPI {
 
         int userId = user.getUserId(); // ⭐ זה השינוי הקריטי
 
-        CreateReservationDTO payload =
+        CreateReservationDTO data =
                 new CreateReservationDTO(date, time, guests, userId);
 
         RequestDTO request =
-                new RequestDTO(Commands.CREATE_RESERVATION, payload);
+                new RequestDTO(Commands.CREATE_RESERVATION, data);
 
         client.sendToServer(request);
     }

@@ -1,7 +1,10 @@
 package guiControllers;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.LocalTime;
 
+import application.ChatClient;
 import entities.Restaurant;
 import entities.User;
 import javafx.fxml.FXML;
@@ -11,11 +14,13 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
+import network.ClientAPI;
 
 public class TableReservation_BController {
 
     private User user;
     private Restaurant restaurant = Restaurant.getInstance();
+    private ClientAPI api;
 
     @FXML private BorderPane rootPane;
 
@@ -24,9 +29,11 @@ public class TableReservation_BController {
     @FXML private TextField txtGuests;
     @FXML private Label lblMessage;
 
-    public void setClient(User client) {
-        this.user = client;
+    public void setClient(User user, ChatClient chatClient) {
+        this.user = user;
+        this.api = new ClientAPI(chatClient);
     }
+
 
     @FXML
     private void onCreateClicked() {
@@ -35,8 +42,24 @@ public class TableReservation_BController {
         if (!validateInputs())
             return;
 
-        showMessage("Reservation created (logic coming soon).");
+        LocalDate date = datePicker.getValue();
+        LocalTime time = LocalTime.parse(txtHour.getText().trim()); // או מה שיש לך ב-validateInputs
+        int guests = Integer.parseInt(txtGuests.getText().trim());
+
+        try {
+            api.createReservation(date, time, guests, user);
+
+            // לא להציג "Reservation created" כאן,
+            // כי עדיין לא קיבלת תשובה מהשרת!
+            showMessage("Request sent to server...");
+        } catch (IOException e) {
+            showMessage("Failed to send request to server.");
+            e.printStackTrace();
+        } catch (Exception e) {
+            showMessage("Invalid input.");
+        }
     }
+
 
     @FXML
     private void onJoinWaitingListClicked() {
