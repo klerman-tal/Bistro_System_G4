@@ -241,4 +241,24 @@ public class Waiting_DB_Controller {
         }
         return list;
     }
+    
+    public Waiting getNextWaitingForSeats(int maxGuests) throws SQLException {
+        String sql = """
+            SELECT * FROM waiting_list
+            WHERE waiting_status = 'Waiting'
+              AND table_freed_time IS NULL
+              AND number_of_guests <= ?
+            ORDER BY waiting_id
+            LIMIT 1;
+            """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, maxGuests);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return mapRowToWaiting(rs);
+            }
+        }
+        return null;
+    }
+
 }
