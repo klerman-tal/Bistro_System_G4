@@ -9,35 +9,68 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox prefHeight="403.0" prefWidth="700" spacing="15" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="guiControllers.OpeningHoursController">
+<VBox id="rootPane"
+      prefHeight="520.0" prefWidth="700.0"
+      spacing="18.0"
+      stylesheets="@Style.css"
+      xmlns="http://javafx.com/javafx/25"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="guiControllers.OpeningHoursController">
 
     <padding>
-        <Insets bottom="15" left="15" right="15" top="15" />
+        <Insets top="20" right="20" bottom="20" left="20"/>
     </padding>
 
-    <!-- ===== TABLE ===== -->
-    <TableView fx:id="openingHoursTable" prefHeight="280">
-        <columns>
-            <TableColumn fx:id="dayColumn" prefWidth="230" text="Day" />
+    <!-- ===== HEADER ===== -->
+    <VBox spacing="4">
+        <children>
+            <Label text="Opening Hours" styleClass="title"/>
+            <Label text="Click a cell to choose Open/Close time, type HH:MM and update"
+                   styleClass="subtitle"/>
+        </children>
+    </VBox>
 
-            <TableColumn fx:id="openTimeColumn" prefWidth="220" text="Open Time" />
+    <!-- ===== TABLE CARD ===== -->
+    <VBox styleClass="card30" spacing="10" prefHeight="320.0">
+        <padding>
+            <Insets top="18" right="18" bottom="18" left="18"/>
+        </padding>
 
-            <TableColumn fx:id="closeTimeColumn" prefWidth="220" text="Close Time" />
-        </columns>
-    </TableView>
+        <children>
+            <TableView fx:id="openingHoursTable" prefHeight="280.0">
+                <columns>
+                    <TableColumn fx:id="dayColumn" prefWidth="210.0" text="Day"/>
+                    <TableColumn fx:id="openTimeColumn" prefWidth="210.0" text="Open Time"/>
+                    <TableColumn fx:id="closeTimeColumn" prefWidth="210.0" text="Close Time"/>
+                </columns>
+            </TableView>
+        </children>
+    </VBox>
 
-    <!-- ===== UPDATE AREA ===== -->
-    <HBox alignment="CENTER_LEFT" spacing="10">
+    <!-- ===== UPDATE AREA CARD ===== -->
+    <VBox styleClass="card" spacing="12">
+        <padding>
+            <Insets top="14" right="14" bottom="14" left="14"/>
+        </padding>
 
-        <Label text="New Time:" />
-        <TextField fx:id="openTimeField" prefWidth="90" promptText="HH:MM" />
+        <children>
+            <Label text="Update selected cell" styleClass="field-label"/>
 
-        <Button fx:id="updateButton" prefWidth="120" text="Update" />
-    </HBox>
+            <HBox alignment="CENTER_LEFT" spacing="12">
+                <children>
+                    <Label text="New Time:" styleClass="subtitle"/>
+                    <TextField fx:id="openTimeField" prefWidth="110" promptText="HH:MM"/>
+                    <Button fx:id="updateButton" text="Update" styleClass="btnPrimary"/>
+                </children>
+            </HBox>
+        </children>
+    </VBox>
 
-    <!-- ===== BACK BUTTON (BOTTOM RIGHT) ===== -->
+    <!-- ===== BACK BUTTON ===== -->
     <HBox alignment="CENTER_RIGHT">
-        <Button fx:id="backButton" prefHeight="26.0" prefWidth="43.0" text="Back" />
+        <children>
+            <Button fx:id="backButton" text="Back" styleClass="btnSecondary"/>
+        </children>
     </HBox>
 
 </VBox>
