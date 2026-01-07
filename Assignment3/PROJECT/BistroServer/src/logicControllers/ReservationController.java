@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Map;
 
 import application.RestaurantServer;
@@ -49,21 +50,35 @@ public class ReservationController {
         out.clear();
 
         try {
+            // For each slot in that day -> one candidate table that fits guests (single-slot availability)
             Map<LocalDateTime, Table> map =
                     restaurantController.getOneAvailableTablePerSlot(date, guestsNumber);
 
-            for (LocalDateTime dt : map.keySet()) {
+            // keySet order is not guaranteed -> sort by time
+            ArrayList<LocalDateTime> times = new ArrayList<>(map.keySet());
+            times.sort(Comparator.naturalOrder());
+
+            for (LocalDateTime dt : times) {
                 LocalTime t = dt.toLocalTime();
 
                 // Only times from the requested time and onward
-                if (fromTime == null || !t.isBefore(fromTime)) {
+                if (fromTime != null && t.isBefore(fromTime)) continue;
+
+                Table table = map.get(dt);
+                if (table == null) continue;
+
+                // IMPORTANT: must be free for 2 hours (4 slots), not just one slot
+                if (restaurantController.isTableFreeForTwoHours(dt, table.getTableNumber())) {
                     out.add(t);
                 }
             }
+
         } catch (Exception e) {
             server.log("ERROR: Failed to load available times. " + e.getMessage());
         }
     }
+
+
 
     /**
      * Attempts to reserve a table for 2 hours (4 slots of 30 minutes). Rolls back on failure.
@@ -159,6 +174,11 @@ public class ReservationController {
         res.setGuestAmount(guestsNumber);
         res.setReservationTime(requested);
         res.setConfirmed(true);
+        res.setTableNumber(table.getTableNumber());
+        res.setActive(true);
+        res.setReservationStatus(ReservationStatus.Active);
+        res.setCreatedByRole(user.getUserRole());
+
 
         try {
             int reservationId = db.addReservation(
@@ -206,28 +226,50 @@ public class ReservationController {
      * Cancels (deactivates) a reservation by confirmation code.
      */
     public boolean CancelReservation(String confirmationCode) {
+
         try {
-            if (!db.isActiveReservationExists(confirmationCode)) {
-                server.log("WARN: Cancel request with invalid or inactive confirmation code: " + confirmationCode);
+            Reservation r = db.getReservationByConfirmationCode(confirmationCode);
+            if (r == null || !r.isActive() || r.getReservationStatus() != ReservationStatus.Active) {
+                server.log("WARN: Cancel request invalid/inactive. Code=" + confirmationCode);
                 return false;
             }
 
-            boolean canceled = db.deactivateReservationByConfirmationCode(confirmationCode);
+            Integer tableNum = r.getTableNumber();
+            LocalDateTime start = r.getReservationTime();
 
-            if (canceled) {
-                server.log("Reservation canceled. ConfirmationCode=" + confirmationCode);
+            if (tableNum == null || start == null) {
+                server.log("ERROR: Cancel failed - missing table/reservation time. Code=" + confirmationCode);
+                return false;
+            }
+
+            // 1) release 2 hours (4 slots)
+            for (int i = 0; i < 4; i++) {
+                try { restaurantController.releaseSlot(start.plusMinutes(30L * i), tableNum); }
+                catch (Exception e) {
+                    server.log("ERROR: Failed releasing slot during cancel. Slot=" +
+                               start.plusMinutes(30L * i) + ", Table=" + tableNum + ", Msg=" + e.getMessage());
+                    // ממשיכים לשחרר אחרים כדי לא להשאיר חצי נעול
+                }
+            }
+
+            // 2) update DB
+            boolean cancelled = db.cancelReservationByConfirmationCode(confirmationCode);
+
+            if (cancelled) {
+                server.log("Reservation canceled. Code=" + confirmationCode);
                 return true;
-            } else {
-                server.log("WARN: Failed to cancel reservation (no row updated). Code=" + confirmationCode);
-                return false;
             }
+
+            server.log("WARN: Cancel DB update did not affect row. Code=" + confirmationCode);
+            return false;
 
         } catch (SQLException e) {
-            server.log("ERROR: Failed to cancel reservation. Code=" + confirmationCode +
-                       ", Message=" + e.getMessage());
+            server.log("ERROR: Failed to cancel reservation. Code=" + confirmationCode + ", Message=" + e.getMessage());
             return false;
         }
     }
+    
+
 
     // =====================================================
     // READ (QUERIES)
@@ -374,4 +416,52 @@ public class ReservationController {
             return false;
         }
     }
+    
+    public boolean FinishReservation(String confirmationCode) {
+
+        try {
+            Reservation r = db.getReservationByConfirmationCode(confirmationCode);
+            if (r == null || !r.isActive() || r.getReservationStatus() != ReservationStatus.Active) {
+                server.log("WARN: Finish request invalid/inactive. Code=" + confirmationCode);
+                return false;
+            }
+
+            Integer tableNum = r.getTableNumber();
+            LocalDateTime start = r.getReservationTime();
+
+            if (tableNum == null || start == null) {
+                server.log("ERROR: Finish failed - missing table/reservation time. Code=" + confirmationCode);
+                return false;
+            }
+
+            // 1) Release 2 hours (4 slots) in availability grid
+            for (int i = 0; i < 4; i++) {
+                LocalDateTime slot = start.plusMinutes(30L * i);
+                try {
+                    restaurantController.releaseSlot(slot, tableNum);
+                } catch (Exception e) {
+                    server.log("ERROR: Failed releasing slot during finish. Slot=" +
+                               slot + ", Table=" + tableNum + ", Msg=" + e.getMessage());
+                    // Continue releasing the rest to avoid partial lock
+                }
+            }
+
+            // 2) Update DB: Finished + checkout + inactive
+            LocalDateTime checkoutTime = LocalDateTime.now();
+            boolean finished = db.finishReservationByConfirmationCode(confirmationCode, checkoutTime);
+
+            if (finished) {
+                server.log("Reservation finished. Code=" + confirmationCode + ", Checkout=" + checkoutTime);
+                return true;
+            }
+
+            server.log("WARN: Finish DB update did not affect row. Code=" + confirmationCode);
+            return false;
+
+        } catch (SQLException e) {
+            server.log("ERROR: Failed to finish reservation. Code=" + confirmationCode + ", Message=" + e.getMessage());
+            return false;
+        }
+    }
+
 }
