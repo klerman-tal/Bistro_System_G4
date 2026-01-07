@@ -670,4 +670,25 @@ public class Restaurant_DB_Controller {
         if (t.matches("^\\d{2}:\\d{2}$")) return t;
         return t.length() >= 5 ? t.substring(0, 5) : "";
     }
+    
+    //liem 
+
+/**
+ * Returns true if the given table column is free (1) at the given slot.
+ * Returns false if no row exists for that slot or the value is 0.
+ */
+public boolean isTableFreeAtSlot(LocalDateTime slot, int tableNumber) throws SQLException {
+    if (slot == null) return false;
+
+    String col = "t_" + tableNumber;
+    String sql = "SELECT " + col + " FROM table_availability_grid WHERE slot_datetime = ?";
+
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setTimestamp(1, Timestamp.valueOf(slot));
+        try (ResultSet rs = ps.executeQuery()) {
+            if (!rs.next()) return false; // slot not initialized in grid
+            return rs.getInt(1) == 1;
+        }
+    }
+}
 }

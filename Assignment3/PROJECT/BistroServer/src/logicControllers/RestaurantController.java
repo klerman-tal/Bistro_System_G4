@@ -313,4 +313,23 @@ public class RestaurantController {
         tables.sort(Comparator.comparingInt(Table::getTableNumber));
         return tables;
     }
+    
+    
+    //liem
+    /**
+     * Checks if a specific table is free for 2 hours starting from 'start'
+     * (4 slots of 30 minutes) WITHOUT reserving anything.
+     */
+    public boolean isTableFreeForTwoHours(LocalDateTime start, int tableNumber) throws Exception {
+        if (start == null) return false;
+
+        List<Table> tables = getSortedTablesEnsured();
+        db.ensureAvailabilityGridSchema(tables);
+
+        for (int i = 0; i < 4; i++) {
+            LocalDateTime slot = start.plusMinutes(30L * i);
+            if (!db.isTableFreeAtSlot(slot, tableNumber)) return false;
+        }
+        return true;
+    }
 }

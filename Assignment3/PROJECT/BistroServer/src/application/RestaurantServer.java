@@ -361,6 +361,9 @@ public class RestaurantServer extends AbstractServer {
         if (onAutoShutdown != null) {
             try { onAutoShutdown.run(); } catch (Exception ignored) {}
         }
-    }
+    
 
 }
+
+}
+

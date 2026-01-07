@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Hyperlink?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.effect.DropShadow?>
+
+<AnchorPane prefHeight="600.0" prefWidth="900.0" 
+            style="-fx-background-color: linear-gradient(to bottom right, #e0f2f1, #ffffff);" 
+            xmlns="http://javafx.com/javafx/21" 
+            xmlns:fx="http://javafx.com/fxml/1" 
+            fx:controller="guiControllers.SubscriberLoginController"> <children>
+        <VBox alignment="TOP_CENTER" spacing="15.0" 
+              AnchorPane.topAnchor="20.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0">
+            
+            <children>
+                <ImageView fitHeight="100.0" fitWidth="100.0" pickOnBounds="true" preserveRatio="true">
+                    <image>
+                        <Image url="@../images/bistro_logo.png" />
+                    </image>
+                    <effect>
+                        <DropShadow color="#00000015" radius="8" offsetY="2" />
+                    </effect>
+                </ImageView>
+
+                <VBox alignment="CENTER" spacing="2.0">
+                    <children>
+                        <Label text="LOGIN AS SUBSCRIBER" 
+                               style="-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
+                        <Label text="Please enter your subscription details" 
+                               style="-fx-font-size: 13px; -fx-text-fill: #7f8c8d;" />
+                    </children>
+                </VBox>
+
+                <VBox alignment="CENTER" spacing="20.0" maxWidth="400.0" 
+                      style="-fx-background-color: white; -fx-background-radius: 20; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 12, 0, 0, 6);">
+                    <padding>
+                        <Insets top="40.0" bottom="30.0" left="40.0" right="40.0" />
+                    </padding>
+                    <children>
+                        
+                        <VBox spacing="5.0" alignment="CENTER_LEFT">
+                            <children>
+                                <Label text="SUBSCRIBER ID" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #95a5a6;" />
+                                <TextField fx:id="subscriberIdField" promptText="e.g. 12345" 
+                                           style="-fx-background-radius: 8; -fx-padding: 10;" />
+                            </children>
+                        </VBox>
+
+                        <VBox spacing="5.0" alignment="CENTER_LEFT">
+                            <children>
+                                <Label text="USERNAME" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #95a5a6;" />
+                                <TextField fx:id="usernameField" promptText="Enter your name" 
+                                           style="-fx-background-radius: 8; -fx-padding: 10;" />
+                            </children>
+                        </VBox>
+
+                        <Label fx:id="lblMessage" visible="false" managed="false" 
+                               style="-fx-text-fill: #ff4757; -fx-font-size: 12px;" />
+
+                        <Button mnemonicParsing="false" onAction="#handleSubscriberLogin" 
+                                text="SIGN IN" 
+                                style="-fx-background-color: #ff4757; -fx-text-fill: white; -fx-background-radius: 15; -fx-padding: 12 80; -fx-cursor: hand; -fx-font-weight: bold; -fx-font-size: 14px;" />
+
+                        <VBox alignment="CENTER" spacing="10.0">
+                            <children>
+                                <Button onAction="#handleForgotCode" text="Forgot Subscriber Code?" 
+                                        style="-fx-background-color: transparent; -fx-text-fill: #3498db; -fx-cursor: hand; -fx-font-size: 12px;" />
+                                <Hyperlink onAction="#handleBackButton" text="← Back to Welcome" 
+                                           style="-fx-text-fill: #bdc3c7; -fx-font-size: 12px;" />
+                            </children>
+                        </VBox>
+                    </children>
+                </VBox>
+            </children>
+        </VBox>
+    </children>
+</AnchorPane>
