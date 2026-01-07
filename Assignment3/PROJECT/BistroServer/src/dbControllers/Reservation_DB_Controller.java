@@ -34,6 +34,7 @@ public class Reservation_DB_Controller {
 
                 reservation_datetime DATETIME NOT NULL,
                 number_of_guests INT NOT NULL,
+                confirmation_code VARCHAR(20) NOT NULL,
 
                 created_by INT NOT NULL,
                 created_by_role ENUM(

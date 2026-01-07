@@ -22,7 +22,6 @@ public class Reservation {
 
     // ===== Constructor =====
     public Reservation() {
-        confirmationCode = createConfirmationCode();
         createdByUserId = -1;
         reservationTime = null;
         guestAmount = 0;
