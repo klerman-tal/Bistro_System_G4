@@ -6,8 +6,11 @@ package application;
 import java.io.*;
 import java.util.ArrayList;
 
+import entities.Notification;
 import ocsf.client.AbstractClient;
 import interfaces.ChatIF;
+import javafx.application.Platform;
+import javafx.scene.control.Alert;
 
 /**
  * This class overrides some of the methods defined in the abstract
@@ -57,7 +60,13 @@ public class ChatClient extends AbstractClient
    */
   public void handleMessageFromServer(Object msg) 
   {
-    clientUI.display(msg.toString());
+      // אם זו התרעה – קופץ חלון
+      if (msg instanceof Notification n) {
+          Platform.runLater(() -> showNotification(n));
+          return;
+      }
+
+      clientUI.display(msg.toString());
   }
 
   /**
@@ -91,5 +100,21 @@ public class ChatClient extends AbstractClient
     catch(IOException e) {}
     System.exit(0);
   }
+  
+  private void showNotification(Notification n) {
+
+	    Alert.AlertType alertType = switch (n.getType()) {
+	        case SUCCESS, INFO -> Alert.AlertType.INFORMATION;
+	        case WARNING -> Alert.AlertType.WARNING;
+	        case ERROR -> Alert.AlertType.ERROR;
+	    };
+
+	    Alert alert = new Alert(alertType);
+	    alert.setTitle("Bistro");
+	    alert.setHeaderText(null);
+	    alert.setContentText(n.getMessage());
+	    alert.showAndWait();
+	}
+
 }
-//End of ChatClient class
+

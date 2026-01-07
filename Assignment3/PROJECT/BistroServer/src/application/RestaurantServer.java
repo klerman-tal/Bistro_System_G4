@@ -4,6 +4,9 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.sql.Connection;
 import java.util.ArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import dbControllers.DBController;
 import dbControllers.Reservation_DB_Controller;
@@ -63,6 +66,8 @@ public class RestaurantServer extends AbstractServer {
 
     @Override
     protected void serverStarted() {
+    	touchActivity();
+    	startIdleWatchdog();
         log("Server started on IP: " + serverIp);
         log("Listening on port " + getPort());
 
@@ -105,11 +110,13 @@ public class RestaurantServer extends AbstractServer {
 
     @Override
     protected void serverStopped() {
+    	idleScheduler.shutdownNow();
         log("Server stopped.");
     }
 
     @Override
     protected synchronized void clientConnected(ConnectionToClient client) {
+    	touchActivity();
         String ip = client.getInetAddress() != null
                 ? client.getInetAddress().getHostAddress()
                 : "UNKNOWN";
@@ -118,6 +125,8 @@ public class RestaurantServer extends AbstractServer {
 
     @Override
     protected void handleMessageFromClient(Object msg, ConnectionToClient client) {
+    	touchActivity();
+
 
         try {
             if (!(msg instanceof ArrayList<?>)) return;
@@ -128,10 +137,6 @@ public class RestaurantServer extends AbstractServer {
             String command = arr.get(0).toString();
 
             switch (command) {
-
-                // =========================
-                // LOGIN / LOGOUT
-                // =========================
 
 
 
@@ -224,9 +229,18 @@ public class RestaurantServer extends AbstractServer {
                         restaurantController.initAvailabilityGridNext30Days();
                     } catch (Exception ignored) {}
 
+                    // ⭐⭐⭐ ADD: TEST NOTIFICATION (Opening Hours) ⭐⭐⭐
+                    //client.sendToClient(new entities.Notification(
+                     //       entities.Notification.Type.SUCCESS,
+                       //     "🕒 שעות הפתיחה עודכנו בהצלחה ליום " + day +
+                         //   "\nפתיחה: " + open + " | סגירה: " + close
+                   // ));
+                    
                     client.sendToClient("RM_OK|");
                     break;
                 }
+
+                
 
                 // =========================
                 // AVAILABILITY GRID (DB) - WITH 4 ADDITIONS
@@ -271,7 +285,7 @@ public class RestaurantServer extends AbstractServer {
                     client.sendToClient(ok ? "RM_OK|" : "RM_ERROR|Release failed");
                     break;
                 }
-
+              
                 default:
                     log("Unknown command: " + command);
             }
@@ -308,4 +322,48 @@ public class RestaurantServer extends AbstractServer {
             server.log("ERROR: Could not start server");
         }
     }
+    
+    private static final long IDLE_TIMEOUT_MS = 30L * 60L * 1000L; // 30 minutes
+    private volatile long lastActivityMs = System.currentTimeMillis();
+
+    private final ScheduledExecutorService idleScheduler =
+            Executors.newSingleThreadScheduledExecutor();
+
+    private Runnable onAutoShutdown; // יקבע מה לעשות ב-UI
+    public void setOnAutoShutdown(Runnable r) { this.onAutoShutdown = r; }
+
+    private void touchActivity() {
+        lastActivityMs = System.currentTimeMillis();
+    }
+
+    private void startIdleWatchdog() {
+        idleScheduler.scheduleAtFixedRate(() -> {
+            try {
+                long idle = System.currentTimeMillis() - lastActivityMs;
+
+                // סוגרים רק אם אין אף לקוח מחובר וגם אין פעילות 30 דקות
+                if (idle >= IDLE_TIMEOUT_MS && getNumberOfClients() == 0) {
+                    log("AUTO-SHUTDOWN: No activity for 30 minutes. Closing server...");
+                    shutdownServerNow();
+                }
+            } catch (Exception e) {
+                log("IdleWatchdog error: " + e.getMessage());
+            }
+        }, 1, 1, TimeUnit.MINUTES);
+    }
+
+    private void shutdownServerNow() {
+        try { stopListening(); } catch (Exception ignored) {}
+        try { close(); } catch (Exception ignored) {}
+
+        idleScheduler.shutdownNow();
+
+        if (onAutoShutdown != null) {
+            try { onAutoShutdown.run(); } catch (Exception ignored) {}
+        }
+    
+
 }
+
+}
+

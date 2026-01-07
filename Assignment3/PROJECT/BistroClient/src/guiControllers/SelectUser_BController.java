@@ -28,9 +28,11 @@ public class SelectUser_BController {
             Object controller = loader.getController();
 
             // להעביר clientActions הלאה למסכים הבאים/אחורה
-          /*  if (controller instanceof RestaurantManagement_BController) {
+            if (controller instanceof RestaurantManagement_BController) {
                 ((RestaurantManagement_BController) controller).setClientActions(clientActions);
-            } else if (controller instanceof SubscribersController) {
+            } 
+            
+            /*else if (controller instanceof SubscribersController) {
                 ((SubscribersController) controller).setClientActions(clientActions);
             } else if (controller instanceof GuestsController) {
                 ((GuestsController) controller).setClientActions(clientActions);
@@ -62,7 +64,7 @@ public class SelectUser_BController {
     @FXML
     private void onBackToMenuClicked() {
         // חזרה למסך הקודם
-        openWindow("RestaurantManagement.fxml", "Restaurant Management");
+        openWindow("RestaurantManagement_B.fxml", "Restaurant Management");
     }
 
     private void showMessage(String msg) {

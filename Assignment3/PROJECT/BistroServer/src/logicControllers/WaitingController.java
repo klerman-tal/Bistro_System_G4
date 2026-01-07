@@ -11,7 +11,7 @@ import entities.User;
 import entities.Waiting;
 
 public class WaitingController {
-//test
+
     private final Waiting_DB_Controller db;
     private final RestaurantServer server;
 

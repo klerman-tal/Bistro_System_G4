@@ -1,5 +1,7 @@
 package application;
+
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -31,7 +33,6 @@ public class ServerUI extends Application {
         DBController.MYSQL_PASSWORD = mysqlPassword;
 
         // ===== Step 2: Load and display the GUI =====
-        // Load FXML layout and get its controller
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/ServerGUI.fxml"));
         Parent root = loader.load();
         controller = loader.getController();
@@ -41,10 +42,18 @@ public class ServerUI extends Application {
         primaryStage.show();
 
         // ===== Step 3: Start the server in a separate thread =====
-        // Prevent blocking the JavaFX UI thread
         new Thread(() -> {
             RestaurantServer server = new RestaurantServer(5556);
             server.setUiController(controller);
+
+            // ✅ NEW: Auto close UI when server auto-shuts down (30 min idle)
+            server.setOnAutoShutdown(() -> Platform.runLater(() -> {
+                try {
+                    primaryStage.close();
+                } catch (Exception ignored) {}
+                Platform.exit();
+            }));
+
             try {
                 server.listen(); // Start listening to client connections
             } catch (Exception e) {
