@@ -2,110 +2,147 @@ package entities;
 
 import java.time.LocalDateTime;
 import java.util.Random;
-import entities.Enums.UserRole;
 
+import entities.Enums.UserRole;
 import entities.Enums.ReservationStatus;
 
 public class Reservation {
 
-    // ===== Fields =====
+	// ===== Fields =====
 	private int reservationId;
-    private String confirmationCode;
-    private int createdByUserId;
-    private LocalDateTime reservationTime;
-    private int guestAmount;
-    private boolean isConfirmed;
-    private ReservationStatus reservationStatus;
-    private Integer tableNumber;          // nullable
-    private boolean isActive;             // from DB is_active
-    private UserRole createdByRole;       // from DB created_by_role
+	private String confirmationCode;
+	private int createdByUserId;
+	private LocalDateTime reservationTime;
+	private int guestAmount;
+	private boolean isConfirmed;
+	private ReservationStatus reservationStatus;
+	private Integer tableNumber; // nullable
+	private boolean isActive; // from DB is_active
+	private UserRole createdByRole; // from DB created_by_role
 
-    // ===== Constructor =====
-    public Reservation() {
-        createdByUserId = -1;
-        reservationTime = null;
-        guestAmount = 0;
+	// ✅ NEW
+	private LocalDateTime checkinTime;
+	private LocalDateTime checkoutTime;
 
-        isConfirmed = true; // אם החלטת "כל עוד לא בוטל = מאושר"
-        isActive = true;
-        reservationStatus = ReservationStatus.Active;
+	// ===== Constructor =====
+	public Reservation() {
+		createdByUserId = -1;
+		reservationTime = null;
+		guestAmount = 0;
 
-        tableNumber = null;
-        createdByRole = null;
-    }
+		isConfirmed = true;
+		isActive = true;
+		reservationStatus = ReservationStatus.Active;
 
+		tableNumber = null;
+		createdByRole = null;
 
-    // ===== Getters / Setters =====
-    public int getReservationId() {
-        return reservationId;
-    }
+		// ✅ NEW
+		checkinTime = null;
+		checkoutTime = null;
+	}
 
-    public void setReservationId(int reservationId) {
-        this.reservationId = reservationId;
-    }
+	// ===== Getters / Setters =====
+	public int getReservationId() {
+		return reservationId;
+	}
 
-    public String getConfirmationCode() {
-        return confirmationCode;
-    }
+	public void setReservationId(int reservationId) {
+		this.reservationId = reservationId;
+	}
 
-    public void setConfirmationCode(String confirmationCode) {
-        this.confirmationCode = confirmationCode;
-    }
+	public String getConfirmationCode() {
+		return confirmationCode;
+	}
 
-    public int getCreatedByUserId() {
-        return createdByUserId;
-    }
+	public void setConfirmationCode(String confirmationCode) {
+		this.confirmationCode = confirmationCode;
+	}
 
-    public void setCreatedByUserId(int createdByUserId) {
-        this.createdByUserId = createdByUserId;
-    }
+	public int getCreatedByUserId() {
+		return createdByUserId;
+	}
 
-    public LocalDateTime getReservationTime() {
-        return reservationTime;
-    }
+	public void setCreatedByUserId(int createdByUserId) {
+		this.createdByUserId = createdByUserId;
+	}
 
-    public void setReservationTime(LocalDateTime reservationTime) {
-        this.reservationTime = reservationTime;
-    }
+	public LocalDateTime getReservationTime() {
+		return reservationTime;
+	}
 
-    public int getGuestAmount() {
-        return guestAmount;
-    }
+	public void setReservationTime(LocalDateTime reservationTime) {
+		this.reservationTime = reservationTime;
+	}
 
-    public void setGuestAmount(int guestAmount) {
-        this.guestAmount = guestAmount;
-    }
+	public int getGuestAmount() {
+		return guestAmount;
+	}
 
-    public boolean isConfirmed() {
-        return isConfirmed;
-    }
+	public void setGuestAmount(int guestAmount) {
+		this.guestAmount = guestAmount;
+	}
 
-    public void setConfirmed(boolean isConfirmed) {
-        this.isConfirmed = isConfirmed;
-    }
-    
-    public ReservationStatus getReservationStatus() {
+	public boolean isConfirmed() {
+		return isConfirmed;
+	}
+
+	public void setConfirmed(boolean isConfirmed) {
+		this.isConfirmed = isConfirmed;
+	}
+
+	public ReservationStatus getReservationStatus() {
 		return reservationStatus;
 	}
 
 	public void setReservationStatus(ReservationStatus reservationStatus) {
 		this.reservationStatus = reservationStatus;
 	}
-	
-	public Integer getTableNumber() { return tableNumber; }
-	public void setTableNumber(Integer tableNumber) { this.tableNumber = tableNumber; }
 
-	public boolean isActive() { return isActive; }
-	public void setActive(boolean active) { isActive = active; }
+	public Integer getTableNumber() {
+		return tableNumber;
+	}
 
-	public UserRole getCreatedByRole() { return createdByRole; }
-	public void setCreatedByRole(UserRole createdByRole) { this.createdByRole = createdByRole; }
+	public void setTableNumber(Integer tableNumber) {
+		this.tableNumber = tableNumber;
+	}
 
-    // ===== Utils =====
-    private String createConfirmationCode() {
-        int code = new Random().nextInt(900000) + 100000;
-        return String.valueOf(code);
-    }
+	public boolean isActive() {
+		return isActive;
+	}
 
-	
+	public void setActive(boolean active) {
+		isActive = active;
+	}
+
+	public UserRole getCreatedByRole() {
+		return createdByRole;
+	}
+
+	public void setCreatedByRole(UserRole createdByRole) {
+		this.createdByRole = createdByRole;
+	}
+
+	// ===== ✅ Check-in / Check-out =====
+	public LocalDateTime getCheckinTime() {
+		return checkinTime;
+	}
+
+	public void setCheckinTime(LocalDateTime checkinTime) {
+		this.checkinTime = checkinTime;
+	}
+
+	public LocalDateTime getCheckoutTime() {
+		return checkoutTime;
+	}
+
+	public void setCheckoutTime(LocalDateTime checkoutTime) {
+		this.checkoutTime = checkoutTime;
+	}
+
+	// ===== Utils =====
+	private String createConfirmationCode() {
+		int code = new Random().nextInt(900000) + 100000;
+		return String.valueOf(code);
+	}
 }
