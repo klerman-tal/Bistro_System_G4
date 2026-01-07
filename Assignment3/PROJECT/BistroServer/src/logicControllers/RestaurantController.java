@@ -74,27 +74,35 @@ public class RestaurantController {
      * אבל זה לא מפריע למערכת כל עוד לא משתמשים בעמודה הזאת.
      */
     public boolean removeTable(int tableNumber) throws SQLException {
-        if (restaurant.getTables() == null || restaurant.getTables().isEmpty()) {
-            loadTablesFromDb();
-        }
+        // לוודא tables טעונים
+        List<Table> tables = getSortedTablesEnsured();
 
+        // לוודא שלגריד יש את העמודות (כולל זו של השולחן שרוצים למחוק)
+        db.ensureAvailabilityGridSchema(tables);
+
+        // למצוא את השולחן בקאש
         Table toRemove = null;
         for (Table t : restaurant.getTables()) {
             if (t.getTableNumber() == tableNumber) { toRemove = t; break; }
         }
         if (toRemove == null) return false;
 
+        // כאן ה-DB יחסום מחיקה אם יש תפוסים בחודש הקרוב
         boolean deleted = db.deleteTable(tableNumber);
         if (!deleted) return false;
 
         restaurant.getTables().remove(toRemove);
 
-        // שומר על סכמה תקינה עבור השולחנות שנשארו
-        List<Table> tables = getSortedTablesEnsured();
-        db.ensureAvailabilityGridSchema(tables);
+        // לשמור על סכמה תקינה עבור הנותרים
+        List<Table> remaining = getSortedTablesEnsured();
+        db.ensureAvailabilityGridSchema(remaining);
+
+        // אופציונלי: למחוק גם את העמודה מהגריד
+        // db.dropTableColumnFromGrid(tableNumber);
 
         return true;
     }
+
 
     // =========================
     // OPENING HOURS (cache + DB)
@@ -304,5 +312,24 @@ public class RestaurantController {
         List<Table> tables = new ArrayList<>(restaurant.getTables());
         tables.sort(Comparator.comparingInt(Table::getTableNumber));
         return tables;
+    }
+    
+    
+    //liem
+    /**
+     * Checks if a specific table is free for 2 hours starting from 'start'
+     * (4 slots of 30 minutes) WITHOUT reserving anything.
+     */
+    public boolean isTableFreeForTwoHours(LocalDateTime start, int tableNumber) throws Exception {
+        if (start == null) return false;
+
+        List<Table> tables = getSortedTablesEnsured();
+        db.ensureAvailabilityGridSchema(tables);
+
+        for (int i = 0; i < 4; i++) {
+            LocalDateTime slot = start.plusMinutes(30L * i);
+            if (!db.isTableFreeAtSlot(slot, tableNumber)) return false;
+        }
+        return true;
     }
 }

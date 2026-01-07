@@ -34,7 +34,7 @@ public class ClientUI extends Application implements ChatIF, ClientActions {
     public void start(Stage primaryStage) throws Exception {
 
         // ===== 1) בקשת IP מהמשתמש =====
-        TextInputDialog dialog = new TextInputDialog("10.0.0.15");
+        TextInputDialog dialog = new TextInputDialog("");
         dialog.setTitle("Server IP Required");
         dialog.setHeaderText("Enter Bistro server IP");
         dialog.setContentText("Server IP:");
@@ -59,28 +59,35 @@ public class ClientUI extends Application implements ChatIF, ClientActions {
             return;
         }
 
-        // ===== 3) טעינת Login =====
+     // ===== 3) טעינת Login =====
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Login_B.fxml"));
+            // שימוש בנתיב מוחלט מה-Root
+            var resource = getClass().getResource("/gui/Login_B.fxml");
+            
+            if (resource == null) {
+                throw new RuntimeException("Fatal Error: Could not find /gui/Login_B.fxml. Check your folder structure!");
+            }
+
+            FXMLLoader loader = new FXMLLoader(resource);
             Parent root = loader.load();
-            Login_BController loginController = loader.getController();
-            loginController.setClientActions(this);
 
-            // אם בלוגין יש setClientActions - מומלץ להעביר (אם אין כרגע, לא חובה)
-            // Object c = loader.getController();
-            // if (c instanceof Login_BController) {
-            //     ((Login_BController) c).setClientActions(this);
-            // }
-
-            primaryStage.setTitle("Bistro Client – Login");
-            primaryStage.setScene(new Scene(root));
+            // הגדרת הסצנה
+            Scene scene = new Scene(root);
+            primaryStage.setTitle("Bistro Management System");
+            primaryStage.setScene(scene);
+            
+            primaryStage.centerOnScreen();
             primaryStage.show();
-        } catch (IOException e) {
-            System.out.println("Error: Can't load Login_B.fxml");
+            
+            System.out.println("Login_B screen loaded successfully.");
+            
+        } catch (Exception e) {
+            System.err.println("Error in start method: " + e.getMessage());
             e.printStackTrace();
-            Platform.exit();
         }
     }
+    
+    
 
     // ---- הודעות מהשרת ----
     @Override
@@ -128,4 +135,16 @@ public class ClientUI extends Application implements ChatIF, ClientActions {
     public static void main(String[] args) {
         launch(args);
     }
+
+	@Override
+	public boolean loginGuest(String phone, String email) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean loginSubscriber(int subscriberId, String username) {
+		// TODO Auto-generated method stub
+		return false;
+	}
 } 
