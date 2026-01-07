@@ -45,8 +45,16 @@ public class OpeningHoursController implements ChatIF {
         ClientUI.setActiveController(this);
 
         dayColumn.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getDayOfWeek()));
-        openTimeColumn.setCellValueFactory(cell -> new SimpleStringProperty(toHHMM(cell.getValue().getOpenTime())));
-        closeTimeColumn.setCellValueFactory(cell -> new SimpleStringProperty(toHHMM(cell.getValue().getCloseTime())));
+        openTimeColumn.setCellValueFactory(cell -> {
+            String v = toHHMM(cell.getValue().getOpenTime());
+            return new SimpleStringProperty(v.isBlank() ? "CLOSED" : v);
+        });
+
+        closeTimeColumn.setCellValueFactory(cell -> {
+            String v = toHHMM(cell.getValue().getCloseTime());
+            return new SimpleStringProperty(v.isBlank() ? "CLOSED" : v);
+        });
+
 
         openingHoursTable.addEventFilter(MouseEvent.MOUSE_CLICKED, e -> detectClickedColumn());
 
@@ -97,14 +105,24 @@ public class OpeningHoursController implements ChatIF {
         }
 
         String newTime = openTimeField.getText();
-        if (newTime == null || newTime.isBlank()) {
-            showAlert("Please enter a time (HH:MM).");
+        newTime = (newTime == null) ? "" : newTime.trim();
+
+        // ⭐⭐⭐ אם ריק -> נסגור את היום (נשלח ריקים -> השרת ישים NULL) ⭐⭐⭐
+        if (newTime.isBlank()) {
+            String day = selected.getDayOfWeek();
+            selected.setOpenTime("");
+            selected.setCloseTime("");
+
+            openingHoursTable.refresh();
+
+            // שולחים ריקים כדי שייכנס NULL ב-DB
+            sendUpdateToServer(day, "", "");
             return;
         }
 
-        newTime = newTime.trim();
+        // אחרת - זה חייב להיות בפורמט HH:MM
         if (!newTime.matches("^\\d{2}:\\d{2}$")) {
-            showAlert("Invalid time format. Use HH:MM (e.g., 09:30).");
+            showAlert("Invalid time format. Use HH:MM (e.g., 09:30) or leave empty for CLOSED.");
             return;
         }
 
@@ -204,7 +222,7 @@ public class OpeningHoursController implements ChatIF {
             row = row.trim();
             if (row.isEmpty()) continue;
 
-            String[] parts = row.split(",");
+            String[] parts = row.split(",", -1);
             if (parts.length < 3) continue;
 
             OpeningHouers oh = new OpeningHouers();

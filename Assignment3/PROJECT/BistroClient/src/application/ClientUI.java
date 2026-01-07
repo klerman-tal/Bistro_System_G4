@@ -34,7 +34,7 @@ public class ClientUI extends Application implements ChatIF, ClientActions {
     public void start(Stage primaryStage) throws Exception {
 
         // ===== 1) בקשת IP מהמשתמש =====
-        TextInputDialog dialog = new TextInputDialog("10.0.0.15");
+        TextInputDialog dialog = new TextInputDialog("");
         dialog.setTitle("Server IP Required");
         dialog.setHeaderText("Enter Bistro server IP");
         dialog.setContentText("Server IP:");
