@@ -1,103 +1,206 @@
-/* ===== ROOT WINDOW (ALL SCREEN ROUNDED) ===== */
-#rootPane {
-    -fx-background-color: #ffffff;    /* רקע חלון */
-    -fx-background-radius: 25;
-    -fx-border-radius: 25;
-    -fx-border-color: #d0d0d0;
-    -fx-border-width: 1.2;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 20, 0.3, 0, 4);
-}
-
-/* כללית – פונט יפה */
+/* ===== GLOBAL FONT ===== */
 .root {
     -fx-font-family: "Poppins", "Segoe UI", "Roboto", "Arial";
 }
 
-
-/* ===== HEADER ===== */
-#header {
-    -fx-background-color: #000000;      /* שחור */
-    -fx-background-radius: 25 25 0 0;   /* עיגול רק למעלה */
-    -fx-padding: 20 30 20 30;
+/* ===== ROOT BACKGROUND ===== */
+#rootPane, .root {
+    -fx-background-color: linear-gradient(to bottom right, #e0f2f1, #ffffff);
 }
 
+/* ===== CARD ===== */
+.card {
+    -fx-background-color: white;
+    -fx-background-radius: 25;
+    -fx-border-color: #f1f2f6;
+    -fx-border-radius: 25;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 15, 0, 0, 8);
+}
+
+/* ===== TITLES / SUBTITLES ===== */
 .title {
-    -fx-font-size: 30px;
-    -fx-font-weight: 600;
-    -fx-text-fill: white;               /* טקסט לבן */
+    -fx-font-size: 32px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #2c3e50;
 }
 
-
-/* ===== LABELS ===== */
-.section {
-    -fx-font-size: 17px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #333333;
+.subtitle {
+    -fx-font-size: 13px;
+    -fx-text-fill: #7f8c8d;
 }
 
-.label {
-    -fx-text-fill: #333333;
+/* ===== FIELD LABELS ===== */
+.field-label {
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #95a5a6;
 }
 
-
-/* ===== INPUT FIELDS ===== */
-.text-field, .password-field {
-    -fx-background-color: #ffffff;
-    -fx-border-color: #cccccc;
-    -fx-background-radius: 8;
-    -fx-border-radius: 8;
-    -fx-padding: 6 12;
-    -fx-font-size: 14px;
+/* ===== TEXT FIELDS ===== */
+.text-field, .password-field, .date-picker {
+    -fx-background-color: #fdfdfd;
+    -fx-border-color: #ebedf0;
+    -fx-border-width: 1;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-padding: 10 12;
+    -fx-font-size: 13.5px;
+    -fx-text-fill: #2c3e50;
+    -fx-prompt-text-fill: #b7c0c7;
 }
 
-.text-field:focused, .password-field:focused {
-    -fx-border-color: #3a7afe;
-    -fx-effect: dropshadow(gaussian, rgba(58,122,254,0.25), 8, 0.3, 0, 0);
+.text-field:focused, .password-field:focused, .date-picker:focused {
+    -fx-border-color: #cfd8dc;
+    -fx-effect: dropshadow(three-pass-box, rgba(44,62,80,0.10), 10, 0, 0, 2);
 }
 
-
-/* ===== RADIO BUTTON ===== */
-.radio-button {
-    -fx-text-fill: #333333;
-}
-
-
-/* ===== ERROR MESSAGE ===== */
-.errorMsg {
-    -fx-text-fill: #cc0000;
-    -fx-font-weight: bold;
-}
-
-
-/* ===== BUTTONS ===== */
-
-/* "Pay" button – מלא שחור */
+/* ===== PRIMARY BUTTON ===== */
 .btnPrimary {
-    -fx-background-color: #000000;
+    -fx-background-color: #2f3542;
     -fx-text-fill: white;
-    -fx-background-radius: 12;
-    -fx-padding: 10 24;
+    -fx-background-radius: 20;
+    -fx-padding: 12 40;
+    -fx-cursor: hand;
+    -fx-font-weight: 800;
     -fx-font-size: 14px;
-    -fx-font-weight: bold;
 }
 
 .btnPrimary:hover {
-    -fx-background-color: #333333;
+    -fx-background-color: #3a4050;
 }
 
-/* "Cancel" – מסגרת שחורה */
+.btnPrimary:pressed {
+    -fx-background-color: #242a35;
+}
+
+/* ===== SECONDARY BUTTON ===== */
 .btnSecondary {
     -fx-background-color: transparent;
-    -fx-border-color: #000000;
+    -fx-border-color: #2f3542;
     -fx-border-width: 2;
-    -fx-text-fill: #000000;
-    -fx-background-radius: 12;
-    -fx-border-radius: 12;
-    -fx-padding: 10 24;
+    -fx-text-fill: #2f3542;
+    -fx-background-radius: 20;
+    -fx-border-radius: 20;
+    -fx-padding: 12 40;
+    -fx-cursor: hand;
+    -fx-font-weight: 800;
     -fx-font-size: 14px;
-    -fx-font-weight: bold;
 }
 
 .btnSecondary:hover {
-    -fx-background-color: #f2f2f2;
+    -fx-background-color: rgba(47,53,66,0.06);
+}
+
+/* ===== ERROR MESSAGE ===== */
+.errorMsg {
+    -fx-text-fill: #ff4757;
+    -fx-font-size: 12px;
+    -fx-font-weight: 800;
+}
+
+/* ===== HYPERLINK ===== */
+.hyperlink {
+    -fx-text-fill: #bdc3c7;
+    -fx-font-size: 12px;
+    -fx-underline: false;
+}
+
+.hyperlink:hover {
+    -fx-text-fill: #9aa4ad;
+}
+/* ===== EXTRA FOR LOGIN_B (MATCH ORIGINAL) ===== */
+
+/* WELCOME big title with spacing */
+.welcomeTitle {
+    -fx-font-size: 50px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #2c3e50;
+    -fx-letter-spacing: 8px;
+}
+
+/* subtitle italic like original header line */
+.subtitleItalic {
+    -fx-font-size: 16px;
+    -fx-text-fill: #7f8c8d;
+    -fx-font-style: italic;
+}
+
+/* bigger emoji icons */
+.emojiBig {
+    -fx-font-size: 45px;
+}
+
+/* card titles */
+.cardTitle {
+    -fx-font-size: 22px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #2c3e50;
+}
+
+/* card hint text */
+.cardHint {
+    -fx-font-size: 12px;
+    -fx-text-fill: #bdc3c7;
+}
+
+/* card shape more like original (radius 30 + stronger shadow) */
+.card30 {
+    -fx-background-color: white;
+    -fx-background-radius: 30;
+    -fx-border-color: #f1f2f6;
+    -fx-border-radius: 30;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 20, 0, 0, 10);
+}
+
+/* red button like original subscriber */
+.btnDanger {
+    -fx-background-color: #ff4757;
+    -fx-text-fill: white;
+    -fx-background-radius: 25;
+    -fx-padding: 12 45;
+    -fx-cursor: hand;
+    -fx-font-weight: 800;
+    -fx-font-size: 14px;
+}
+
+.btnDanger:hover {
+    -fx-background-color: #ff5f6d;
+}
+
+.btnDanger:pressed {
+    -fx-background-color: #e8414f;
+}
+
+/* dark button shape like original guest */
+.btnWide25 {
+    -fx-background-color: #2f3542;
+    -fx-text-fill: white;
+    -fx-background-radius: 25;
+    -fx-padding: 12 45;
+    -fx-cursor: hand;
+    -fx-font-weight: 800;
+    -fx-font-size: 14px;
+}
+
+.btnWide25:hover {
+    -fx-background-color: #3a4050;
+}
+
+.btnWide25:pressed {
+    -fx-background-color: #242a35;
+}
+
+/* register link blue like original */
+.linkBlue {
+    -fx-text-fill: #3498db;
+    -fx-font-size: 15px;
+    -fx-font-weight: 800;
+    -fx-underline: false;
+}
+
+.linkBlue:hover {
+    -fx-text-fill: #2f80ed;
+    -fx-underline: false;
 }

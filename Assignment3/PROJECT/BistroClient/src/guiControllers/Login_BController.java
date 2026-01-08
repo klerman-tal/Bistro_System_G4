@@ -13,7 +13,7 @@ public class Login_BController {
 
     @FXML
     private void handleSubscriberChoice(ActionEvent event) {
-        navigateTo(event, "/gui/SubscriberLogin.fxml");
+        navigateTo(event, "/gui/Menu_B.fxml");
     }
 
     @FXML
