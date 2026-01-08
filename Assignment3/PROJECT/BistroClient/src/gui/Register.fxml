@@ -4,51 +4,69 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.effect.DropShadow?>
 
-<StackPane prefHeight="700.0" prefWidth="900.0" 
-           style="-fx-background-color: linear-gradient(to bottom right, #e0f2f1, #ffffff);" 
-           xmlns="http://javafx.com/javafx/21" 
-           xmlns:fx="http://javafx.com/fxml/1" 
+<StackPane id="rootPane"
+           stylesheets="@Style.css"
+           xmlns="http://javafx.com/javafx/21"
+           xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="guiControllers.RegisterController">
-    
+
     <children>
-        <VBox alignment="CENTER" spacing="25.0" maxWidth="500.0">
+
+        <VBox alignment="CENTER" spacing="25" maxWidth="500">
+
             <children>
-                <ImageView fitHeight="70.0" fitWidth="70.0" pickOnBounds="true" preserveRatio="true">
+
+                <!-- LOGO -->
+                <ImageView fitHeight="90"
+                           preserveRatio="true">
                     <image>
-                        <Image url="@../images/bistro_logo.png" />
+                        <Image url="@BistroLogo.png"/>
                     </image>
                 </ImageView>
 
-                <VBox alignment="CENTER" spacing="5.0">
+                <!-- TITLE -->
+                <VBox alignment="CENTER" spacing="6">
                     <children>
-                        <Label text="REGISTER" style="-fx-font-size: 40px; -fx-font-weight: bold; -fx-text-fill: #2c3e50; -fx-letter-spacing: 2;" />
-                        <Label text="Create your new subscriber account" style="-fx-font-size: 14px; -fx-text-fill: #7f8c8d;" />
+                        <Label text="REGISTER" styleClass="welcomeTitle"/>
+                        <Label text="Create your new subscriber account"
+                               styleClass="subtitleItalic"/>
                     </children>
                 </VBox>
 
-                <VBox alignment="CENTER" spacing="15.0" 
-                      style="-fx-background-color: white; -fx-background-radius: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 20, 0, 0, 10);">
+                <!-- FORM CARD -->
+                <VBox alignment="CENTER"
+                      spacing="15"
+                      styleClass="card30">
                     <padding>
-                        <Insets top="40.0" bottom="40.0" left="50.0" right="50.0" />
+                        <Insets top="35" bottom="35" left="40" right="40"/>
                     </padding>
+
                     <children>
-                        <TextField fx:id="firstNameField" promptText="First Name" style="-fx-background-radius: 10; -fx-padding: 12; -fx-border-color: #f1f2f6; -fx-border-radius: 10;" />
-                        <TextField fx:id="lastNameField" promptText="Last Name" style="-fx-background-radius: 10; -fx-padding: 12; -fx-border-color: #f1f2f6; -fx-border-radius: 10;" />
-                        <TextField fx:id="usernameField" promptText="Username" style="-fx-background-radius: 10; -fx-padding: 12; -fx-border-color: #f1f2f6; -fx-border-radius: 10;" />
-                        <TextField fx:id="phoneField" promptText="Phone Number" style="-fx-background-radius: 10; -fx-padding: 12; -fx-border-color: #f1f2f6; -fx-border-radius: 10;" />
-                        <TextField fx:id="emailField" promptText="Email Address" style="-fx-background-radius: 10; -fx-padding: 12; -fx-border-color: #f1f2f6; -fx-border-radius: 10;" />
+                        <TextField fx:id="firstNameField" promptText="First Name"/>
+                        <TextField fx:id="lastNameField" promptText="Last Name"/>
+                        <TextField fx:id="usernameField" promptText="Username"/>
+                        <TextField fx:id="phoneField" promptText="Phone Number"/>
+                        <TextField fx:id="emailField" promptText="Email Address"/>
 
-                        <Label fx:id="lblMessage" visible="false" managed="false" style="-fx-text-fill: #ff4757; -fx-font-size: 13px;" />
+                        <Label fx:id="lblMessage"
+                               visible="false"
+                               managed="false"
+                               styleClass="errorMsg"/>
 
-                        <Button onAction="#handleRegister" prefWidth="250.0" text="CREATE ACCOUNT" 
-                                style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-background-radius: 20; -fx-padding: 15; -fx-font-weight: bold; -fx-cursor: hand;" />
-                        
-                        <Hyperlink onAction="#handleBackButton" text="Return to Home" style="-fx-text-fill: #bdc3c7; -fx-font-size: 12px;" />
+                        <Button text="CREATE ACCOUNT"
+                                onAction="#handleRegister"
+                                styleClass="btnPrimary"
+                                prefWidth="240"/>
+
+                        <Hyperlink text="Return to Home"
+                                   onAction="#handleBackButton"
+                                   styleClass="linkBlue"/>
                     </children>
                 </VBox>
+
             </children>
         </VBox>
+
     </children>
 </StackPane>
