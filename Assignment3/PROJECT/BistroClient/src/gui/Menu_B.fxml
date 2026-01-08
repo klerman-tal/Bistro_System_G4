@@ -8,51 +8,66 @@
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 
-<BorderPane fx:id="rootPane" stylesheets="@Style.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="guiControllers.Menu_BController">
+<BorderPane fx:id="rootPane" stylesheets="@Style.css"
+	xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+	fx:controller="guiControllers.Menu_BController">
 
-    <!-- HEADER -->
-    <top>
-        <HBox fx:id="header" alignment="CENTER_LEFT">
-            <padding>
-                <Insets bottom="18" left="25" right="25" top="18" />
-            </padding>
-            <children>
-                <Label styleClass="title" text="Main Menu" textFill="WHITE" />
+	<!-- HEADER -->
+	<top>
+		<HBox fx:id="header" alignment="CENTER_LEFT">
+			<padding>
+				<Insets bottom="18" left="25" right="25" top="18" />
+			</padding>
+			<children>
+				<Label styleClass="title" text="Main Menu" textFill="WHITE" />
 
-                <!-- רווח דוחף -->
-                <Region HBox.hgrow="ALWAYS" />
-            </children>
-        </HBox>
-    </top>
+				<!-- רווח דוחף -->
+				<Region HBox.hgrow="ALWAYS" />
+			</children>
+		</HBox>
+	</top>
 
-    <!-- CENTER CONTENT -->
-    <center>
-        <VBox alignment="TOP_CENTER" spacing="18">
-            <padding>
-                <Insets bottom="20" left="40" right="40" top="30" />
-            </padding>
+	<!-- CENTER CONTENT -->
+	<center>
+		<VBox alignment="TOP_CENTER" spacing="18">
+			<padding>
+				<Insets bottom="20" left="40" right="40" top="30" />
+			</padding>
 
-            <children>
-                <Label styleClass="section" text="Choose an action" />
+			<children>
+				<Label styleClass="section" text="Choose an action" />
 
-                <Button fx:id="btnReservation" maxWidth="300" onAction="#onSelectReservationClicked" prefWidth="260" styleClass="btnSecondary" text="Table Reservation" />
+				<Button fx:id="btnReservation" maxWidth="300"
+					onAction="#onSelectReservationClicked" prefWidth="260"
+					styleClass="btnSecondary" text="Table Reservation" />
 
-                <Button fx:id="btnPayment" maxWidth="300" onAction="#onSelectPaymentClicked" prefWidth="260" styleClass="btnSecondary" text="Payment" />
+				<Button fx:id="btnPayment" maxWidth="300"
+					onAction="#onSelectPaymentClicked" prefWidth="260"
+					styleClass="btnSecondary" text="Payment" />
 
-                <Button fx:id="btnPersonalDetails" maxWidth="300" onAction="#onSelectPersonalDetailsClicked" prefWidth="260" styleClass="btnSecondary" text="Personal Details" />
+				<Button fx:id="btnPersonalDetails" maxWidth="300"
+					onAction="#onSelectPersonalDetailsClicked" prefWidth="260"
+					styleClass="btnSecondary" text="Personal Details" />
 
-                <!-- בלי Register -->
+				<!-- בלי Register -->
 
-                <Button fx:id="btnGetTable" maxWidth="300" onAction="#onSelectGetTableClicked" prefWidth="260" styleClass="btnSecondary" text="Get Table" />
+				<Button fx:id="btnGetTable" maxWidth="300"
+					onAction="#onSelectGetTableClicked" prefWidth="260"
+					styleClass="btnSecondary" text="Get Table" />
 
-                <Button fx:id="btnRestaurantManagement" maxWidth="300" onAction="#onSelectRestaurantManagementClicked" prefWidth="260" styleClass="btnSecondary" text="Restaurant Management" />
+				<Button fx:id="btnRestaurantManagement" maxWidth="300"
+					onAction="#onSelectRestaurantManagementClicked" prefWidth="260"
+					styleClass="btnSecondary" text="Restaurant Management" />
 
-                <Label fx:id="lblMessage" managed="false" styleClass="errorMsg" text="" visible="false" />
+				<Label fx:id="lblMessage" managed="false"
+					styleClass="errorMsg" text="" visible="false" />
 
-                <!-- LOGOUT קטן בשחור -->
-                <Button fx:id="btnLogout" onAction="#onLogoutClicked" style="-fx-background-color: #000000;                                -fx-text-fill: white;                                -fx-font-size: 11px;                                -fx-padding: 4 12;                                -fx-background-radius: 12;" styleClass="btnSecondary" text="Logout" />
-            </children>
-        </VBox>
-    </center>
+				<!-- LOGOUT קטן בשחור -->
+				<Button fx:id="btnLogout" onAction="#onLogoutClicked"
+					style="-fx-background-color: #000000;                                -fx-text-fill: white;                                -fx-font-size: 11px;                                -fx-padding: 4 12;                                -fx-background-radius: 12;"
+					styleClass="btnSecondary" text="Logout" />
+			</children>
+		</VBox>
+	</center>
 
 </BorderPane>
