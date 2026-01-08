@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.chart.BarChart?>
+<?import javafx.scene.chart.CategoryAxis?>
+<?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane fx:id="rootPane"
+            stylesheets="@Style.css"
+            xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="guiControllers.ReportsScreenController">
+
+    <!-- HEADER -->
+    <top>
+        <HBox alignment="CENTER_LEFT">
+            <padding>
+                <Insets top="18" right="25" bottom="18" left="25"/>
+            </padding>
+            <children>
+                <Label text="Monthly Arrival and Stay Report"
+                       styleClass="title"
+                       textFill="WHITE"/>
+            </children>
+        </HBox>
+    </top>
+
+    <!-- CENTER -->
+    <center>
+        <VBox alignment="TOP_CENTER" spacing="25">
+            <padding>
+                <Insets top="30" right="40" bottom="20" left="40"/>
+            </padding>
+
+            <children>
+
+                <Label text="Arrival Delays and Stay Duration (Minutes)"
+                       styleClass="section"/>
+
+                <BarChart fx:id="timesChart"
+                          prefWidth="850"
+                          prefHeight="420"
+                          animated="false">
+
+                    <xAxis>
+                        <NumberAxis label="Minutes"/>
+                    </xAxis>
+
+                    <yAxis>
+                        <CategoryAxis label="Day of Month"/>
+                    </yAxis>
+
+                </BarChart>
+
+            </children>
+        </VBox>
+    </center>
+
+</BorderPane>

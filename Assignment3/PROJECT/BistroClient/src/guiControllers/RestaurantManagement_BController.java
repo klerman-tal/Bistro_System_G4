@@ -27,7 +27,7 @@ public class RestaurantManagement_BController {
 
             Object controller = loader.getController();
 
-            // מעבירים clientActions רק למי שצריך
+            // pass clientActions where needed
             if (controller instanceof UpdateTablesController) {
                 ((UpdateTablesController) controller).setClientActions(clientActions);
 
@@ -39,6 +39,9 @@ public class RestaurantManagement_BController {
 
             } else if (controller instanceof ManageReservationController) {
                 ((ManageReservationController) controller).setClientActions(clientActions);
+
+            } else if (controller instanceof ReportsScreenController) {
+                ((ReportsScreenController) controller).setClientActions(clientActions);
             }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
@@ -70,6 +73,11 @@ public class RestaurantManagement_BController {
     @FXML
     private void onManageReservationClicked() {
         openWindow("ManageReservation.fxml", "Manage Reservations");
+    }
+
+    @FXML
+    private void onReportsClicked() {
+        openWindow("ReportsScreen.fxml", "Reports");
     }
 
     @FXML

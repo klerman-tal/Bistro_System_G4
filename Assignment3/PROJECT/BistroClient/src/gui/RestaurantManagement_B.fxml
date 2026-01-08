@@ -35,32 +35,33 @@
             <children>
                 <Label styleClass="section" text="Management actions"/>
 
-                <Button fx:id="btnUpdateTables"
-                        text="Update Tables"
+                <Button text="Update Tables"
                         maxWidth="300" prefWidth="260"
                         styleClass="btnSecondary"
                         onAction="#onUpdateTablesClicked"/>
 
-                <Button fx:id="btnUpdateOpeningHours"
-                        text="Update Opening Hours"
+                <Button text="Update Opening Hours"
                         maxWidth="300" prefWidth="260"
                         styleClass="btnSecondary"
                         onAction="#onUpdateOpeningHoursClicked"/>
 
-                <Button fx:id="btnManageUsers"
-                        text="Manage Users"
+                <Button text="Manage Users"
                         maxWidth="300" prefWidth="260"
                         styleClass="btnSecondary"
                         onAction="#onManageUsersClicked"/>
 
-                <Button fx:id="btnManageReservation"
-                        text="Manage Reservations"
+                <Button text="Manage Reservations"
                         maxWidth="300" prefWidth="260"
                         styleClass="btnSecondary"
                         onAction="#onManageReservationClicked"/>
 
+                <!-- NEW -->
+                <Button text="Reports"
+                        maxWidth="300" prefWidth="260"
+                        styleClass="btnSecondary"
+                        onAction="#onReportsClicked"/>
+
                 <Label fx:id="lblMessage"
-                       text=""
                        visible="false"
                        managed="false"
                        styleClass="errorMsg"/>
@@ -68,15 +69,14 @@
         </VBox>
     </center>
 
-    <!-- FOOTER BACK BUTTON -->
+    <!-- FOOTER -->
     <bottom>
         <HBox alignment="CENTER_RIGHT" spacing="12">
             <padding>
                 <Insets top="10" right="40" bottom="20" left="40"/>
             </padding>
             <children>
-                <Button fx:id="btnBack"
-                        text="Back"
+                <Button text="Back"
                         styleClass="btnSecondary"
                         onAction="#onBackToMenuClicked"/>
             </children>
