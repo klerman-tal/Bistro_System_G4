@@ -21,20 +21,21 @@ public class CreateReservationHandler implements RequestHandler {
 
     @Override
     public void handle(RequestDTO request, ConnectionToClient client) throws Exception {
-        // 1) חילוץ הנתונים
+
         CreateReservationDTO data = (CreateReservationDTO) request.getData();
         ArrayList<LocalTime> availableTimesOut = new ArrayList<>();
 
         Reservation res = reservationController.CreateTableReservation(data, availableTimesOut);
 
-        // 3) בדיקה אם ההזמנה הצליחה ושליחת תשובה
         if (res != null) {
-            // שלחי לקליינט את קוד האישור (confirmationCode)
-            ResponseDTO response = new ResponseDTO(true, "Reservation created", res.getConfirmationCode());
+            ResponseDTO response =
+                    new ResponseDTO(true, "Reservation created", res.getConfirmationCode());
             client.sendToClient(response);
         } else {
-            ResponseDTO response = new ResponseDTO(false, "No availability for requested time", null);
+            ResponseDTO response =
+                    new ResponseDTO(false, "No availability for requested time", availableTimesOut);
             client.sendToClient(response);
         }
     }
+
 }

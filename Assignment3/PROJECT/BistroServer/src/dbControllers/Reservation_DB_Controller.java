@@ -401,12 +401,13 @@ public class Reservation_DB_Controller {
      * Maps a ResultSet row to a Reservation entity (partial mapping for current project needs).
      */
     private Reservation mapRowToReservation(ResultSet rs) throws SQLException {
+
         Reservation r = new Reservation();
 
         r.setReservationId(rs.getInt("reservation_id"));
-        r.setConfirmationCode();
-        r.setGuestAmount(rs.getInt("number_of_guests"));
+        r.setConfirmationCode(); // ✅ חשוב
 
+        r.setGuestAmount(rs.getInt("number_of_guests"));
         r.setReservationTime(rs.getTimestamp("reservation_datetime").toLocalDateTime());
 
         r.setCreatedByUserId(rs.getInt("created_by"));
@@ -416,13 +417,16 @@ public class Reservation_DB_Controller {
         r.setActive(rs.getInt("is_active") == 1);
 
         String status = rs.getString("reservation_status");
-        if (status != null) r.setReservationStatus(ReservationStatus.valueOf(status));
+        if (status != null) {
+            r.setReservationStatus(ReservationStatus.valueOf(status));
+        }
 
         int tableNum = rs.getInt("table_number");
         r.setTableNumber(rs.wasNull() ? null : tableNum);
 
         return r;
     }
+
 
 
     /**
