@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.chart.BarChart?>
+<?import javafx.scene.chart.CategoryAxis?>
+<?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.chart.PieChart?>
+
+
+<BorderPane fx:id="rootPane" stylesheets="@Style.css"
+	xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+	fx:controller="guiControllers.TimeReportController">
+
+	<!-- HEADER -->
+	<top>
+		<HBox fx:id="header" alignment="CENTER_LEFT">
+			<padding>
+				<Insets top="18" right="25" bottom="18" left="25" />
+			</padding>
+			<children>
+				<Label text="Time Report" styleClass="title" textFill="WHITE" />
+			</children>
+		</HBox>
+	</top>
+
+	<!-- CENTER -->
+	<center>
+		<VBox alignment="TOP_CENTER" spacing="20">
+			<padding>
+				<Insets top="20" right="30" bottom="20" left="30" />
+			</padding>
+
+			<children>
+
+				<TabPane prefWidth="900" prefHeight="700">
+
+					<!-- TAB 1: Arrival Status -->
+					<Tab text="Arrival Status" closable="false">
+						<VBox alignment="TOP_CENTER" spacing="20">
+							<padding>
+								<Insets top="25" right="30" bottom="20" left="30" />
+							</padding>
+
+							<children>
+
+								<Label text="Arrival Status Distribution"
+									styleClass="section" />
+
+								<PieChart fx:id="arrivalPieChart" prefWidth="500"
+									prefHeight="350" />
+
+								<!-- Summary -->
+								<VBox alignment="TOP_LEFT" spacing="6" prefWidth="500">
+
+									<Label fx:id="lblOnTime" />
+									<Label fx:id="lblMinorDelay" />
+									<Label fx:id="lblMajorDelay" />
+
+								</VBox>
+
+							</children>
+						</VBox>
+					</Tab>
+
+					<!-- TAB 2: Stay Duration -->
+					<Tab text="Stay Duration" closable="false">
+						<VBox alignment="TOP_CENTER" spacing="20" prefHeight="550">
+							<padding>
+								<Insets top="25" right="30" bottom="20" left="30" />
+							</padding>
+
+							<children>
+
+								<Label text="Actual Stay Duration by Day (Minutes)"
+									styleClass="section" />
+
+								<BarChart fx:id="timesChart" prefWidth="850"
+									prefHeight="420" animated="false">
+
+									<xAxis>
+										<CategoryAxis label="Day of Month" />
+									</xAxis>
+
+									<yAxis>
+										<NumberAxis label="Minutes" />
+									</yAxis>
+
+								</BarChart>
+
+								<!-- ===== SUMMARY SECTION ===== -->
+								<VBox alignment="TOP_LEFT" spacing="6" prefWidth="850"
+									style="-fx-padding: 8;">
+
+									<Label fx:id="lblMonthlyAvg" />
+									<Label fx:id="lblMaxDay" />
+									<Label fx:id="lblMinDay" />
+
+								</VBox>
+
+							</children>
+						</VBox>
+					</Tab>
+
+				</TabPane>
+
+			</children>
+		</VBox>
+	</center>
+
+	<!-- FOOTER -->
+	<bottom>
+		<HBox alignment="CENTER_RIGHT" spacing="12">
+			<padding>
+				<Insets top="10" right="40" bottom="20" left="40" />
+			</padding>
+			<children>
+				<Button fx:id="btnBack" text="Back" styleClass="btnSecondary"
+					onAction="#onBackClicked" />
+			</children>
+		</HBox>
+	</bottom>
+
+</BorderPane>

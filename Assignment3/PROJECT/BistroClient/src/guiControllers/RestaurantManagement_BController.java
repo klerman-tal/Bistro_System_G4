@@ -40,8 +40,8 @@ public class RestaurantManagement_BController {
             } else if (controller instanceof ManageReservationController) {
                 ((ManageReservationController) controller).setClientActions(clientActions);
 
-            } else if (controller instanceof ReportsScreenController) {
-                ((ReportsScreenController) controller).setClientActions(clientActions);
+            } else if (controller instanceof ReportsMenuController) {
+                ((ReportsMenuController) controller).setClientActions(clientActions);
             }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
@@ -77,7 +77,7 @@ public class RestaurantManagement_BController {
 
     @FXML
     private void onReportsClicked() {
-        openWindow("ReportsScreen.fxml", "Reports");
+    	openWindow("ReportsMenu.fxml", "Reports");
     }
 
     @FXML
