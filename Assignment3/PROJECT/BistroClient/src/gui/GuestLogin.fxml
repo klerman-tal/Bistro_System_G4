@@ -75,8 +75,14 @@
                             </VBox.margin>
                         </Button>
 
+                        <!-- ✅ NEW: Forgot confirmation code -->
+                        <Hyperlink text="Forgot confirmation code?"
+                                   onAction="#handleForgotConfirmationCode"
+                                   styleClass="linkBlue"/>
+
                         <Hyperlink text="← Back to Selection"
-                                   onAction="#handleBackButton" />
+                                   onAction="#handleBackButton"
+                                   styleClass="linkGray"/>
 
                     </children>
                 </VBox>

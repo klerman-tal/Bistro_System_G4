@@ -8,6 +8,7 @@ import java.util.ArrayList;
 
 import application.ChatClient;
 import dto.CreateReservationDTO;
+import dto.RecoverSubscriberCodeDTO;
 import dto.SubscriberLoginDTO;
 import dto.RequestDTO;
 import protocol.Commands;
@@ -66,4 +67,40 @@ public class ClientAPI {
         // שליחה לשרת
         client.sendToServer(request);
     }
+    
+    public void recoverSubscriberCode(String username, String phone, String email) throws IOException {
+
+        RecoverSubscriberCodeDTO data =
+                new RecoverSubscriberCodeDTO(username, phone, email);
+
+        RequestDTO request =
+                new RequestDTO(Commands.RECOVER_SUBSCRIBER_CODE, data);
+
+        client.sendToServer(request);
+    }
+    
+    public void recoverGuestConfirmationCode(String phone, String email, java.time.LocalDateTime reservationDateTime)
+            throws IOException {
+
+        if ((phone == null || phone.isBlank()) && (email == null || email.isBlank()))
+            throw new IllegalArgumentException("Please enter a phone number or an email.");
+
+        if (reservationDateTime == null)
+            throw new IllegalArgumentException("Please select reservation date and time.");
+
+        dto.RecoverGuestConfirmationCodeDTO data =
+                new dto.RecoverGuestConfirmationCodeDTO(
+                        (phone == null ? "" : phone.trim()),
+                        (email == null ? "" : email.trim()),
+                        reservationDateTime
+                );
+
+        dto.RequestDTO request =
+                new dto.RequestDTO(protocol.Commands.RECOVER_GUEST_CONFIRMATION_CODE, data);
+
+        client.sendToServer(request);
+    }
+
+
+
 }
