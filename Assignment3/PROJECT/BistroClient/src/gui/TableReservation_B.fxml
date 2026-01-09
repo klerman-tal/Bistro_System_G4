@@ -1,102 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.DatePicker?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.control.TextField?>
-<?import javafx.scene.layout.BorderPane?>
-<?import javafx.scene.layout.ColumnConstraints?>
-<?import javafx.scene.layout.GridPane?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.RowConstraints?>
-<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
 
-<BorderPane fx:id="rootPane"
-            stylesheets="@Style.css"
-            xmlns="http://javafx.com/javafx/21"
-            xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="guiControllers.TableReservation_BController">
-
-    <!-- HEADER -->
+<BorderPane fx:id="rootPane" stylesheets="@Style.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="guiControllers.TableReservation_BController">
     <top>
         <HBox fx:id="header" alignment="CENTER_LEFT">
-            <padding>
-                <Insets top="18" right="25" bottom="18" left="25"/>
-            </padding>
-            <children>
-                <Label styleClass="title" text="Table Reservation" textFill="WHITE"/>
-            </children>
+            <padding><Insets bottom="18" left="25" right="25" top="18" /></padding>
+            <children><Label styleClass="title" text="Table Reservation" textFill="WHITE" /></children>
         </HBox>
     </top>
-
-    <!-- CENTER -->
     <center>
         <VBox alignment="TOP_CENTER" spacing="25">
-            <padding>
-                <Insets top="30" right="40" bottom="20" left="40"/>
-            </padding>
-
+            <padding><Insets bottom="20" left="40" right="40" top="30" /></padding>
             <children>
-                <Label styleClass="section" text="Reservation Details"/>
-
+                <Label styleClass="section" text="Reservation Details" />
                 <GridPane hgap="15" vgap="15">
                     <children>
-                        <Label text="Date:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                        <DatePicker fx:id="datePicker" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-
-                        <Label text="Hour:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-                        <TextField fx:id="txtHour" promptText="HH:MM"
-                                   GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-
-                        <Label text="Guests:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
-                        <TextField fx:id="txtGuests" promptText="Number of guests"
-                                   GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                        <Label text="Date:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                        <DatePicker fx:id="datePicker" onAction="#onDateSelected" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                        <Label text="Hour:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                        <ComboBox fx:id="cmbHour" prefWidth="175.0" promptText="Select Hour" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                        <Label text="Guests:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                        <TextField fx:id="txtGuests" promptText="Number of guests" GridPane.columnIndex="1" GridPane.rowIndex="2" />
                     </children>
-                    <columnConstraints>
-                        <ColumnConstraints/>
-                        <ColumnConstraints/>
-                    </columnConstraints>
-                    <rowConstraints>
-                        <RowConstraints/>
-                        <RowConstraints/>
-                        <RowConstraints/>
-                    </rowConstraints>
                 </GridPane>
-
-                <Label fx:id="lblMessage"
-                       text=""
-                       visible="false"
-                       managed="false"
-                       styleClass="errorMsg"/>
+                <Label fx:id="lblMessage" managed="false" styleClass="errorMsg" visible="false" />
             </children>
         </VBox>
     </center>
-
-    <!-- FOOTER BUTTONS -->
     <bottom>
         <HBox alignment="CENTER_RIGHT" spacing="12">
-            <padding>
-                <Insets top="10" right="40" bottom="20" left="40"/>
-            </padding>
+            <padding><Insets bottom="20" left="40" right="40" top="10" /></padding>
             <children>
-                <!-- NEW: BACK BUTTON -->
-                <Button fx:id="btnBack"
-                        text="Back"
-                        styleClass="btnSecondary"
-                        onAction="#onBackToMenuClicked"/>
-
-                <Button fx:id="btnCreate"
-                        text="Create Reservation"
-                        styleClass="btnPrimary"
-                        onAction="#onCreateClicked"/>
-
-                <Button fx:id="btnWait"
-                        text="Join Waiting List"
-                        styleClass="btnPrimary"
-                        onAction="#onJoinWaitingListClicked"/>
+                <Button fx:id="btnBack" onAction="#onBackToMenuClicked" styleClass="btnSecondary" text="Back" />
+                <Button fx:id="btnCreate" onAction="#onCreateClicked" styleClass="btnPrimary" text="Create Reservation" />
+                <Button fx:id="btnWait" onAction="#onJoinWaitingListClicked" styleClass="btnPrimary" text="Join Waiting List" />
             </children>
         </HBox>
     </bottom>
-
 </BorderPane>

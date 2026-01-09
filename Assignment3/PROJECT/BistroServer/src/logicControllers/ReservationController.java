@@ -10,6 +10,7 @@ import java.util.Map;
 
 import application.RestaurantServer;
 import dbControllers.Reservation_DB_Controller;
+import dto.CreateReservationDTO;
 import entities.Enums.ReservationStatus;
 import entities.Reservation;
 import entities.Restaurant;
@@ -130,98 +131,78 @@ public class ReservationController {
      * If not available, fills availableTimesOut and returns null.
      */
     public Reservation CreateTableReservation(
-            LocalDate date,
-            LocalTime time,
-            int guestsNumber,
-            User user,
+            CreateReservationDTO dto, 
             ArrayList<LocalTime> availableTimesOut) {
 
         if (availableTimesOut != null) availableTimesOut.clear();
 
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime requested = LocalDateTime.of(date, time);
+        // שימוש בנתונים מה-DTO
+        LocalDateTime requested = LocalDateTime.of(dto.getDate(), dto.getTime());
 
+        // בדיקת חלון זמן (שעה קדימה עד חודש)
         if (requested.isBefore(now.plusHours(1)) || requested.isAfter(now.plusMonths(1))) {
-            server.log("WARN: Invalid reservation time requested. UserId=" + user.getUserId() +
-                       ", Requested=" + requested + ", Now=" + now);
+            server.log("WARN: Invalid reservation time. UserId=" + dto.getUserId());
             return null;
         }
 
         Table table;
         try {
-            // Find a table for the first slot
-            table = restaurantController.getOneAvailableTableAt(requested, guestsNumber);
+            // בדיקת זמינות שולחן לפי כמות האורחים מה-DTO
+            table = restaurantController.getOneAvailableTableAt(requested, dto.getGuests());
         } catch (Exception e) {
             server.log("ERROR: Failed to check availability. " + e.getMessage());
             return null;
         }
 
-        // No table for the requested time -> return alternative times
         if (table == null) {
-            fillAvailableTimesForDay(date, guestsNumber, time, availableTimesOut);
+            fillAvailableTimesForDay(dto.getDate(), dto.getGuests(), dto.getTime(), availableTimesOut);
             return null;
         }
 
-        // Reserve the table for 2 hours (4 slots)
+        // ניסיון נעילת שולחן ל-2 פעימות (שעה) או יותר לפי הלוגיקה שלך
         boolean locked2h = tryReserveForTwoHours(requested, table.getTableNumber());
         if (!locked2h) {
-            fillAvailableTimesForDay(date, guestsNumber, time, availableTimesOut);
+            fillAvailableTimesForDay(dto.getDate(), dto.getGuests(), dto.getTime(), availableTimesOut);
             return null;
         }
 
+        // יצירת אובייקט ה-Entity לשמירה ב-DB
         Reservation res = new Reservation();
-        res.setCreatedByUserId(user.getUserId());
-        res.setGuestAmount(guestsNumber);
+        res.setCreatedByUserId(dto.getUserId());
+        res.setGuestAmount(dto.getGuests());
         res.setReservationTime(requested);
         res.setConfirmed(true);
         res.setTableNumber(table.getTableNumber());
         res.setActive(true);
         res.setReservationStatus(ReservationStatus.Active);
-        res.setCreatedByRole(user.getUserRole());
-
+        res.setCreatedByRole(dto.getRole());
+        res.setConfirmationCode();
 
         try {
             int reservationId = db.addReservation(
                     res.getReservationTime(),
-                    guestsNumber,
+                    dto.getGuests(),
                     res.getConfirmationCode(),
-                    user.getUserId(),
-                    user.getUserRole(),
+                    dto.getUserId(),
+                    dto.getRole(),
                     table.getTableNumber()
             );
 
             if (reservationId == -1) {
-                server.log("ERROR: Reservation insert failed (no ID returned)");
-
-                // Rollback: release 2 hours (4 slots)
-                for (int i = 0; i < 4; i++) {
-                    try { restaurantController.releaseSlot(requested.plusMinutes(30L * i), table.getTableNumber()); }
-                    catch (Exception ignore) {}
-                }
+                rollbackReservation(requested, table.getTableNumber());
                 return null;
             }
-
             res.setReservationId(reservationId);
 
         } catch (SQLException e) {
-            server.log("ERROR: Failed to insert reservation into DB. UserId=" + user.getUserId() +
-                       ", Message=" + e.getMessage());
-
-            // Rollback: release 2 hours (4 slots)
-            for (int i = 0; i < 4; i++) {
-                try { restaurantController.releaseSlot(requested.plusMinutes(30L * i), table.getTableNumber()); }
-                catch (Exception ignore) {}
-            }
-
+            server.log("ERROR: DB Insert failed: " + e.getMessage());
+            rollbackReservation(requested, table.getTableNumber());
             return null;
         }
 
-        server.log("Table reservation created. ReservationId=" + res.getReservationId() +
-                   ", ConfirmationCode=" + res.getConfirmationCode());
-
         return res;
     }
-
     /**
      * Cancels (deactivates) a reservation by confirmation code.
      */
@@ -270,6 +251,19 @@ public class ReservationController {
     }
     
 
+    /**
+     * מתודת עזר לשחרור השולחן במידה וההרשמה ל-DB נכשלה
+     */
+    private void rollbackReservation(LocalDateTime requested, int tableNumber) {
+        server.log("Rolling back: releasing 2 hours (4 slots) for table " + tableNumber);
+        for (int i = 0; i < 4; i++) {
+            try { 
+                restaurantController.releaseSlot(requested.plusMinutes(30L * i), tableNumber); 
+            } catch (Exception ignore) {
+                // אנחנו כבר בתוך שגיאה, אז רק מנסים לנקות כמה שאפשר
+            }
+        }
+    }
 
     // =====================================================
     // READ (QUERIES)

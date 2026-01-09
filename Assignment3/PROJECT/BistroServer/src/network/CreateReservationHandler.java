@@ -1,8 +1,12 @@
 package network;
 
+import java.time.LocalTime;
+import java.util.ArrayList;
+
 import dto.CreateReservationDTO;
 import dto.RequestDTO;
 import dto.ResponseDTO;
+import entities.Reservation;
 import logicControllers.ReservationController;
 import network.RequestHandler;
 import ocsf.server.ConnectionToClient;
@@ -17,15 +21,20 @@ public class CreateReservationHandler implements RequestHandler {
 
     @Override
     public void handle(RequestDTO request, ConnectionToClient client) throws Exception {
-
-        // 1) extract payload
+        // 1) חילוץ הנתונים
         CreateReservationDTO data = (CreateReservationDTO) request.getData();
+        ArrayList<LocalTime> availableTimesOut = new ArrayList<>();
 
-        // 2) call business logic (you implement this)
-        int confirmationCode = reservationController.CreateTableReservation(data);
+        Reservation res = reservationController.CreateTableReservation(data, availableTimesOut);
 
-        // 3) respond back to client
-        ResponseDTO response = new ResponseDTO(true, "Reservation created", confirmationCode);
-        client.sendToClient(response);
+        // 3) בדיקה אם ההזמנה הצליחה ושליחת תשובה
+        if (res != null) {
+            // שלחי לקליינט את קוד האישור (confirmationCode)
+            ResponseDTO response = new ResponseDTO(true, "Reservation created", res.getConfirmationCode());
+            client.sendToClient(response);
+        } else {
+            ResponseDTO response = new ResponseDTO(false, "No availability for requested time", null);
+            client.sendToClient(response);
+        }
     }
 }

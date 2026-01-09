@@ -90,7 +90,7 @@ public class ClientDetails_BController {
         }
 
         txtSubscriberNumber.setText(
-                String.valueOf(subscriber.getSubscriberId())
+                String.valueOf(subscriber.getUserId())
         );
 
         txtUserName.setText(
@@ -98,7 +98,7 @@ public class ClientDetails_BController {
         );
 
         txtContactDetails.setText(
-                "Phone: " + subscriber.getPhone() + "\n" +
+                "Phone: " + subscriber.getPhoneNumber() + "\n" +
                 "Email: " + subscriber.getEmail()
         );
     }

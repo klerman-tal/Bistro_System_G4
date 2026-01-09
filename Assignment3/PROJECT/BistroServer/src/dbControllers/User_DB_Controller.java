@@ -31,8 +31,8 @@ public class User_DB_Controller {
 
         String sql = "CREATE TABLE IF NOT EXISTS GUESTS (" +
                      "guest_id INT PRIMARY KEY, " +
-                     "phone VARCHAR(15) NOT NULL, " +
-                     "email VARCHAR(100) NOT NULL)";
+                     "phone VARCHAR(15) NULL, " +
+                     "email VARCHAR(100) NULL)";
 
         try (Statement stmt = conn.createStatement()) {
             stmt.executeUpdate(sql);
@@ -41,6 +41,8 @@ public class User_DB_Controller {
 
     public void createSubscribersTable() throws SQLException {
 
+        // // "role ENUM('SUBSCRIBER','MANAGER','REPRESENTATIVE') NOT NULL)"; // הקוד הקודם
+        // השורה המעודכנת שתואמת ל-Enum ב-Java:
         String sql = "CREATE TABLE IF NOT EXISTS SUBSCRIBERS (" +
                      "subscriber_id INT PRIMARY KEY, " +
                      "username VARCHAR(50) NOT NULL UNIQUE, " +
@@ -48,7 +50,7 @@ public class User_DB_Controller {
                      "last_name VARCHAR(50), " +
                      "phone VARCHAR(15), " +
                      "email VARCHAR(100), " +
-                     "role ENUM('SUBSCRIBER','MANAGER','REPRESENTATIVE') NOT NULL)";
+                     "role ENUM('RandomClient','Subscriber','RestaurantAgent','RestaurantManager') NOT NULL)";
 
         try (Statement stmt = conn.createStatement()) {
             stmt.executeUpdate(sql);
@@ -84,14 +86,17 @@ public class User_DB_Controller {
     }
 
     public User loginGuest(int guestId, String phone, String email) {
-
         String sql = "INSERT INTO GUESTS (guest_id, phone, email) VALUES (?, ?, ?)";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-
             stmt.setInt(1, guestId);
-            stmt.setString(2, phone);
-            stmt.setString(3, email);
+            
+            if (phone == null || phone.isBlank()) stmt.setNull(2, java.sql.Types.VARCHAR);
+            else stmt.setString(2, phone);
+
+            if (email == null || email.isBlank()) stmt.setNull(3, java.sql.Types.VARCHAR);
+            else stmt.setString(3, email);
+            
             stmt.executeUpdate();
 
             User user = new User(phone, email);
@@ -99,11 +104,9 @@ public class User_DB_Controller {
             user.setUserRole(Enums.UserRole.RandomClient);
 
             return user;
-
         } catch (SQLException e) {
             e.printStackTrace();
         }
-
         return null;
     }
 
@@ -134,7 +137,7 @@ public class User_DB_Controller {
             stmt.setString(4, lastName);
             stmt.setString(5, phone);
             stmt.setString(6, email);
-            stmt.setString(7, role.name());
+            stmt.setString(7, role.name()); // משתמש ב-name() כדי להכניס למשל "Subscriber"
 
             stmt.executeUpdate();
 
