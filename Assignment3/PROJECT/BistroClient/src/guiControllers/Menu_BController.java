@@ -1,6 +1,7 @@
 package guiControllers;
 
 import java.io.IOException;
+
 import application.ChatClient;
 import entities.User;
 import interfaces.ClientActions;
@@ -24,30 +25,26 @@ public class Menu_BController {
     @FXML private Button btnLogout;
     @FXML private Label lblMessage;
 
-    private User user; // המשתמש ה"תפוס"
+    private User user;
     private ChatClient chatClient;
-    private ClientActions clientActions; // שמירה על הקיים
+    private ClientActions clientActions;
 
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
     }
-    
-    // המתודה ששומרת את הנתונים שהגיעו מהלוגין
+
+    // שמירה של ה-session מהלוגין
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
     }
 
-    /**
-     * פונקציה זו שונתה כדי להתאים בדיוק לשם ב-FXML: onSelectReservationClicked
-     */
     @FXML
     private void onSelectReservationClicked() {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/TableReservation_B.fxml"));
             Parent root = loader.load();
 
-            // ✨ הזרקת הנתונים למסך ההזמנה
             TableReservation_BController nextController = loader.getController();
             nextController.setClient(this.user, this.chatClient);
 
@@ -60,24 +57,24 @@ public class Menu_BController {
         }
     }
 
-    @FXML 
-    private void onSelectPaymentClicked() { 
-        openWindow("Payment_B.fxml", "Payment"); 
+    @FXML
+    private void onSelectPaymentClicked() {
+        openWindow("Payment_B.fxml", "Payment");
     }
 
-    @FXML 
-    private void onSelectPersonalDetailsClicked() { 
-        openWindow("ClientDetails_B.fxml", "Client Details"); 
+    @FXML
+    private void onSelectPersonalDetailsClicked() {
+        openWindow("ClientDetails_B.fxml", "Client Details");
     }
 
-    @FXML 
-    private void onSelectGetTableClicked() { 
-        openWindow("GetTable_B.fxml", "Get Table"); 
+    @FXML
+    private void onSelectGetTableClicked() {
+        openWindow("GetTable_B.fxml", "Get Table");
     }
 
-    @FXML 
-    private void onSelectRestaurantManagementClicked() { 
-        openWindow("RestaurantManagement_B.fxml", "Restaurant Management"); 
+    @FXML
+    private void onSelectRestaurantManagementClicked() {
+        openWindow("RestaurantManagement_B.fxml", "Restaurant Management");
     }
 
     @FXML
@@ -100,16 +97,30 @@ public class Menu_BController {
             Parent root = loader.load();
 
             Object controller = loader.getController();
-            
-            // הזרקה למסך ניהול מסעדה כפי שהיה לך קודם
-            if (controller instanceof RestaurantManagement_BController) {
-                ((RestaurantManagement_BController) controller).setClientActions(clientActions);
+
+            // להעביר clientActions אם יש
+            if (controller != null && clientActions != null) {
+                try {
+                    controller.getClass()
+                            .getMethod("setClientActions", ClientActions.class)
+                            .invoke(controller, clientActions);
+                } catch (Exception ignored) {}
+            }
+
+            // להעביר user + chatClient אם יש setClient
+            if (controller != null && user != null && chatClient != null) {
+                try {
+                    controller.getClass()
+                            .getMethod("setClient", User.class, ChatClient.class)
+                            .invoke(controller, user, chatClient);
+                } catch (Exception ignored) {}
             }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setTitle("Bistro - " + title);
             stage.setScene(new Scene(root));
             stage.show();
+
         } catch (Exception e) {
             e.printStackTrace();
         }

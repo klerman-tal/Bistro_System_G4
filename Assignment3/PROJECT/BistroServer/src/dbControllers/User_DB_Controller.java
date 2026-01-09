@@ -147,8 +147,7 @@ public class User_DB_Controller {
                     firstName,
                     lastName,
                     phone,
-                    email,
-                    role
+                    email
             );
 
         } catch (SQLException e) {
@@ -363,8 +362,7 @@ public class User_DB_Controller {
                 rs.getString("first_name"),
                 rs.getString("last_name"),
                 rs.getString("phone"),
-                rs.getString("email"),
-                Enums.UserRole.valueOf(rs.getString("role"))
+                rs.getString("email")
         );
     }
     

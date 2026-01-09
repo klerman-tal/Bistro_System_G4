@@ -101,6 +101,17 @@ public class ClientAPI {
         client.sendToServer(request);
     }
 
+    public void registerSubscriber(String username, String firstName, String lastName,
+            String phone, String email, int performedById) throws IOException {
+
+			dto.RegisterSubscriberDTO data =
+			new dto.RegisterSubscriberDTO(username, firstName, lastName, phone, email, performedById);
+			
+			dto.RequestDTO request =
+			new dto.RequestDTO(protocol.Commands.REGISTER_SUBSCRIBER, data);
+			
+			client.sendToServer(request);
+		}
 
 
 }
