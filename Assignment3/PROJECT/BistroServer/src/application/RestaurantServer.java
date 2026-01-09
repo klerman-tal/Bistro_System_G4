@@ -20,6 +20,7 @@ import entities.Table;
 import entities.User;
 
 import javafx.application.Platform;
+import logicControllers.ReportsController;
 import logicControllers.ReservationController;
 import logicControllers.RestaurantController;
 import logicControllers.UserController;
@@ -42,6 +43,8 @@ public class RestaurantServer extends AbstractServer {
     private Waiting_DB_Controller waitingDB;
     private ReservationController reservationController;
     private RequestRouter router;
+    private ReportsController reportsController;
+
     
     private gui.ServerGUIController uiController;
     private String serverIp;
@@ -110,6 +113,8 @@ public class RestaurantServer extends AbstractServer {
             restaurantController = new RestaurantController(restaurantDB);
             userController = new UserController(userDB);
             reservationController = new ReservationController(reservationDB, this, restaurantController);
+            reportsController = new ReportsController(reservationDB);
+
 
             registerHandlers();
 
@@ -135,9 +140,11 @@ public class RestaurantServer extends AbstractServer {
         router.register(Commands.SUBSCRIBER_LOGIN, new SubscriberLoginHandler(userController));
         router.register(protocol.Commands.GUEST_LOGIN, new GuestLoginHandler(userController));
         router.register(Commands.RECOVER_SUBSCRIBER_CODE,new RecoverSubscriberCodeHandler(userController));
-        router.register(protocol.Commands.RECOVER_GUEST_CONFIRMATION_CODE,
-                new RecoverGuestConfirmationCodeHandler(reservationController, userController));
+        router.register(protocol.Commands.RECOVER_GUEST_CONFIRMATION_CODE,new RecoverGuestConfirmationCodeHandler(reservationController, userController));
+                
+        router.register(protocol.Commands.GET_TIME_REPORT, new GetTimeReportHandler(reportsController));
 
+        	
 
 
     }

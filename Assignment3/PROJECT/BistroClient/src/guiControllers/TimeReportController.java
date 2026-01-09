@@ -1,6 +1,7 @@
 package guiControllers;
 
 import interfaces.ClientActions;
+
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -10,6 +11,11 @@ import javafx.scene.chart.PieChart;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
+import dto.TimeReportDTO;
+import dto.RequestDTO;
+import protocol.Commands;
+
+
 
 public class TimeReportController {
 
@@ -41,6 +47,8 @@ public class TimeReportController {
 
     private ClientActions clientActions;
 
+
+
     // Injected from previous screen
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
@@ -48,8 +56,27 @@ public class TimeReportController {
 
     @FXML
     public void initialize() {
-        // Intentionally empty
-        // Data will be loaded later via DTO / DB
+        // בדיקה זמנית – ינואר 2025
+        requestTimeReport(2025, 1);
+    }
+    
+    private void requestTimeReport(int year, int month) {
+
+        if (clientActions == null) {
+            System.out.println("❌ clientActions is NULL");
+            return;
+        }
+
+        TimeReportDTO dto = new TimeReportDTO();
+        dto.setYear(year);
+        dto.setMonth(month);
+
+        RequestDTO request =
+                new RequestDTO(Commands.GET_TIME_REPORT, dto);
+
+        clientActions.sendToServer(request);
+
+        System.out.println("📤 TimeReport request sent: " + year + "-" + month);
     }
 
     // ===== BACK BUTTON =====
