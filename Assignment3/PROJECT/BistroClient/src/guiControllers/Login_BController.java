@@ -51,27 +51,4 @@ public class Login_BController {
         }
     }
 
-    @FXML
-    private void handleRegisterChoice(ActionEvent event) {
-        navigateTo(event, "/gui/Register.fxml");
-    }
-
-    private void navigateTo(ActionEvent event, String fxmlPath) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
-            Parent root = loader.load();
-            
-            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-            Scene scene = new Scene(root);
-            
-            stage.setScene(scene);
-            stage.centerOnScreen();
-            stage.show();
-            
-            System.out.println("Switched to: " + fxmlPath);
-        } catch (IOException e) {
-            System.err.println("Error loading FXML: " + fxmlPath);
-            e.printStackTrace();
-        }
-    }
 }

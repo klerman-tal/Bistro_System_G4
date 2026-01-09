@@ -103,18 +103,26 @@ public class SubscriberLoginController implements ClientResponseHandler {
     @FXML
     private void handleForgotCode(ActionEvent event) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/ForgotSubscriberCode.fxml"));
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/gui/ForgotSubscriberCode.fxml"));
             Parent root = loader.load();
+
+            ForgotCodeController controller = loader.getController();
+            controller.setClient(chatClient);          // ✅ חיבור לשרת
+            chatClient.setResponseHandler(controller); // ✅ קבלת תשובה
+
             Stage popupStage = new Stage();
             popupStage.initModality(Modality.APPLICATION_MODAL);
             popupStage.setTitle("Recover Subscriber Code");
             popupStage.setScene(new Scene(root));
             popupStage.setResizable(false);
             popupStage.showAndWait();
+
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
 
     @FXML
     private void handleBackButton(ActionEvent event) {

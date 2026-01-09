@@ -115,19 +115,40 @@ public class TableReservation_BController implements ClientResponseHandler {
 
     @Override
     public void handleResponse(ResponseDTO response) {
+
         Platform.runLater(() -> {
+
+            // GET_OPENING_HOURS
             if (response.isSuccess() && response.getData() instanceof ArrayList) {
                 this.cachedOpeningHours = (ArrayList<OpeningHouers>) response.getData();
                 if (datePicker.getValue() != null) {
                     updateComboBoxForDate(datePicker.getValue(), cachedOpeningHours);
                 }
-            } else if (response.isSuccess()) {
-                showSuccessAlert("Success", "Reservation confirmed!");
-            } else {
-                showMessage(response.getMessage(), "red");
+                return;
             }
+
+            // CREATE_RESERVATION – הצלחה
+            if (response.isSuccess()) {
+
+                if (response.getData() instanceof String) {
+                    String confirmationCode = (String) response.getData();
+                    showSuccessAlert(
+                            "Reservation Confirmed",
+                            "Your reservation was successfully created.\n\nConfirmation Code: "
+                                    + confirmationCode
+                    );
+                } else {
+                    showSuccessAlert("Reservation Confirmed", "Reservation created successfully.");
+                }
+
+                return;
+            }
+
+            // CREATE_RESERVATION – כישלון
+            showMessage(response.getMessage(), "red");
         });
     }
+
 
     private void updateComboBoxForDate(LocalDate date, ArrayList<OpeningHouers> allHours) {
         if (date == null || allHours == null) return;

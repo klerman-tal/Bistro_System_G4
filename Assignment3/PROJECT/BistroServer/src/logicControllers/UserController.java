@@ -234,7 +234,24 @@ public class UserController {
         return userDB.deleteRestaurantAgent(agentId);
     }
 
-    
+    public Subscriber recoverSubscriberCode(
+            String username,
+            String phone,
+            String email) {
+
+        if (username == null || username.isBlank() ||
+            phone == null || phone.isBlank() ||
+            email == null || email.isBlank()) {
+            return null;
+        }
+
+        Subscriber subscriber =
+                userDB.getSubscriberByUsernamePhoneEmail(
+                        username, phone, email);
+
+        return subscriber;
+    }
+
     
 
 }

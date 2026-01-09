@@ -1,7 +1,6 @@
 package guiControllers;
 
 import application.ChatClient;
-import application.ClientUI;
 import dto.ResponseDTO;
 import entities.User;
 import javafx.application.Platform;
@@ -13,53 +12,42 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import network.ClientAPI;
 import network.ClientResponseHandler;
+
 import java.io.IOException;
 
-/**
- * קונטרולר למסך כניסת אורח (GuestLogin.fxml)
- * מעודכן לתמיכה בתקשורת אסינכרונית והזרקת משתמש "תפוס"
- */
-public class GuestLoginController implements ClientResponseHandler { // ✨ הוספת הממשק
+public class GuestLoginController implements ClientResponseHandler {
 
     @FXML private TextField phoneField;
     @FXML private TextField emailField;
     @FXML private Label lblMessage;
 
-    // // private ClientActions clientActions; // ❌ הוחלף בגישה האחידה
     private ChatClient chatClient;
     private ClientAPI api;
 
-    /**
-     * הזרקת הלקוח והכנת ה-API
-     */
-    public void setClient(ChatClient chatClient) { // ✨ מתודה חדשה להזרקה
+    public void setClient(ChatClient chatClient) {
         this.chatClient = chatClient;
         if (chatClient != null) {
             this.api = new ClientAPI(chatClient);
-            this.chatClient.setResponseHandler(this); // רישום לקבלת תשובות מהשרת
+            this.chatClient.setResponseHandler(this);
         }
     }
 
-    /**
-     * מופעל בלחיצה על כפתור CONTINUE
-     */
     @FXML
     private void handleGuestLogin(ActionEvent event) {
         hideError();
 
-        String phone = phoneField.getText().trim();
-        String email = emailField.getText().trim();
+        String phone = phoneField.getText() != null ? phoneField.getText().trim() : "";
+        String email = emailField.getText() != null ? emailField.getText().trim() : "";
 
-        // בדיקה ששניהם לא ריקים בו זמנית
         if (phone.isEmpty() && email.isEmpty()) {
             showError("Please enter at least a phone number or an email.");
             return;
         }
 
-        // ולידציה לאימייל רק אם המשתמש הזין אחד
         if (!email.isEmpty() && (!email.contains("@") || !email.contains("."))) {
             showError("Please enter a valid email address.");
             return;
@@ -67,25 +55,23 @@ public class GuestLoginController implements ClientResponseHandler { // ✨ הו
 
         if (api != null) {
             try {
-                api.loginGuest(phone, email); // שולח את מה שיש (גם אם אחד ריק)
+                api.loginGuest(phone, email);
                 lblMessage.setText("Connecting...");
                 lblMessage.setVisible(true);
+                lblMessage.setManaged(true);
             } catch (IOException e) {
                 showError("Connection error.");
             }
+        } else {
+            showError("Client not initialized.");
         }
     }
 
-    /**
-     * טיפול בתשובה מהשרת - יצירת האורח הצליחה/נכשלה
-     */
     @Override
-    public void handleResponse(ResponseDTO response) { // ✨ מימוש קבלת תשובה
+    public void handleResponse(ResponseDTO response) {
         Platform.runLater(() -> {
             if (response.isSuccess()) {
-                // השרת מחזיר אובייקט User (אורח) עם ה-ID שנוצר ב-DB
                 User guestUser = (User) response.getData();
-                System.out.println("GUEST LOGIN SUCCESS: " + guestUser.getEmail());
                 goToMenu(guestUser);
             } else {
                 showError(response.getMessage());
@@ -93,22 +79,50 @@ public class GuestLoginController implements ClientResponseHandler { // ✨ הו
         });
     }
 
-    /**
-     * מעבר לתפריט עם הזרקת האורח ה"תפוס"
-     */
-    private void goToMenu(User guestUser) { // ✨ מתודה חדשה למעבר
+    private void goToMenu(User guestUser) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
             Parent root = loader.load();
 
             Menu_BController menu = loader.getController();
-            menu.setClient(guestUser, chatClient); // הזרקת האורח והחיבור לתפריט
+            menu.setClient(guestUser, chatClient);
 
             Stage stage = (Stage) phoneField.getScene().getWindow();
             stage.setScene(new Scene(root));
             stage.show();
         } catch (IOException e) {
             e.printStackTrace();
+            showError("Failed to open menu.");
+        }
+    }
+
+    // ✅ NEW: Open ForgotGuestConfirmation popup
+    @FXML
+    private void handleForgotConfirmationCode(ActionEvent event) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/ForgotGuestConfirmation.fxml"));
+            Parent root = loader.load();
+
+            Object controller = loader.getController();
+            if (controller instanceof ForgotGuestConfirmationController) {
+                ((ForgotGuestConfirmationController) controller).setClient(chatClient);
+            }
+
+            Stage popupStage = new Stage();
+            popupStage.initModality(Modality.APPLICATION_MODAL);
+            popupStage.setTitle("Recover Confirmation Code");
+            popupStage.setScene(new Scene(root));
+            popupStage.setResizable(false);
+            popupStage.showAndWait();
+
+            // ✅ IMPORTANT: restore handler back to THIS screen
+            if (chatClient != null) {
+                chatClient.setResponseHandler(this);
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            showError("Failed to open recovery window.");
         }
     }
 
@@ -117,17 +131,10 @@ public class GuestLoginController implements ClientResponseHandler { // ✨ הו
         navigateTo(event, "/gui/Login_B.fxml");
     }
 
-    /* ================= פונקציות עזר (UI Utility) ================= */
-
     private void navigateTo(ActionEvent event, String fxmlPath) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
             Parent root = loader.load();
-            
-            // אם חוזרים אחורה, כדאי להזריק שוב את הלקוח אם צריך
-            if (loader.getController() instanceof Login_BController) {
-                // לוגיקה נוספת במידת הצורך
-            }
 
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
             stage.setScene(new Scene(root));
@@ -154,7 +161,11 @@ public class GuestLoginController implements ClientResponseHandler { // ✨ הו
         }
     }
 
-    // מימושים ריקים עבור הממשק
-    @Override public void handleConnectionError(Exception e) { Platform.runLater(() -> showError("Server connection lost.")); }
-    @Override public void handleConnectionClosed() {}
+    @Override
+    public void handleConnectionError(Exception e) {
+        Platform.runLater(() -> showError("Server connection lost."));
+    }
+
+    @Override
+    public void handleConnectionClosed() {}
 }

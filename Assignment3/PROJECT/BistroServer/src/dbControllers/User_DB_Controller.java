@@ -367,4 +367,36 @@ public class User_DB_Controller {
                 Enums.UserRole.valueOf(rs.getString("role"))
         );
     }
+    
+    public Subscriber getSubscriberByUsernamePhoneEmail(
+            String username,
+            String phone,
+            String email) {
+
+        String sql = """
+            SELECT * FROM SUBSCRIBERS
+            WHERE username = ?
+              AND phone = ?
+              AND email = ?
+            """;
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, username);
+            stmt.setString(2, phone);
+            stmt.setString(3, email);
+
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                return mapRowToSubscriber(rs);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
 }

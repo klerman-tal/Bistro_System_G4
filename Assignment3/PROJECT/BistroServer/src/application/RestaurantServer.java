@@ -134,6 +134,12 @@ public class RestaurantServer extends AbstractServer {
         router.register(protocol.Commands.GET_OPENING_HOURS, new GetOpeningHoursHandler(restaurantController));
         router.register(Commands.SUBSCRIBER_LOGIN, new SubscriberLoginHandler(userController));
         router.register(protocol.Commands.GUEST_LOGIN, new GuestLoginHandler(userController));
+        router.register(Commands.RECOVER_SUBSCRIBER_CODE,new RecoverSubscriberCodeHandler(userController));
+        router.register(protocol.Commands.RECOVER_GUEST_CONFIRMATION_CODE,
+                new RecoverGuestConfirmationCodeHandler(reservationController, userController));
+
+
+
     }
 
     @Override

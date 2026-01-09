@@ -85,20 +85,6 @@
                     </children>
                 </HBox>
 
-                <!-- ===== ORIGINAL REGISTER (לא נגעתי) ===== -->
-                <VBox alignment="CENTER" spacing="5.0">
-                    <VBox.margin>
-                        <Insets top="20.0"/>
-                    </VBox.margin>
-                    <children>
-                        <Label text="Don't have a subscriber account yet?"
-                               styleClass="subtitle"/>
-                        <Hyperlink text="Register Now"
-                                   onAction="#handleRegisterChoice"
-                                   styleClass="linkBlue"/>
-                    </children>
-                </VBox>
-
             </children>
         </VBox>
     </children>
