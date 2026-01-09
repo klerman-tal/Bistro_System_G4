@@ -405,7 +405,7 @@ public class Reservation_DB_Controller {
         Reservation r = new Reservation();
 
         r.setReservationId(rs.getInt("reservation_id"));
-        r.setConfirmationCode(); // ✅ חשוב
+        r.setConfirmationCode(rs.getString("confirmation_code"));
 
         r.setGuestAmount(rs.getInt("number_of_guests"));
         r.setReservationTime(rs.getTimestamp("reservation_datetime").toLocalDateTime());
@@ -460,6 +460,120 @@ public class Reservation_DB_Controller {
             return ps.executeUpdate() > 0;
         }
     }
+
+
+    public String findGuestConfirmationCodeByDateTimeAndGuestIds(
+            java.time.LocalDateTime reservationDateTime,
+            java.util.ArrayList<Integer> guestIds) throws SQLException {
+
+        if (reservationDateTime == null || guestIds == null || guestIds.isEmpty())
+            return null;
+
+        StringBuilder in = new StringBuilder();
+        for (int i = 0; i < guestIds.size(); i++) {
+            if (i > 0) in.append(",");
+            in.append("?");
+        }
+
+        String sql =
+            "SELECT confirmation_code " +
+            "FROM reservations " +
+            "WHERE reservation_datetime = ? " +
+            "  AND created_by_role = 'RandomClient' " +
+            "  AND created_by IN (" + in + ") " +
+            "ORDER BY reservation_id DESC " +
+            "LIMIT 1;";
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setTimestamp(1, java.sql.Timestamp.valueOf(reservationDateTime));
+
+            int idx = 2;
+            for (Integer id : guestIds) {
+                ps.setInt(idx++, id);
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getString("confirmation_code");
+            }
+        }
+
+        return null;
+    }
+
+
+
+    public java.util.ArrayList<Integer> getGuestIdsByContact(String phone, String email) throws SQLException {
+
+        String p = (phone == null) ? "" : phone.trim();
+        String e = (email == null) ? "" : email.trim();
+
+        StringBuilder sql = new StringBuilder("SELECT guest_id FROM GUESTS WHERE 1=1 ");
+        if (!p.isBlank()) sql.append(" AND phone = ? ");
+        if (!e.isBlank()) sql.append(" AND email = ? ");
+
+        java.util.ArrayList<Integer> ids = new java.util.ArrayList<>();
+
+        try (PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            int idx = 1;
+            if (!p.isBlank()) ps.setString(idx++, p);
+            if (!e.isBlank()) ps.setString(idx++, e);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    ids.add(rs.getInt("guest_id"));
+                }
+            }
+        }
+
+        return ids;
+    }
+    
+ // בתוך Reservation_DB_Controller
+
+    public Reservation findGuestReservationByContactAndTime(
+            String phone,
+            String email,
+            LocalDateTime dateTime) throws SQLException {
+
+        if (dateTime == null) return null;
+
+        boolean hasPhone = phone != null && !phone.isBlank();
+        boolean hasEmail = email != null && !email.isBlank();
+        if (!hasPhone && !hasEmail) return null;
+
+        String sql = """
+            SELECT r.*
+            FROM reservations r
+            JOIN guests g ON g.guest_id = r.created_by
+            WHERE r.created_by_role = 'RandomClient'
+              AND r.reservation_datetime = ?
+              AND (
+                    (? = 1 AND g.phone = ?)
+                 OR (? = 1 AND g.email = ?)
+              )
+            ORDER BY r.reservation_datetime DESC
+            LIMIT 1;
+            """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setTimestamp(1, Timestamp.valueOf(dateTime));
+
+            ps.setInt(2, hasPhone ? 1 : 0);
+            ps.setString(3, hasPhone ? phone : "");
+
+            ps.setInt(4, hasEmail ? 1 : 0);
+            ps.setString(5, hasEmail ? email : "");
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapRowToReservation(rs);
+                }
+            }
+        }
+
+        return null;
+    }
+
 
 
 }

@@ -177,7 +177,8 @@ public class ReservationController {
         res.setActive(true);
         res.setReservationStatus(ReservationStatus.Active);
         res.setCreatedByRole(dto.getRole());
-        res.setConfirmationCode();
+        res.generateAndSetConfirmationCode();
+
 
         try {
             int reservationId = db.addReservation(
@@ -457,5 +458,58 @@ public class ReservationController {
             return false;
         }
     }
+    
+    public Reservation findGuestReservationByContactAndTime(
+            String phone,
+            String email,
+            LocalDateTime dateTime) {
+
+        if (((phone == null || phone.isBlank()) &&
+             (email == null || email.isBlank())) ||
+             dateTime == null) {
+            return null;
+        }
+
+        try {
+            return db.findGuestReservationByContactAndTime(phone, email, dateTime);
+        } catch (Exception e) {
+            server.log("ERROR: Recover guest confirmation failed. " + e.getMessage());
+            return null;
+        }
+    }
+
+    
+    public String recoverGuestConfirmationCode(
+            String phone,
+            String email,
+            java.time.LocalDateTime reservationDateTime) {
+
+        // Validate: must have at least one contact
+        if ((phone == null || phone.isBlank()) && (email == null || email.isBlank())) {
+            return null;
+        }
+        if (reservationDateTime == null) {
+            return null;
+        }
+
+        try {
+            // 1) Find all guest ids that match phone/email
+            java.util.ArrayList<Integer> guestIds =
+                    db.getGuestIdsByContact(phone, email);
+
+            if (guestIds == null || guestIds.isEmpty()) {
+                return null;
+            }
+
+            // 2) Find reservation by exact datetime + created_by in those guestIds
+            return db.findGuestConfirmationCodeByDateTimeAndGuestIds(reservationDateTime, guestIds);
+
+        } catch (Exception e) {
+            server.log("ERROR: recoverGuestConfirmationCode failed: " + e.getMessage());
+            return null;
+        }
+    }
+
+
 
 }

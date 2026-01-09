@@ -57,9 +57,10 @@ public class Reservation implements Serializable { // ✨ הוספת הממשק
 		return confirmationCode;
 	}
 
-	public void setConfirmationCode() {
-		this.confirmationCode = createConfirmationCode();
+	public void setConfirmationCode(String code) {
+	    this.confirmationCode = code;
 	}
+
 
 	public int getCreatedByUserId() {
 		return createdByUserId;
@@ -147,4 +148,9 @@ public class Reservation implements Serializable { // ✨ הוספת הממשק
 		int code = new Random().nextInt(900000) + 100000;
 		return String.valueOf(code);
 	}
+	
+	public void generateAndSetConfirmationCode() {
+	    this.confirmationCode = createConfirmationCode();
+	}
+
 }
