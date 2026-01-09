@@ -3,39 +3,21 @@ package entities;
 import entities.Enums.UserRole;
 
 /**
- * Represents a subscriber entity.
- * This class maps directly to the SUBSCRIBERS table in the database.
- * It contains only identification and personal information.
+ * Represents a subscriber entity inheriting from User.
  */
-public class Subscriber {
+public class Subscriber extends User { // ✨ הוספת הירושה
 
     // ====== Fields ======
-
-    /** Primary key of the subscriber (also serves as subscriber number) */
-    private int subscriberId;
-
-    /** Login username */
+    // שדות ה-ID, ה-Phone, ה-Email וה-Role כבר קיימים ב-User, לכן מחקנו אותם מכאן כדי למנוע כפילות
     private String username;
-
-    /** Subscriber first name */
     private String firstName;
-
-    /** Subscriber last name */
     private String lastName;
-
-    /** Subscriber phone number */
-    private String phone;
-
-    /** Subscriber email address */
-    private String email;
-
-    /** Role of the subscriber (SUBSCRIBER / REPRESENTATIVE / MANAGER) */
-    private UserRole role;
 
     // ====== Constructors ======
 
     /** Empty constructor required for DB mapping */
     public Subscriber() {
+        super();
     }
 
     /** Full constructor */
@@ -48,70 +30,25 @@ public class Subscriber {
             String email,
             UserRole role
     ) {
-        this.subscriberId = subscriberId;
+        // ✨ קריאה לקונסטרקטור של האבא (User)
+        super(subscriberId, phone, email, role); 
+        
+        // אתחול השדות הייחודיים ל-Subscriber
         this.username = username;
         this.firstName = firstName;
         this.lastName = lastName;
-        this.phone = phone;
-        this.email = email;
-        this.role = role;
     }
 
     // ====== Getters & Setters ======
 
-    public int getSubscriberId() {
-        return subscriberId;
-    }
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
 
-    public void setSubscriberId(int subscriberId) {
-        this.subscriberId = subscriberId;
-    }
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
 
-    public String getUsername() {
-        return username;
-    }
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
 
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getFirstName() {
-        return firstName;
-    }
-
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-
-    public String getLastName() {
-        return lastName;
-    }
-
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public UserRole getRole() {
-        return role;
-    }
-
-    public void setRole(UserRole role) {
-        this.role = role;
-    }
+    // שימי לב: Getters כמו getSubscriberId או getPhone יעבדו אוטומטית כי הם יורשים מהאבא (User)
 }

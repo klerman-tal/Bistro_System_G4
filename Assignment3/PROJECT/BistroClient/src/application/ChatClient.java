@@ -6,11 +6,13 @@ package application;
 import java.io.*;
 import java.util.ArrayList;
 
+import dto.ResponseDTO;
 import entities.Notification;
 import ocsf.client.AbstractClient;
 import interfaces.ChatIF;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
+import network.ClientResponseHandler;
 
 /**
  * This class overrides some of the methods defined in the abstract
@@ -30,6 +32,8 @@ public class ChatClient extends AbstractClient
    * the display method in the client.
    */
   ChatIF clientUI; 
+//✨ הוספה חדשה - handler לתגובות מובנות
+  private ClientResponseHandler responseHandler;
 
   
   //Constructors ****************************************************
@@ -49,6 +53,11 @@ public class ChatClient extends AbstractClient
     this.clientUI = clientUI;
     openConnection();
   }
+  
+//✨ הוספה חדשה - setter ל-handler
+  public void setResponseHandler(ClientResponseHandler handler) {
+      this.responseHandler = handler;
+  }
 
   
   //Instance methods ************************************************
@@ -63,6 +72,17 @@ public class ChatClient extends AbstractClient
       // אם זו התרעה – קופץ חלון
       if (msg instanceof Notification n) {
           Platform.runLater(() -> showNotification(n));
+          return;
+      }
+      
+      // 2️⃣ ✨ חדש: אם זו תגובת DTO – העבר ל-handler
+      if (msg instanceof ResponseDTO response) {
+          if (responseHandler != null) {
+              Platform.runLater(() -> responseHandler.handleResponse(response));
+          } else {
+              // fallback - הצג בממשק הרגיל
+              clientUI.display("Response: " + response.getMessage());
+          }
           return;
       }
 
@@ -115,6 +135,15 @@ public class ChatClient extends AbstractClient
 	    alert.setContentText(n.getMessage());
 	    alert.showAndWait();
 	}
+  
+//✨ חדש: טיפול בשגיאות חיבור
+  @Override
+  protected void connectionException(Exception exception) {
+      if (responseHandler != null) {
+          Platform.runLater(() -> responseHandler.handleConnectionError(exception));
+      }
+      clientUI.display("Connection error: " + exception.getMessage());
+  }
 
 }
 
