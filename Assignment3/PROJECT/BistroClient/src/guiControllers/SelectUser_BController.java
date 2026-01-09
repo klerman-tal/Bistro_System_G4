@@ -1,5 +1,9 @@
 package guiControllers;
 
+import java.io.IOException;
+
+import application.ChatClient;
+import entities.User;
 import interfaces.ClientActions;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -9,14 +13,22 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
-import java.io.IOException;
-
 public class SelectUser_BController {
 
     private ClientActions clientActions;
 
+    // ✅ session
+    private User user;
+    private ChatClient chatClient;
+
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
+    }
+
+    // ✅ נקרא מ-RestaurantManagement_BController
+    public void setClient(User user, ChatClient chatClient) {
+        this.user = user;
+        this.chatClient = chatClient;
     }
 
     @FXML
@@ -34,19 +46,28 @@ public class SelectUser_BController {
         navigateTo(event, "/gui/RestaurantManagement_B.fxml");
     }
 
-    // בדיוק כמו Login_BController — שיטה אחת
     private void navigateTo(ActionEvent event, String fxmlPath) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
             Parent root = loader.load();
 
-            // העברת clientActions אם יש
             Object controller = loader.getController();
+
+            // להעביר clientActions (כמו שהיה לך)
             if (controller != null && clientActions != null) {
                 try {
                     controller.getClass()
-                              .getMethod("setClientActions", ClientActions.class)
-                              .invoke(controller, clientActions);
+                            .getMethod("setClientActions", ClientActions.class)
+                            .invoke(controller, clientActions);
+                } catch (Exception ignored) {}
+            }
+
+            // ✅ להעביר user + chatClient למסך הבא (ManageSubscriber צריך את זה)
+            if (controller != null && user != null && chatClient != null) {
+                try {
+                    controller.getClass()
+                            .getMethod("setClient", User.class, ChatClient.class)
+                            .invoke(controller, user, chatClient);
                 } catch (Exception ignored) {}
             }
 

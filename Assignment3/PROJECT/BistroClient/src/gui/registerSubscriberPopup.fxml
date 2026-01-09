@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<StackPane id="rootPane"
+           stylesheets="@Style.css"
+           xmlns="http://javafx.com/javafx/21"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="guiControllers.RegisterSubscriberPopupController">
+
+    <children>
+
+        <VBox alignment="CENTER" spacing="22" maxWidth="520">
+
+            <!-- LOGO -->
+            <ImageView fitHeight="85" preserveRatio="true">
+                <image>
+                    <Image url="@BistroLogo.png"/>
+                </image>
+            </ImageView>
+
+            <!-- TITLE -->
+            <VBox alignment="CENTER" spacing="6">
+                <children>
+                    <Label text="CREATE USER" styleClass="welcomeTitle"/>
+                    <Label text="Fill in the details to create a new user"
+                           styleClass="subtitleItalic"/>
+                </children>
+            </VBox>
+
+            <!-- FORM CARD -->
+            <VBox alignment="CENTER"
+                  spacing="14"
+                  styleClass="card30">
+                <padding>
+                    <Insets top="28" bottom="28" left="36" right="36"/>
+                </padding>
+
+                <children>
+                    <TextField fx:id="firstNameField" promptText="First Name"/>
+                    <TextField fx:id="lastNameField" promptText="Last Name"/>
+                    <TextField fx:id="usernameField" promptText="Username"/>
+                    <TextField fx:id="phoneField" promptText="Phone Number"/>
+                    <TextField fx:id="emailField" promptText="Email Address"/>
+
+                    <!-- NEW -->
+                    <ComboBox fx:id="roleCombo"
+                              promptText="Select Role"
+                              maxWidth="1.7976931348623157E308"/>
+
+                    <Label fx:id="lblMessage"
+                           visible="false"
+                           managed="false"
+                           styleClass="errorMsg"/>
+
+                    <HBox alignment="CENTER" spacing="12">
+                        <children>
+                            <Button text="CREATE"
+                                    onAction="#handleCreate"
+                                    styleClass="btnPrimary"
+                                    prefWidth="170"/>
+
+                            <Button text="CANCEL"
+                                    onAction="#handleCancel"
+                                    styleClass="btnSecondary"
+                                    prefWidth="170"/>
+                        </children>
+                    </HBox>
+                </children>
+
+            </VBox>
+
+        </VBox>
+
+    </children>
+</StackPane>
