@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.control.Tab?>
-<?import javafx.scene.control.TabPane?>
-<?import javafx.scene.layout.BorderPane?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.chart.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
 
 <BorderPane fx:id="rootPane"
             stylesheets="@Style.css"
@@ -15,7 +11,7 @@
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="guiControllers.SubscribersReportController">
 
-    <!-- HEADER -->
+    <!-- ===== HEADER ===== -->
     <top>
         <HBox fx:id="header" alignment="CENTER_LEFT">
             <padding>
@@ -29,7 +25,7 @@
         </HBox>
     </top>
 
-    <!-- CENTER -->
+    <!-- ===== CENTER ===== -->
     <center>
         <VBox alignment="TOP_CENTER" spacing="20">
             <padding>
@@ -37,46 +33,103 @@
             </padding>
 
             <children>
-                <TabPane prefWidth="900" prefHeight="700">
-                    <tabs>
-                        <Tab text="Tab 1" closable="false">
-                            <VBox alignment="TOP_CENTER" spacing="15">
-                                <padding>
-                                    <Insets top="25" right="30" bottom="20" left="30"/>
-                                </padding>
-                                <children>
-                                    <Label text="(Subscribers report content will be added here)"
-                                           styleClass="section"/>
-                                </children>
-                            </VBox>
-                        </Tab>
 
-                        <Tab text="Tab 2" closable="false">
-                            <VBox alignment="TOP_CENTER" spacing="15">
-                                <padding>
-                                    <Insets top="25" right="30" bottom="20" left="30"/>
-                                </padding>
-                                <children>
-                                    <Label text="(More content will be added here)"
-                                           style="-fx-text-fill: gray;"/>
-                                </children>
-                            </VBox>
-                        </Tab>
-                    </tabs>
+                <TabPane prefWidth="900" prefHeight="700">
+
+                    <!-- ================= TAB 1 ================= -->
+                    <Tab text="Active Subscribers" closable="false">
+                        <VBox spacing="20" alignment="TOP_CENTER">
+                            <padding>
+                                <Insets top="25"/>
+                            </padding>
+
+                            <children>
+                                <Label text="Active vs Inactive Subscribers"
+                                       styleClass="section"/>
+
+                                <PieChart fx:id="activeSubscribersPie"
+                                          prefWidth="450"
+                                          prefHeight="350"/>
+
+                                <VBox spacing="6" alignment="TOP_LEFT">
+                                    <Label fx:id="lblActiveSubscribers"/>
+                                    <Label fx:id="lblInactiveSubscribers"/>
+                                </VBox>
+                            </children>
+                        </VBox>
+                    </Tab>
+
+                    <!-- ================= TAB 2 ================= -->
+                    <Tab text="Waiting List Activity" closable="false">
+                        <VBox spacing="20" alignment="TOP_CENTER">
+                            <padding>
+                                <Insets top="25"/>
+                            </padding>
+
+                            <children>
+                                <Label text="Subscribers Waiting List Entries per Day"
+                                       styleClass="section"/>
+
+                                <BarChart fx:id="waitingListChart"
+                                          prefWidth="850"
+                                          prefHeight="420">
+
+                                    <xAxis>
+                                        <CategoryAxis label="Day of Month"/>
+                                    </xAxis>
+
+                                    <yAxis>
+                                        <NumberAxis label="Subscribers Count"/>
+                                    </yAxis>
+
+                                </BarChart>
+                            </children>
+                        </VBox>
+                    </Tab>
+
+                    <!-- ================= TAB 3 ================= -->
+                    <Tab text="Reservation Trend" closable="false">
+                        <VBox spacing="20" alignment="TOP_CENTER">
+                            <padding>
+                                <Insets top="25"/>
+                            </padding>
+
+                            <children>
+                                <Label text="Subscriber Reservations Trend"
+                                       styleClass="section"/>
+
+                                <LineChart fx:id="reservationsTrendChart"
+                                           prefWidth="850"
+                                           prefHeight="420">
+
+                                    <xAxis>
+                                        <CategoryAxis label="Day of Month"/>
+                                    </xAxis>
+
+                                    <yAxis>
+                                        <NumberAxis label="Reservations Count"/>
+                                    </yAxis>
+
+                                </LineChart>
+                            </children>
+                        </VBox>
+                    </Tab>
+
                 </TabPane>
+
             </children>
         </VBox>
     </center>
 
-    <!-- FOOTER -->
+    <!-- ===== FOOTER ===== -->
     <bottom>
         <HBox alignment="CENTER_RIGHT" spacing="12">
             <padding>
                 <Insets top="10" right="40" bottom="20" left="40"/>
             </padding>
             <children>
-                <Button fx:id="btnBack"
-                        text="Back"
+                <Button text="Back"
+                        fx:id="btnBack"
                         styleClass="btnSecondary"
                         onAction="#onBackClicked"/>
             </children>
