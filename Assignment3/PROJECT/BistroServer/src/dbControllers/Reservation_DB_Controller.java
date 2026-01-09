@@ -404,7 +404,7 @@ public class Reservation_DB_Controller {
         Reservation r = new Reservation();
 
         r.setReservationId(rs.getInt("reservation_id"));
-        r.setConfirmationCode(rs.getString("confirmation_code"));
+        r.setConfirmationCode();
         r.setGuestAmount(rs.getInt("number_of_guests"));
 
         r.setReservationTime(rs.getTimestamp("reservation_datetime").toLocalDateTime());

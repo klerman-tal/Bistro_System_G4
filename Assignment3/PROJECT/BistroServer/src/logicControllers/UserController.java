@@ -38,20 +38,16 @@ public class UserController {
     }
 
     public User loginGuest(String phone, String email) {
-
-        // Validate input parameters
-        if (phone == null || phone.isBlank() ||
-            email == null || email.isBlank()) {
+        // שינוי: ולידציה שבודקת שלפחות אחד קיים
+        if ((phone == null || phone.isBlank()) && (email == null || email.isBlank())) {
             return null;
         }
 
-        // Generate a global user ID
         int guestId = Restaurant.getInstance().getNextUserId();
 
-        // Delegate guest creation to DB layer
+        // שליחה ל-DB (ה-DB יקבל null עבור השדה הריק)
         User guest = userDB.loginGuest(guestId, phone, email);
 
-        // Handle DB failure
         if (guest == null) {
             return null;
         }
@@ -76,13 +72,13 @@ public class UserController {
         // Authorization rules:
         // - RestaurantAgent can create Subscriber only
         // - RestaurantManager can create Subscriber or RestaurantAgent
-        if (performedBy.getRole() == Enums.UserRole.RestaurantAgent &&
+        if (performedBy.getUserRole() == Enums.UserRole.RestaurantAgent &&
             role != Enums.UserRole.Subscriber) {
             return null;
         }
 
-        if (performedBy.getRole() == Enums.UserRole.Subscriber ||
-            performedBy.getRole() == Enums.UserRole.RandomClient) {
+        if (performedBy.getUserRole() == Enums.UserRole.Subscriber ||
+            performedBy.getUserRole() == Enums.UserRole.RandomClient) {
             return null;
         }
 
@@ -124,7 +120,7 @@ public class UserController {
         }
 
         // Only RestaurantManager can add restaurant agents
-        if (performedBy.getRole() != Enums.UserRole.RestaurantManager) {
+        if (performedBy.getUserRole() != Enums.UserRole.RestaurantManager) {
             return null;
         }
 
@@ -162,8 +158,8 @@ public class UserController {
 
         // Authorization rules:
         // Only RestaurantAgent or RestaurantManager can fetch a subscriber by ID
-        if (performedBy.getRole() != Enums.UserRole.RestaurantAgent &&
-            performedBy.getRole() != Enums.UserRole.RestaurantManager) {
+        if (performedBy.getUserRole() != Enums.UserRole.RestaurantAgent &&
+            performedBy.getUserRole() != Enums.UserRole.RestaurantManager) {
             return null;
         }
 
@@ -197,8 +193,8 @@ public class UserController {
 
         // Authorization rules:
         // Only RestaurantAgent or RestaurantManager can view all subscribers
-        if (performedBy.getRole() != Enums.UserRole.RestaurantAgent &&
-            performedBy.getRole() != Enums.UserRole.RestaurantManager) {
+        if (performedBy.getUserRole() != Enums.UserRole.RestaurantAgent &&
+            performedBy.getUserRole() != Enums.UserRole.RestaurantManager) {
             return new ArrayList<>();
         }
 
@@ -225,7 +221,7 @@ public class UserController {
         }
 
         // Only RestaurantManager can delete restaurant agents
-        if (performedBy.getRole() != Enums.UserRole.RestaurantManager) {
+        if (performedBy.getUserRole() != Enums.UserRole.RestaurantManager) {
             return false;
         }
 

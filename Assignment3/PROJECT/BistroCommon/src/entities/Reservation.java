@@ -1,12 +1,14 @@
 package entities;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Random;
 
 import entities.Enums.UserRole;
 import entities.Enums.ReservationStatus;
 
-public class Reservation {
+public class Reservation implements Serializable { // ✨ הוספת הממשק
+    private static final long serialVersionUID = 1L;
 
 	// ===== Fields =====
 	private int reservationId;
@@ -55,8 +57,8 @@ public class Reservation {
 		return confirmationCode;
 	}
 
-	public void setConfirmationCode(String confirmationCode) {
-		this.confirmationCode = confirmationCode;
+	public void setConfirmationCode() {
+		this.confirmationCode = createConfirmationCode();
 	}
 
 	public int getCreatedByUserId() {
