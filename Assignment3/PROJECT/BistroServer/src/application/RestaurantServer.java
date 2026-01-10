@@ -17,6 +17,7 @@ import javafx.application.Platform;
 import logicControllers.ReservationController;
 import logicControllers.RestaurantController;
 import logicControllers.UserController;
+import logicControllers.WaitingController;
 import network.*;
 import ocsf.server.AbstractServer;
 import ocsf.server.ConnectionToClient;
@@ -33,13 +34,17 @@ public class RestaurantServer extends AbstractServer {
     private UserController userController;
     private Reservation_DB_Controller reservationDB;
     private Waiting_DB_Controller waitingDB;
+
     private ReservationController reservationController;
+    private WaitingController waitingController;
+    private ScheduledExecutorService waitingScheduler;
+    
+
     private RequestRouter router;
 
     private gui.ServerGUIController uiController;
     private String serverIp;
 
-    // ================= UI =================
     public void setUiController(gui.ServerGUIController controller) {
         this.uiController = controller;
     }
@@ -51,7 +56,6 @@ public class RestaurantServer extends AbstractServer {
         }
     }
 
-    // ================= Constructor =================
     public RestaurantServer(int port) {
         super(port);
         conn = new DBController();
@@ -65,7 +69,6 @@ public class RestaurantServer extends AbstractServer {
         }
     }
 
-    // ================= Server Started =================
     @Override
     protected void serverStarted() {
         touchActivity();
@@ -83,13 +86,11 @@ public class RestaurantServer extends AbstractServer {
                 return;
             }
 
-            // ---- DB Controllers ----
             restaurantDB = new Restaurant_DB_Controller(sqlConn);
             reservationDB = new Reservation_DB_Controller(sqlConn);
             userDB = new User_DB_Controller(sqlConn);
             waitingDB = new Waiting_DB_Controller(sqlConn);
 
-            // ---- Create tables ----
             log("⚙️ Ensuring all database tables exist...");
             userDB.createSubscribersTable();
             userDB.createGuestsTable();
@@ -99,16 +100,28 @@ public class RestaurantServer extends AbstractServer {
             waitingDB.createWaitingListTable();
             log("✅ Database schema ensured.");
 
-            // ---- Logic Controllers ----
             restaurantController = new RestaurantController(restaurantDB);
             userController = new UserController(userDB);
-            reservationController =
-                    new ReservationController(reservationDB, this, restaurantController);
+            reservationController = new ReservationController(reservationDB, this, restaurantController);
 
-            // ---- Register Handlers ----
+            // ✅ NEW
+            waitingController = new WaitingController(waitingDB, this, restaurantController, reservationController);
+
+
+         // run every 10 seconds
+         waitingScheduler = Executors.newSingleThreadScheduledExecutor();
+         waitingScheduler.scheduleAtFixedRate(() -> {
+             try {
+            	 int c = waitingController.cancelExpiredWaitingsAndReservations();
+                 if (c > 0) log("⏳ Auto-cancelled expired waitings: " + c);
+             } catch (Exception e) {
+                 log("Waiting scheduler error: " + e.getMessage());
+             }
+         }, 10, 10, TimeUnit.SECONDS);
+
+
             registerHandlers();
 
-            // ---- Init availability grid ----
             try {
                 restaurantController.initAvailabilityGridNext30Days();
                 log("📅 Availability grid ensured for the next 30 days.");
@@ -124,22 +137,24 @@ public class RestaurantServer extends AbstractServer {
         }
     }
 
-    // ================= Register Handlers =================
     private void registerHandlers() {
         log("⚙️ Registering DTO handlers...");
 
-        // ---- Reservations ----
+        // Reservations
         router.register(Commands.CREATE_RESERVATION,
                 new CreateReservationHandler(reservationController));
 
         router.register(Commands.GET_RESERVATION_HISTORY,
                 new GetReservationHistoryHandler(reservationController));
 
-        // ---- Opening hours ----
+        // Opening hours
         router.register(Commands.GET_OPENING_HOURS,
                 new GetOpeningHoursHandler(restaurantController));
 
-        // ---- Tables (כמו אתמול – DTO רגיל) ----
+        router.register(Commands.UPDATE_OPENING_HOURS,
+                new UpdateOpeningHoursHandler(restaurantController));
+
+        // Tables
         router.register(Commands.GET_TABLES,
                 new GetTablesHandler(restaurantController));
 
@@ -149,7 +164,7 @@ public class RestaurantServer extends AbstractServer {
         router.register(Commands.DELETE_TABLE,
                 new DeleteTableHandler(restaurantController));
 
-        // ---- Users ----
+        // Users
         router.register(Commands.SUBSCRIBER_LOGIN,
                 new SubscriberLoginHandler(userController));
 
@@ -167,17 +182,17 @@ public class RestaurantServer extends AbstractServer {
 
         router.register(Commands.UPDATE_SUBSCRIBER_DETAILS,
                 new UpdateSubscriberDetailsHandler(userController));
-        
-        router.register(Commands.GET_OPENING_HOURS,
-                new GetOpeningHoursHandler(restaurantController));
 
-        router.register(Commands.UPDATE_OPENING_HOURS,
-                new UpdateOpeningHoursHandler(restaurantController));
-;
+        // ✅ WAITING LIST
+        router.register(Commands.JOIN_WAITING_LIST,
+                new JoinWaitingListHandler(waitingController));
+
+        router.register(Commands.GET_WAITING_STATUS, new GetWaitingStatusHandler(waitingController));
+        router.register(Commands.CANCEL_WAITING, new CancelWaitingHandler(waitingController));
+        router.register(Commands.CONFIRM_WAITING_ARRIVAL, new ConfirmWaitingArrivalHandler(waitingController));
+
     }
 
-
-    // ================= Message From Client =================
     @Override
     protected void handleMessageFromClient(Object msg, ConnectionToClient client) {
         touchActivity();
@@ -193,10 +208,10 @@ public class RestaurantServer extends AbstractServer {
         }
     }
 
-    // ================= Shutdown =================
     @Override
     protected void serverStopped() {
         idleScheduler.shutdownNow();
+        if (waitingScheduler != null) waitingScheduler.shutdownNow();
         log("Server stopped.");
     }
 
@@ -245,7 +260,6 @@ public class RestaurantServer extends AbstractServer {
         }
     }
 
-    // ================= Main =================
     public static void main(String[] args) {
         int port;
         try {

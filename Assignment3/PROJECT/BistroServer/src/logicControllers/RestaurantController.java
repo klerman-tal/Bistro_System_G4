@@ -248,4 +248,26 @@ public class RestaurantController {
         }
         return new ArrayList<>(restaurant.getTables());
     }
+    
+ // Rounds up a datetime to the next 30-min slot (00 or 30).
+ // Examples: 10:02 -> 10:30, 10:30 -> 10:30, 10:31 -> 11:00
+ public LocalDateTime roundUpToNextHalfHour(LocalDateTime dt) {
+     if (dt == null) return null;
+
+     int minute = dt.getMinute();
+     int mod = minute % 30;
+
+     // already aligned (00 or 30)
+     if (mod == 0 && dt.getSecond() == 0 && dt.getNano() == 0) {
+         return dt;
+     }
+
+     // move to next boundary
+     int add = 30 - mod;
+     LocalDateTime rounded = dt.plusMinutes(add);
+
+     // zero seconds/nanos
+     return rounded.withSecond(0).withNano(0);
+ }
+
 }
