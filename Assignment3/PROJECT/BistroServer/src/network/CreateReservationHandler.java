@@ -8,7 +8,6 @@ import dto.RequestDTO;
 import dto.ResponseDTO;
 import entities.Reservation;
 import logicControllers.ReservationController;
-import network.RequestHandler;
 import ocsf.server.ConnectionToClient;
 
 public class CreateReservationHandler implements RequestHandler {
@@ -31,11 +30,25 @@ public class CreateReservationHandler implements RequestHandler {
             ResponseDTO response =
                     new ResponseDTO(true, "Reservation created", res.getConfirmationCode());
             client.sendToClient(response);
-        } else {
-            ResponseDTO response =
-                    new ResponseDTO(false, "No availability for requested time", availableTimesOut);
-            client.sendToClient(response);
+            return;
         }
-    }
 
+        // No reservation created
+        if (availableTimesOut == null || availableTimesOut.isEmpty()) {
+            // No suggested times for that day from requested time and onward
+            ResponseDTO response =
+                    new ResponseDTO(false,
+                            "No tables available for 2 hours today from the selected time and onward.",
+                            new ArrayList<LocalTime>());
+            client.sendToClient(response);
+            return;
+        }
+
+        // Send suggested times (same day, from requested time and onward)
+        ResponseDTO response =
+                new ResponseDTO(false,
+                        "No availability for requested time. Suggested times:",
+                        availableTimesOut);
+        client.sendToClient(response);
+    }
 }

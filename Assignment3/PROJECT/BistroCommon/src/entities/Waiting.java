@@ -1,48 +1,40 @@
 package entities;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Random;
 
 import entities.Enums.UserRole;
 import entities.Enums.WaitingStatus;
 
-public class Waiting {
+public class Waiting implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private int waitingId;
-    private String confirmationCode;
-
+    private int guestAmount;
     private int createdByUserId;
     private UserRole createdByRole;
 
-    private int guestAmount;
-
-    // "שעה שהתפנה שולחן בשבילו"
-    private LocalDateTime tableFreedTime;
+    private String confirmationCode;
+    private WaitingStatus waitingStatus = WaitingStatus.Waiting;
 
     private Integer tableNumber;
+    private LocalDateTime tableFreedTime;
 
-    private WaitingStatus waitingStatus;
+    // =========================
+    // Confirmation Code
+    // =========================
 
-    public Waiting() {
-        confirmationCode = createConfirmationCode();
-        createdByUserId = -1;
-        createdByRole = null;
-
-        guestAmount = 0;
-
-        tableFreedTime = null;
-        tableNumber = null;
-
-        waitingStatus = WaitingStatus.Waiting;
+    public void generateAndSetConfirmationCode() {
+        // 6-digit numeric code (same style as Reservation)
+        Random rnd = new Random();
+        this.confirmationCode = String.valueOf(100000 + rnd.nextInt(900000));
     }
 
-    public int getWaitingId() {
-        return waitingId;
-    }
-
-    public void setWaitingId(int waitingId) {
-        this.waitingId = waitingId;
-    }
+    // =========================
+    // Getters / Setters
+    // =========================
 
     public String getConfirmationCode() {
         return confirmationCode;
@@ -50,6 +42,38 @@ public class Waiting {
 
     public void setConfirmationCode(String confirmationCode) {
         this.confirmationCode = confirmationCode;
+    }
+
+    public WaitingStatus getWaitingStatus() {
+        return waitingStatus;
+    }
+
+    public void setWaitingStatus(WaitingStatus waitingStatus) {
+        this.waitingStatus = waitingStatus;
+    }
+
+    public Integer getTableNumber() {
+        return tableNumber;
+    }
+
+    public void setTableNumber(Integer tableNumber) {
+        this.tableNumber = tableNumber;
+    }
+
+    public LocalDateTime getTableFreedTime() {
+        return tableFreedTime;
+    }
+
+    public void setTableFreedTime(LocalDateTime tableFreedTime) {
+        this.tableFreedTime = tableFreedTime;
+    }
+
+    public int getGuestAmount() {
+        return guestAmount;
+    }
+
+    public void setGuestAmount(int guestAmount) {
+        this.guestAmount = guestAmount;
     }
 
     public int getCreatedByUserId() {
@@ -68,40 +92,11 @@ public class Waiting {
         this.createdByRole = createdByRole;
     }
 
-    public int getGuestAmount() {
-        return guestAmount;
+    public int getWaitingId() {
+        return waitingId;
     }
 
-    public void setGuestAmount(int guestAmount) {
-        this.guestAmount = guestAmount;
-    }
-
-    public LocalDateTime getTableFreedTime() {
-        return tableFreedTime;
-    }
-
-    public void setTableFreedTime(LocalDateTime tableFreedTime) {
-        this.tableFreedTime = tableFreedTime;
-    }
-
-    public Integer getTableNumber() {
-        return tableNumber;
-    }
-
-    public void setTableNumber(Integer tableNumber) {
-        this.tableNumber = tableNumber;
-    }
-
-    public WaitingStatus getWaitingStatus() {
-        return waitingStatus;
-    }
-
-    public void setWaitingStatus(WaitingStatus waitingStatus) {
-        this.waitingStatus = waitingStatus;
-    }
-
-    private String createConfirmationCode() {
-        int code = new Random().nextInt(900000) + 100000;
-        return String.valueOf(code);
+    public void setWaitingId(int waitingId) {
+        this.waitingId = waitingId;
     }
 }

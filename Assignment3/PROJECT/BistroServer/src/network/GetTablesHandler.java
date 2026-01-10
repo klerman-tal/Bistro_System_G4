@@ -19,20 +19,14 @@ public class GetTablesHandler implements RequestHandler {
     @Override
     public void handle(RequestDTO request, ConnectionToClient client) {
         try {
-            // 🔴 🔴 🔴 החלק שהיה חסר
             restaurantController.loadTablesFromDb();
-
             List<Table> tables = restaurantController.getAllTables();
 
-            client.sendToClient(
-                new ResponseDTO(true, "Tables loaded", tables)
-            );
+            client.sendToClient(new ResponseDTO(true, "Tables loaded", tables));
 
         } catch (Exception e) {
             try {
-                client.sendToClient(
-                    new ResponseDTO(false, e.getMessage(), null)
-                );
+                client.sendToClient(new ResponseDTO(false, e.getMessage(), null));
             } catch (Exception ignored) {}
         }
     }

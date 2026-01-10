@@ -32,10 +32,10 @@ public class ClientDetails_BController implements ClientResponseHandler {
     @FXML private BorderPane rootPane;
 
     @FXML private TextField txtSubscriberNumber;
-    @FXML private TextField txtUserName;        // ✅ תואם FXML
+    @FXML private TextField txtUserName;
     @FXML private TextField txtFirstName;
     @FXML private TextField txtLastName;
-    @FXML private TextField txtPhoneNumber;     // ✅ תואם FXML
+    @FXML private TextField txtPhoneNumber;
     @FXML private TextField txtEmail;
 
     @FXML private Label lblMessage;
@@ -49,9 +49,6 @@ public class ClientDetails_BController implements ClientResponseHandler {
     private final DateTimeFormatter formatter =
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-    /* =========================
-       INIT
-       ========================= */
     @FXML
     private void initialize() {
 
@@ -78,9 +75,6 @@ public class ClientDetails_BController implements ClientResponseHandler {
                 ));
     }
 
-    /* =========================
-       SESSION INJECTION
-       ========================= */
     public void setClient(User user, ChatClient chatClient) {
 
         if (!(user instanceof Subscriber)) {
@@ -91,15 +85,14 @@ public class ClientDetails_BController implements ClientResponseHandler {
         this.subscriber = (Subscriber) user;
         this.chatClient = chatClient;
 
-        chatClient.setResponseHandler(this);
+        if (this.chatClient != null) {
+            this.chatClient.setResponseHandler(this);
+        }
 
         loadSubscriberDetails();
-        requestReservationHistory(); // ✅ בלי try/catch
+        requestReservationHistory();
     }
 
-    /* =========================
-       REQUEST
-       ========================= */
     private void requestReservationHistory() {
         try {
             GetReservationHistoryDTO data =
@@ -115,11 +108,6 @@ public class ClientDetails_BController implements ClientResponseHandler {
         }
     }
 
-
-
-    /* =========================
-       RESPONSE HANDLER
-       ========================= */
     @Override
     public void handleResponse(ResponseDTO response) {
 
@@ -128,13 +116,11 @@ public class ClientDetails_BController implements ClientResponseHandler {
             return;
         }
 
-        // ✅ הודעת הצלחה לעדכון פרטים
         if ("Details updated successfully".equals(response.getMessage())) {
             showMessage("✔ Details updated successfully");
             return;
         }
 
-        // 📌 טעינת היסטוריית הזמנות (לא נפגע!)
         if (response.getData() instanceof List<?> list &&
             !list.isEmpty() &&
             list.get(0) instanceof Reservation) {
@@ -148,7 +134,6 @@ public class ClientDetails_BController implements ClientResponseHandler {
         }
     }
 
-
     @Override
     public void handleConnectionError(Exception e) {
         showMessage("Connection error: " + e.getMessage());
@@ -159,11 +144,7 @@ public class ClientDetails_BController implements ClientResponseHandler {
         showMessage("Connection closed.");
     }
 
-    /* =========================
-       VIEW
-       ========================= */
     private void loadSubscriberDetails() {
-
         txtSubscriberNumber.setText(String.valueOf(subscriber.getUserId()));
         txtUserName.setText(subscriber.getUsername());
         txtFirstName.setText(subscriber.getFirstName());
@@ -171,7 +152,7 @@ public class ClientDetails_BController implements ClientResponseHandler {
         txtPhoneNumber.setText(subscriber.getPhoneNumber());
         txtEmail.setText(subscriber.getEmail());
     }
-    
+
     @FXML
     private void onUpdateDetailsClicked() {
 
@@ -196,11 +177,6 @@ public class ClientDetails_BController implements ClientResponseHandler {
         }
     }
 
-
-
-    /* =========================
-       NAVIGATION
-       ========================= */
     @FXML
     private void onBackToMenuClicked() {
 
@@ -209,6 +185,13 @@ public class ClientDetails_BController implements ClientResponseHandler {
                     new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
 
             Parent root = loader.load();
+
+            // ✅ להעביר session לתפריט
+            Menu_BController menu = loader.getController();
+            if (menu != null) {
+                menu.setClient(subscriber, chatClient);
+            }
+
             Stage stage = (Stage) rootPane.getScene().getWindow();
 
             stage.setTitle("Bistro - Main Menu");
@@ -221,9 +204,6 @@ public class ClientDetails_BController implements ClientResponseHandler {
         }
     }
 
-    /* =========================
-       UI HELPERS
-       ========================= */
     private void showMessage(String msg) {
         lblMessage.setText(msg);
         lblMessage.setVisible(true);

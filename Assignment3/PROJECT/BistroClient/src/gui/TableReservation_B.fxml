@@ -10,6 +10,7 @@
             <children><Label styleClass="title" text="Table Reservation" textFill="WHITE" /></children>
         </HBox>
     </top>
+
     <center>
         <VBox alignment="TOP_CENTER" spacing="25">
             <padding><Insets bottom="20" left="40" right="40" top="30" /></padding>
@@ -19,23 +20,26 @@
                     <children>
                         <Label text="Date:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
                         <DatePicker fx:id="datePicker" onAction="#onDateSelected" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+
                         <Label text="Hour:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
                         <ComboBox fx:id="cmbHour" prefWidth="175.0" promptText="Select Hour" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+
                         <Label text="Guests:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
                         <TextField fx:id="txtGuests" promptText="Number of guests" GridPane.columnIndex="1" GridPane.rowIndex="2" />
                     </children>
                 </GridPane>
+
                 <Label fx:id="lblMessage" managed="false" styleClass="errorMsg" visible="false" />
             </children>
         </VBox>
     </center>
+
     <bottom>
         <HBox alignment="CENTER_RIGHT" spacing="12">
             <padding><Insets bottom="20" left="40" right="40" top="10" /></padding>
             <children>
                 <Button fx:id="btnBack" onAction="#onBackToMenuClicked" styleClass="btnSecondary" text="Back" />
                 <Button fx:id="btnCreate" onAction="#onCreateClicked" styleClass="btnPrimary" text="Create Reservation" />
-                <Button fx:id="btnWait" onAction="#onJoinWaitingListClicked" styleClass="btnPrimary" text="Join Waiting List" />
             </children>
         </HBox>
     </bottom>

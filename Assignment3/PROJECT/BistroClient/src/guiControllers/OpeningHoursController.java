@@ -1,10 +1,12 @@
 package guiControllers;
 
-import application.ClientUI;
+import application.ChatClient;
+import dto.RequestDTO;
+import dto.ResponseDTO;
+import dto.UpdateOpeningHoursDTO;
 import entities.OpeningHouers;
 import entities.Restaurant;
-import interfaces.ChatIF;
-import interfaces.ClientActions;
+import entities.User;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.fxml.FXML;
@@ -14,55 +16,76 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Stage;
+import network.ClientAPI;
+import network.ClientResponseHandler;
+import protocol.Commands;
 
 import java.io.IOException;
 import java.util.ArrayList;
 
-public class OpeningHoursController implements ChatIF {
+public class OpeningHoursController implements ClientResponseHandler {
 
     @FXML private TableView<OpeningHouers> openingHoursTable;
     @FXML private TableColumn<OpeningHouers, String> dayColumn;
     @FXML private TableColumn<OpeningHouers, String> openTimeColumn;
     @FXML private TableColumn<OpeningHouers, String> closeTimeColumn;
 
-    @FXML private TextField openTimeField; // New Time (HH:MM)
+    @FXML private TextField openTimeField;
     @FXML private Button updateButton;
     @FXML private Button backButton;
 
-    private ClientActions clientActions;
+    private User user;
+    private ChatClient chatClient;
+    private ClientAPI api;
 
     private enum EditTarget { OPEN_TIME, CLOSE_TIME }
     private EditTarget editTarget = EditTarget.OPEN_TIME;
 
-    // נקרא מהמסך הקודם אחרי טעינת ה-FXML (כמו UpdateTables)
-    public void setClientActions(ClientActions clientActions) {
-        this.clientActions = clientActions;
-        requestOpeningHoursFromServer(); // ✅ רק אחרי שהוזרק
+    /**
+     * נקרא מהמסך הקודם אחרי טעינת ה-FXML.
+     */
+    public void setClient(User user, ChatClient chatClient) {
+        this.user = user;
+        this.chatClient = chatClient;
+        this.api = new ClientAPI(chatClient);
+
+        // מקשרים את ה-controller הזה לקבלת ResponseDTO
+        this.chatClient.setResponseHandler(this);
+
+        try {
+            api.getOpeningHours();
+        } catch (IOException e) {
+            showAlert("Failed to load opening hours.");
+        }
     }
 
     @FXML
     public void initialize() {
-        ClientUI.setActiveController(this);
 
-        dayColumn.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getDayOfWeek()));
-        openTimeColumn.setCellValueFactory(cell -> {
-            String v = toHHMM(cell.getValue().getOpenTime());
+        dayColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getDayOfWeek()));
+
+        openTimeColumn.setCellValueFactory(c -> {
+            String v = toHHMM(c.getValue().getOpenTime());
             return new SimpleStringProperty(v.isBlank() ? "CLOSED" : v);
         });
 
-        closeTimeColumn.setCellValueFactory(cell -> {
-            String v = toHHMM(cell.getValue().getCloseTime());
+        closeTimeColumn.setCellValueFactory(c -> {
+            String v = toHHMM(c.getValue().getCloseTime());
             return new SimpleStringProperty(v.isBlank() ? "CLOSED" : v);
         });
 
-
-        openingHoursTable.addEventFilter(MouseEvent.MOUSE_CLICKED, e -> detectClickedColumn());
+        openingHoursTable.addEventFilter(MouseEvent.MOUSE_CLICKED,
+                e -> detectClickedColumn());
 
         openingHoursTable.getSelectionModel().selectedItemProperty().addListener((obs, oldV, selected) -> {
             if (selected == null) return;
-            openTimeField.setText(editTarget == EditTarget.OPEN_TIME
-                    ? toHHMM(selected.getOpenTime())
-                    : toHHMM(selected.getCloseTime()));
+
+            openTimeField.setText(
+                    editTarget == EditTarget.OPEN_TIME
+                            ? toHHMM(selected.getOpenTime())
+                            : toHHMM(selected.getCloseTime())
+            );
         });
 
         updateButton.setOnAction(e -> onUpdateClicked());
@@ -70,34 +93,16 @@ public class OpeningHoursController implements ChatIF {
     }
 
     // =====================
-    // Client -> Server
+    // Button handlers
     // =====================
-    private void requestOpeningHoursFromServer() {
-        if (clientActions == null) return;
 
-        ArrayList<String> msg = new ArrayList<>();
-        msg.add("RM_GET_OPENING_HOURS");
-        clientActions.sendToServer(msg);
-    }
+    private void onUpdateClicked() {
 
-    private void sendUpdateToServer(String day, String openHHMM, String closeHHMM) {
-        if (clientActions == null) {
-            showAlert("clientActions not set");
+        if (chatClient == null) {
+            showAlert("ChatClient not set (setClient was not called).");
             return;
         }
 
-        ArrayList<String> msg = new ArrayList<>();
-        msg.add("RM_UPDATE_OPENING_HOURS");
-        msg.add(day);
-        msg.add(openHHMM);
-        msg.add(closeHHMM);
-        clientActions.sendToServer(msg);
-    }
-
-    // =====================
-    // Button handlers
-    // =====================
-    private void onUpdateClicked() {
         OpeningHouers selected = openingHoursTable.getSelectionModel().getSelectedItem();
         if (selected == null) {
             showAlert("Please select a day from the table.");
@@ -107,49 +112,45 @@ public class OpeningHoursController implements ChatIF {
         String newTime = openTimeField.getText();
         newTime = (newTime == null) ? "" : newTime.trim();
 
-        // ⭐⭐⭐ אם ריק -> נסגור את היום (נשלח ריקים -> השרת ישים NULL) ⭐⭐⭐
+        String open = selected.getOpenTime();
+        String close = selected.getCloseTime();
+
+        // אם ריק -> סגור יום (שולחים null כדי שייכנס NULL ב-DB)
         if (newTime.isBlank()) {
-            String day = selected.getDayOfWeek();
-            selected.setOpenTime("");
-            selected.setCloseTime("");
-
-            openingHoursTable.refresh();
-
-            // שולחים ריקים כדי שייכנס NULL ב-DB
-            sendUpdateToServer(day, "", "");
-            return;
-        }
-
-        // אחרת - זה חייב להיות בפורמט HH:MM
-        if (!newTime.matches("^\\d{2}:\\d{2}$")) {
-            showAlert("Invalid time format. Use HH:MM (e.g., 09:30) or leave empty for CLOSED.");
-            return;
-        }
-
-        String day = selected.getDayOfWeek();
-        String openHHMM = toHHMM(selected.getOpenTime());
-        String closeHHMM = toHHMM(selected.getCloseTime());
-
-        if (editTarget == EditTarget.OPEN_TIME) {
-            openHHMM = newTime;
-            selected.setOpenTime(newTime);
+            open = null;
+            close = null;
         } else {
-            closeHHMM = newTime;
-            selected.setCloseTime(newTime);
+            if (!newTime.matches("^\\d{2}:\\d{2}$")) {
+                showAlert("Invalid time format. Use HH:MM (e.g., 09:30) or leave empty for CLOSED.");
+                return;
+            }
+
+            if (editTarget == EditTarget.OPEN_TIME) open = newTime;
+            else close = newTime;
         }
 
-        openingHoursTable.refresh();
-        sendUpdateToServer(day, openHHMM, closeHHMM);
+        UpdateOpeningHoursDTO dto =
+                new UpdateOpeningHoursDTO(selected.getDayOfWeek(), open, close);
+
+        try {
+            RequestDTO request = new RequestDTO(Commands.UPDATE_OPENING_HOURS, dto);
+            chatClient.sendToServer(request);
+        } catch (IOException e) {
+            showAlert("Failed to send update to server.");
+        }
     }
 
     private void onBackClicked() {
+
+        if (chatClient != null) chatClient.setResponseHandler(null);
+
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/RestaurantManagement_B.fxml"));
             Parent root = loader.load();
 
             Object controller = loader.getController();
             if (controller instanceof RestaurantManagement_BController) {
-                ((RestaurantManagement_BController) controller).setClientActions(clientActions);
+                ((RestaurantManagement_BController) controller).setClient(user, chatClient); // ✅ זה התיקון
             }
 
             Stage stage = (Stage) backButton.getScene().getWindow();
@@ -166,35 +167,50 @@ public class OpeningHoursController implements ChatIF {
     // =====================
     // Server -> Client
     // =====================
+
     @Override
-    public void display(String message) {
-        if (message == null) return;
+    public void handleResponse(ResponseDTO response) {
 
-        if (message.startsWith("RM_ERROR|")) {
-            String err = message.substring("RM_ERROR|".length());
-            Platform.runLater(() -> showAlert(err));
-            return;
-        }
+        Platform.runLater(() -> {
 
-        if (message.equals("RM_OK") || message.startsWith("RM_OK|")) {
-            Platform.runLater(this::requestOpeningHoursFromServer);
-            return;
-        }
+            if (response == null) return;
 
-        if (message.startsWith("RM_OPENING_HOURS|")) {
-            String payload = message.substring("RM_OPENING_HOURS|".length());
-            ArrayList<OpeningHouers> list = parseOpeningHours(payload);
+            if (!response.isSuccess()) {
+                showAlert(response.getMessage());
+                return;
+            }
 
-            Platform.runLater(() -> {
+            // GET_OPENING_HOURS מחזיר ArrayList<OpeningHouers>
+            if (response.getData() instanceof ArrayList) {
+                @SuppressWarnings("unchecked")
+                ArrayList<OpeningHouers> list = (ArrayList<OpeningHouers>) response.getData();
+
                 Restaurant.getInstance().setOpeningHours(list);
                 openingHoursTable.getItems().setAll(list);
-            });
-        }
+                return;
+            }
+
+            // UPDATE_OPENING_HOURS הצליח -> רענון
+            try {
+                api.getOpeningHours();
+            } catch (IOException e) {
+                showAlert("Updated, but failed to refresh opening hours.");
+            }
+        });
     }
+
+    @Override
+    public void handleConnectionError(Exception e) {
+        Platform.runLater(() -> showAlert("Connection lost."));
+    }
+
+    @Override
+    public void handleConnectionClosed() {}
 
     // =====================
     // Helpers
     // =====================
+
     private void detectClickedColumn() {
         if (openingHoursTable.getSelectionModel().getSelectedCells().isEmpty()) return;
 
@@ -212,32 +228,10 @@ public class OpeningHoursController implements ChatIF {
         }
     }
 
-    // payload: "Sunday,09:00,23:00;Monday,09:00,23:00;"
-    private ArrayList<OpeningHouers> parseOpeningHours(String payload) {
-        ArrayList<OpeningHouers> list = new ArrayList<>();
-        if (payload == null || payload.isBlank()) return list;
-
-        String[] rows = payload.split(";");
-        for (String row : rows) {
-            row = row.trim();
-            if (row.isEmpty()) continue;
-
-            String[] parts = row.split(",", -1);
-            if (parts.length < 3) continue;
-
-            OpeningHouers oh = new OpeningHouers();
-            oh.setDayOfWeek(parts[0].trim());
-            oh.setOpenTime(parts[1].trim());
-            oh.setCloseTime(parts[2].trim());
-            list.add(oh);
-        }
-        return list;
-    }
-
     private String toHHMM(String t) {
         if (t == null) return "";
         t = t.trim();
-        if (t.matches("^\\d{2}:\\d{2}:\\d{2}$")) return t.substring(0, 5);
+        if (t.length() >= 5) return t.substring(0, 5);
         return t;
     }
 

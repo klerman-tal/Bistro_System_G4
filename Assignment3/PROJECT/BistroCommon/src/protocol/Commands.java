@@ -1,13 +1,23 @@
 package protocol;
 
 public enum Commands {
+    // Reservations
     CREATE_RESERVATION,
     GET_RESERVATION_HISTORY,
+
+    // Waiting List
+    JOIN_WAITING_LIST,
+    GET_WAITING_STATUS,
+    CANCEL_WAITING,
+    CONFIRM_WAITING_ARRIVAL,
+
+    // Opening Hours
     GET_OPENING_HOURS,
+    UPDATE_OPENING_HOURS,
 
     // Tables
     GET_TABLES,
-    SAVE_TABLE, 
+    SAVE_TABLE,
     DELETE_TABLE,
 
     // Users
