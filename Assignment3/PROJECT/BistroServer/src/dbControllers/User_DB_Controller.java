@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import entities.Enums;
+import entities.RestaurantAgent;
+import entities.RestaurantManager;
 import entities.Subscriber;
 import entities.User;
 
@@ -19,8 +21,7 @@ public class User_DB_Controller {
     public User_DB_Controller(Connection conn) {
         this.conn = conn;
     }
-// חסר טיפול האם למחוק מנוי מהטבלה לאחר חודש ?
-    // חסר טיפול בקוד הזמנה + הרשאות
+
     /*
      * ===============================================================
      * TABLE CREATION METHODS
@@ -41,8 +42,6 @@ public class User_DB_Controller {
 
     public void createSubscribersTable() throws SQLException {
 
-        // // "role ENUM('SUBSCRIBER','MANAGER','REPRESENTATIVE') NOT NULL)"; // הקוד הקודם
-        // השורה המעודכנת שתואמת ל-Enum ב-Java:
         String sql = "CREATE TABLE IF NOT EXISTS SUBSCRIBERS (" +
                      "subscriber_id INT PRIMARY KEY, " +
                      "username VARCHAR(50) NOT NULL UNIQUE, " +
@@ -90,13 +89,13 @@ public class User_DB_Controller {
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, guestId);
-            
+
             if (phone == null || phone.isBlank()) stmt.setNull(2, java.sql.Types.VARCHAR);
             else stmt.setString(2, phone);
 
             if (email == null || email.isBlank()) stmt.setNull(3, java.sql.Types.VARCHAR);
             else stmt.setString(3, email);
-            
+
             stmt.executeUpdate();
 
             User user = new User(phone, email);
@@ -137,17 +136,13 @@ public class User_DB_Controller {
             stmt.setString(4, lastName);
             stmt.setString(5, phone);
             stmt.setString(6, email);
-            stmt.setString(7, role.name()); // משתמש ב-name() כדי להכניס למשל "Subscriber"
+            stmt.setString(7, role.name());
 
             stmt.executeUpdate();
 
-            return new Subscriber(
-                    subscriberId,
-                    username,
-                    firstName,
-                    lastName,
-                    phone,
-                    email
+            // ✅ מחזירים אובייקט מהסוג הנכון
+            return createSubscriberByRole(
+                    subscriberId, username, firstName, lastName, phone, email, role
             );
 
         } catch (SQLException e) {
@@ -314,7 +309,7 @@ public class User_DB_Controller {
 
         return false;
     }
-    
+
     public boolean deleteRestaurantAgent(int subscriberId) {
 
         String sql = "DELETE FROM SUBSCRIBERS WHERE subscriber_id = ? AND role = 'RestaurantAgent'";
@@ -331,7 +326,6 @@ public class User_DB_Controller {
         return false;
     }
 
-
     public boolean deleteSubscriber(int subscriberId) {
 
         String sql = "DELETE FROM SUBSCRIBERS WHERE subscriber_id = ?";
@@ -340,7 +334,7 @@ public class User_DB_Controller {
 
             stmt.setInt(1, subscriberId);
             return stmt.executeUpdate() > 0;
- 
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -356,16 +350,45 @@ public class User_DB_Controller {
 
     private Subscriber mapRowToSubscriber(ResultSet rs) throws SQLException {
 
-        return new Subscriber(
-                rs.getInt("subscriber_id"),
-                rs.getString("username"),
-                rs.getString("first_name"),
-                rs.getString("last_name"),
-                rs.getString("phone"),
-                rs.getString("email")
-        );
+        int id = rs.getInt("subscriber_id");
+        String username = rs.getString("username");
+        String first = rs.getString("first_name");
+        String last = rs.getString("last_name");
+        String phone = rs.getString("phone");
+        String email = rs.getString("email");
+
+        Enums.UserRole role = Enums.UserRole.Subscriber; // default safe
+        String roleStr = rs.getString("role");
+        if (roleStr != null && !roleStr.isBlank()) {
+            try { role = Enums.UserRole.valueOf(roleStr); }
+            catch (IllegalArgumentException ignore) {}
+        }
+
+        return createSubscriberByRole(id, username, first, last, phone, email, role);
     }
-    
+
+    private Subscriber createSubscriberByRole(
+            int id,
+            String username,
+            String firstName,
+            String lastName,
+            String phone,
+            String email,
+            Enums.UserRole role) {
+
+        if (role == Enums.UserRole.RestaurantManager) {
+            return new RestaurantManager(id, username, firstName, lastName, phone, email);
+        }
+
+        if (role == Enums.UserRole.RestaurantAgent) {
+            return new RestaurantAgent(id, username, firstName, lastName, phone, email);
+        }
+
+        Subscriber s = new Subscriber(id, username, firstName, lastName, phone, email);
+        s.setUserRole(role); // לכיסוי מקרים חריגים
+        return s;
+    }
+
     public Subscriber getSubscriberByUsernamePhoneEmail(
             String username,
             String phone,
@@ -396,7 +419,7 @@ public class User_DB_Controller {
 
         return null;
     }
-    
+
     public boolean updateSubscriberDetails(
             int subscriberId,
             String firstName,
@@ -430,6 +453,4 @@ public class User_DB_Controller {
             return false;
         }
     }
-
-
 }

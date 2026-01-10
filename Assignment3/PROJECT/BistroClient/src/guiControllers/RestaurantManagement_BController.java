@@ -24,8 +24,6 @@ public class RestaurantManagement_BController {
         this.user = user;
         this.chatClient = chatClient;
     }
-    
-    
 
     private void openWindow(String fxmlName, String title) {
         try {
@@ -35,13 +33,20 @@ public class RestaurantManagement_BController {
 
             Object controller = loader.getController();
 
-            // ✅ העברה מפורשת – כמו אתמול
+            // ✅ Update Tables
             if (controller instanceof UpdateTablesController utc) {
                 utc.setClient(chatClient);
             }
-            
-          
 
+            // ✅ Opening Hours
+            if (controller instanceof OpeningHoursController ohc) {
+                ohc.setClient(user, chatClient);
+            }
+
+            // ✅ Back to Menu
+            if (controller instanceof Menu_BController menu) {
+                menu.setClient(user, chatClient);
+            }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setTitle("Bistro - " + title);
@@ -53,7 +58,6 @@ public class RestaurantManagement_BController {
             showMessage("Failed to open: " + fxmlName);
         }
     }
-
 
     @FXML
     private void onUpdateTablesClicked() {
