@@ -273,15 +273,19 @@ public class ReservationController {
     /**
      * Returns all reservations created by the given user.
      */
-    public ArrayList<Reservation> getReservationsForUser(User user) {
+   
+    
+    public ArrayList<Reservation> getReservationsForUser(int userId) {
         try {
-            return db.getReservationsByUser(user.getUserId());
+            return db.getReservationsByUser(userId);
         } catch (SQLException e) {
             server.log("ERROR: Failed to load reservations for user. UserId=" +
-                       user.getUserId() + ", Message=" + e.getMessage());
-            return null;
+                       userId + ", Message=" + e.getMessage());
+            return new ArrayList<>();
         }
     }
+
+
 
     /**
      * Returns all active reservations (DB filter).

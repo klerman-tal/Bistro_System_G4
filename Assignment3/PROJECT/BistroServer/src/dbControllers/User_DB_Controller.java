@@ -396,5 +396,40 @@ public class User_DB_Controller {
 
         return null;
     }
+    
+    public boolean updateSubscriberDetails(
+            int subscriberId,
+            String firstName,
+            String lastName,
+            String phone,
+            String email
+    ) {
+
+        String sql = """
+            UPDATE SUBSCRIBERS
+            SET
+                first_name = COALESCE(?, first_name),
+                last_name  = COALESCE(?, last_name),
+                phone      = COALESCE(?, phone),
+                email      = COALESCE(?, email)
+            WHERE subscriber_id = ?
+            """;
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, firstName);
+            stmt.setString(2, lastName);
+            stmt.setString(3, phone);
+            stmt.setString(4, email);
+            stmt.setInt(5, subscriberId);
+
+            return stmt.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
 
 }

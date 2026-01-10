@@ -5,7 +5,6 @@ import java.io.IOException;
 import application.ChatClient;
 import entities.User;
 import interfaces.ClientActions;
-import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -14,6 +13,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import network.ClientAPI;
 
 public class ManageSubscriberController {
 
@@ -21,29 +21,41 @@ public class ManageSubscriberController {
     @FXML private Label lblStatus;
 
     private ClientActions clientActions;
-    private User performedBy;      // מי שנכנס למערכת (Agent / Manager)
-    private ChatClient chatClient; // אם תצטרכי לשלוח DTO בהמשך
+    private User performedBy;      // המשתמש המחובר (Agent / Manager)
+    private ChatClient chatClient;
 
-    // SelectUser_BController מעביר clientActions ברפלקשן
+    // API לשליחת בקשות לשרת
+    private ClientAPI clientAPI;
+
+    /* =======================
+       SETTERS
+       ======================= */
+
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
     }
 
-    // מומלץ: מי שפותח את המסך יעביר גם את המשתמש המחובר
+    // נקרא מ-SelectUser_BController
     public void setClient(User performedBy, ChatClient chatClient) {
         this.performedBy = performedBy;
         this.chatClient = chatClient;
+
+        if (chatClient != null) {
+            this.clientAPI = new ClientAPI(chatClient);
+        }
     }
+
+    /* =======================
+       BUTTON ACTIONS
+       ======================= */
 
     @FXML
     private void onRefreshClicked() {
-        // TODO (שלב אחר): למשוך רשימת מנויים מהשרת ולהציג בטבלה
         showMessage("Refresh - TODO");
     }
 
     @FXML
     private void onUpdateClicked() {
-        // TODO (שלב אחר): לשלוח DTO לעדכון פרטים
         showMessage("Update - TODO");
     }
 
@@ -57,36 +69,28 @@ public class ManageSubscriberController {
         hideMessage();
 
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/RegisterSubscriberPopup.fxml"));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/RegisterSubscriberPopup.fxml"));
             Parent root = loader.load();
 
-            RegisterSubscriberPopupController popupController = loader.getController();
+            RegisterSubscriberPopupController popupController =
+                    loader.getController();
 
-            // מעבירים מי ביצע את הפעולה (כדי להציג תפקידים לפי הרשאות)
             if (popupController != null) {
-                popupController.setPerformedBy(performedBy);
-                // בהמשך נוכל גם להעביר clientActions/chatClient אם תרצי לשלוח DTO ישר מהפופאפ
-                // popupController.setClientActions(clientActions);
-                // popupController.setChatClient(chatClient);
+                // ✅ רק זה צריך לעבור לפופאפ
+                popupController.setClientAPI(clientAPI);
             }
 
             Stage popupStage = new Stage();
             popupStage.setTitle("Create User");
             popupStage.initModality(Modality.WINDOW_MODAL);
 
-            // owner = החלון הנוכחי
             Stage owner = (Stage) rootPane.getScene().getWindow();
             popupStage.initOwner(owner);
 
             popupStage.setScene(new Scene(root));
-
-            // כדי שלא "יעוף" עם resize (אפשר לשנות ל-true אם תרצי)
             popupStage.setResizable(false);
-
             popupStage.showAndWait();
-
-            // אחרי שהפופאפ נסגר - בד"כ נרצה לעשות refresh לרשימה (בהמשך מול שרת)
-            // onRefreshClicked();
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -94,22 +98,21 @@ public class ManageSubscriberController {
         }
     }
 
-    // =========================
-    // Navigation helpers
-    // =========================
+    /* =======================
+       NAVIGATION
+       ======================= */
 
     private void navigateTo(String fxmlPath, String title) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
             Parent root = loader.load();
 
-            // להעביר clientActions למסך הבא אם יש לו setClientActions
             Object controller = loader.getController();
             if (controller != null && clientActions != null) {
                 try {
                     controller.getClass()
-                              .getMethod("setClientActions", ClientActions.class)
-                              .invoke(controller, clientActions);
+                            .getMethod("setClientActions", ClientActions.class)
+                            .invoke(controller, clientActions);
                 } catch (Exception ignored) {}
             }
 
@@ -125,9 +128,9 @@ public class ManageSubscriberController {
         }
     }
 
-    // =========================
-    // UI messages
-    // =========================
+    /* =======================
+       UI HELPERS
+       ======================= */
 
     private void showMessage(String msg) {
         if (lblStatus == null) return;

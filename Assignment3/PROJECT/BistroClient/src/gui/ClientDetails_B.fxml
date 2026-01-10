@@ -5,7 +5,6 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
-<?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
@@ -20,19 +19,19 @@
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="guiControllers.ClientDetails_BController">
 
-    <!-- HEADER -->
+    <!-- ===== HEADER ===== -->
     <top>
         <HBox fx:id="header" alignment="CENTER_LEFT">
             <padding>
                 <Insets top="18" right="25" bottom="18" left="25"/>
             </padding>
             <children>
-                <Label styleClass="title" text="Client Details" textFill="WHITE"/>
+                <Label styleClass="title" text="Client Details"/>
             </children>
         </HBox>
     </top>
 
-    <!-- CENTER CONTENT -->
+    <!-- ===== CENTER ===== -->
     <center>
         <VBox alignment="TOP_CENTER" spacing="25">
             <padding>
@@ -40,71 +39,105 @@
             </padding>
 
             <children>
+
                 <Label styleClass="section" text="Subscriber Information"/>
 
                 <GridPane hgap="15" vgap="15">
+
                     <children>
                         <Label text="Subscriber number:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                        <TextField fx:id="txtSubscriberNumber" editable="false"
-                                   GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                        <TextField fx:id="txtSubscriberNumber"
+                                   editable="false"
+                                   GridPane.columnIndex="1"
+                                   GridPane.rowIndex="0"/>
 
                         <Label text="Username:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-                        <TextField fx:id="txtUserName" editable="false"
-                                   GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                        <TextField fx:id="txtUserName"
+                                   editable="false"
+                                   GridPane.columnIndex="1"
+                                   GridPane.rowIndex="1"/>
 
-                        <Label text="Personal details:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
-                        <TextArea fx:id="txtPersonalDetails" editable="false" prefRowCount="3"
-                                  GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                        <Label text="First name:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                        <TextField fx:id="txtFirstName"
+                                   promptText="Enter first name"
+                                   GridPane.columnIndex="1"
+                                   GridPane.rowIndex="2"/>
 
-                        <Label text="Phone number:" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
-                        <TextField fx:id="txtPhoneNumber" promptText="050-1234567"
-                                   GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                        <Label text="Last name:" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                        <TextField fx:id="txtLastName"
+                                   promptText="Enter last name"
+                                   GridPane.columnIndex="1"
+                                   GridPane.rowIndex="3"/>
 
-                        <Label text="Email:" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
-                        <TextField fx:id="txtEmail" promptText="example@mail.com"
-                                   GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                        <Label text="Phone number:" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+                        <TextField fx:id="txtPhoneNumber"
+                                   promptText="0501234567"
+                                   GridPane.columnIndex="1"
+                                   GridPane.rowIndex="4"/>
+
+                        <Label text="Email:" GridPane.columnIndex="0" GridPane.rowIndex="5"/>
+                        <TextField fx:id="txtEmail"
+                                   promptText="example@mail.com"
+                                   GridPane.columnIndex="1"
+                                   GridPane.rowIndex="5"/>
                     </children>
+
                     <columnConstraints>
-                        <ColumnConstraints/>
-                        <ColumnConstraints/>
+                        <ColumnConstraints minWidth="150"/>
+                        <ColumnConstraints hgrow="ALWAYS"/>
                     </columnConstraints>
+
                     <rowConstraints>
                         <RowConstraints/>
                         <RowConstraints/>
                         <RowConstraints/>
                         <RowConstraints/>
                         <RowConstraints/>
+                        <RowConstraints/>
                     </rowConstraints>
+
                 </GridPane>
 
                 <Label fx:id="lblMessage"
-                       text=""
                        visible="false"
                        managed="false"
                        styleClass="errorMsg"/>
 
                 <Label styleClass="section" text="Reservation History"/>
 
-                <TableView fx:id="tblReservationHistory" prefHeight="220" prefWidth="520">
+                <!-- ✅ כאן הייתה השגיאה – TableView מתוקן -->
+                <TableView fx:id="tblReservationHistory"
+                           prefHeight="200"
+                           prefWidth="520">
+
                     <columns>
-                        <TableColumn fx:id="colDateTime" prefWidth="180" text="Date &amp; Time"/>
-                        <TableColumn fx:id="colGuests" prefWidth="80" text="Guests"/>
-                        <TableColumn fx:id="colCode" prefWidth="140" text="Confirmation Code"/>
-                        <TableColumn fx:id="colStatus" prefWidth="110" text="Status"/>
+                        <TableColumn fx:id="colDateTime"
+                                     text="Date &amp; Time"
+                                     prefWidth="180"/>
+                        <TableColumn fx:id="colGuests"
+                                     text="Guests"
+                                     prefWidth="80"/>
+                        <TableColumn fx:id="colCode"
+                                     text="Confirmation Code"
+                                     prefWidth="140"/>
+                        <TableColumn fx:id="colStatus"
+                                     text="Status"
+                                     prefWidth="110"/>
                     </columns>
+
                 </TableView>
+
             </children>
         </VBox>
     </center>
 
-    <!-- FOOTER BUTTONS -->
+    <!-- ===== FOOTER ===== -->
     <bottom>
         <HBox alignment="CENTER_RIGHT" spacing="12">
             <padding>
                 <Insets top="10" right="40" bottom="20" left="40"/>
             </padding>
             <children>
-                <!-- NEW: BACK BUTTON -->
                 <Button fx:id="btnBack"
                         text="Back"
                         styleClass="btnSecondary"

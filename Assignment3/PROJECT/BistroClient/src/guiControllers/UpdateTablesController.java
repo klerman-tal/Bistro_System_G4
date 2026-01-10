@@ -1,12 +1,14 @@
 package guiControllers;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.List;
 
-import application.ClientUI;
-import entities.Notification;
+import application.ChatClient;
+import dto.DeleteTableDTO;
+import dto.RequestDTO;
+import dto.ResponseDTO;
+import dto.SaveTableDTO;
 import entities.Table;
-import interfaces.ChatIF;
 import interfaces.ClientActions;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -19,8 +21,12 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
+import network.ClientResponseHandler;
+import protocol.Commands;
 
-public class UpdateTablesController implements ChatIF {
+public class UpdateTablesController implements ClientResponseHandler {
+
+    private ChatClient chatClient;
 
     @FXML private BorderPane rootPane;
 
@@ -33,153 +39,197 @@ public class UpdateTablesController implements ChatIF {
 
     @FXML private Label lblMsg;
 
-    private ClientActions clientActions;
-    private final ObservableList<Table> tables = FXCollections.observableArrayList();
+    private final ObservableList<Table> tables =
+            FXCollections.observableArrayList();
 
-    public void setClientActions(ClientActions clientActions) {
-        this.clientActions = clientActions;
-        onRefresh(); // מרענן רק אחרי שה-clientActions קיים
-    }
+	private ClientActions clientActions;
+
+    /* ================= INIT ================= */
 
     @FXML
-    public void initialize() {
-        ClientUI.setActiveController(this);
+    private void initialize() {
 
-        colNumber.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
-        colSeats.setCellValueFactory(new PropertyValueFactory<>("seatsAmount"));
+        colNumber.setCellValueFactory(
+                new PropertyValueFactory<>("tableNumber"));
+        colSeats.setCellValueFactory(
+                new PropertyValueFactory<>("seatsAmount"));
 
         tblTables.setItems(tables);
 
-        tblTables.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> {
-            if (newV != null) {
-                txtTableNumber.setText(String.valueOf(newV.getTableNumber()));
-                txtSeats.setText(String.valueOf(newV.getSeatsAmount()));
+        tblTables.getSelectionModel()
+                 .selectedItemProperty()
+                 .addListener((obs, o, n) -> {
+            if (n != null) {
+                txtTableNumber.setText(
+                        String.valueOf(n.getTableNumber()));
+                txtSeats.setText(
+                        String.valueOf(n.getSeatsAmount()));
             }
         });
+    }
+    
+    public void setClientActions(ClientActions clientActions) {
+        this.clientActions = clientActions;
+    }
+
+    
+    
+    
+    
+
+    /**
+     * חיבור ה־ChatClient למסך (כמו ב־ClientDetails)
+     */
+    public void setClient(ChatClient chatClient) {
+        this.chatClient = chatClient;
+        chatClient.setResponseHandler(this);
+        requestTables();
+    }
+
+    /* ================= REQUESTS ================= */
+
+    private void requestTables() {
+        try {
+            RequestDTO req =
+                    new RequestDTO(Commands.GET_TABLES, null);
+            chatClient.sendToServer(req);
+            show("Loading tables...");
+        } catch (IOException e) {
+            show("Failed to load tables");
+        }
     }
 
     @FXML
     private void onAddOrSave() {
+
         Integer num = parseInt(txtTableNumber.getText(), "Table #");
         Integer seats = parseInt(txtSeats.getText(), "Seats");
         if (num == null || seats == null) return;
 
-        if (clientActions == null) { show("clientActions not set"); return; }
+        try {
+            SaveTableDTO dto =
+                    new SaveTableDTO(num, seats);
 
-        ArrayList<String> msg = new ArrayList<>();
-        msg.add("RM_SAVE_TABLE");
-        msg.add(String.valueOf(num));
-        msg.add(String.valueOf(seats));
-        clientActions.sendToServer(msg);
+            RequestDTO req =
+                    new RequestDTO(Commands.SAVE_TABLE, dto);
 
-        show("Sent RM_SAVE_TABLE");
+            chatClient.sendToServer(req);
+            show("Saving table...");
+
+        } catch (IOException e) {
+            show("Failed to save table");
+        }
     }
 
     @FXML
     private void onDeleteSelected() {
-        Table selected = tblTables.getSelectionModel().getSelectedItem();
-        if (selected == null) { show("Select a table first"); return; }
-        if (clientActions == null) { show("clientActions not set"); return; }
 
-        ArrayList<String> msg = new ArrayList<>();
-        msg.add("RM_DELETE_TABLE");
-        msg.add(String.valueOf(selected.getTableNumber()));
-        clientActions.sendToServer(msg);
+        Table selected =
+                tblTables.getSelectionModel().getSelectedItem();
 
-        show("Sent RM_DELETE_TABLE");
+        if (selected == null) {
+            show("Select a table first");
+            return;
+        }
+
+        try {
+            DeleteTableDTO dto =
+                    new DeleteTableDTO(selected.getTableNumber());
+
+            RequestDTO req =
+                    new RequestDTO(Commands.DELETE_TABLE, dto);
+
+            chatClient.sendToServer(req);
+            show("Deleting table...");
+
+        } catch (IOException e) {
+            show("Failed to delete table");
+        }
     }
 
     @FXML
     private void onRefresh() {
-        if (clientActions == null) { show("clientActions not set"); return; }
-
-        ArrayList<String> msg = new ArrayList<>();
-        msg.add("RM_GET_TABLES");
-        clientActions.sendToServer(msg);
-
-        show("Sent RM_GET_TABLES");
+        requestTables();
     }
+
+    /* ================= RESPONSES ================= */
+
+    @Override
+    public void handleResponse(ResponseDTO response) {
+
+        if (!response.isSuccess()) {
+            Platform.runLater(() ->
+                show(response.getMessage()));
+            return;
+        }
+
+        // קיבלנו רשימת שולחנות
+        if (response.getData() instanceof List<?> list &&
+            !list.isEmpty() &&
+            list.get(0) instanceof Table) {
+
+            @SuppressWarnings("unchecked")
+            List<Table> tableList = (List<Table>) list;
+
+            Platform.runLater(() -> {
+                tables.setAll(tableList);
+                hide();
+            });
+            return;
+        }
+
+        // SAVE / DELETE הצליח → רענון
+        Platform.runLater(() -> {
+            hide();
+            requestTables();
+        });
+    }
+
+    @Override
+    public void handleConnectionError(Exception e) {
+        show("Connection error: " + e.getMessage());
+    }
+
+    @Override
+    public void handleConnectionClosed() {
+        show("Connection closed");
+    }
+
+    /* ================= NAV ================= */
 
     @FXML
     private void onBack() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/RestaurantManagement_B.fxml"));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass()
+                            .getResource("/gui/RestaurantManagement_B.fxml"));
+
             Parent root = loader.load();
 
             Object controller = loader.getController();
-            if (controller instanceof RestaurantManagement_BController) {
-                ((RestaurantManagement_BController) controller).setClientActions(clientActions);
-            }
-
-            Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setTitle("Bistro - Restaurant Management");
+            
+            
+            
+ 
+            Stage stage =
+                    (Stage) rootPane.getScene().getWindow();
             stage.setScene(new Scene(root));
+            stage.setTitle("Bistro - Restaurant Management");
             stage.show();
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    
-    
-    public void display(String message) {
-        if (message == null) return;
-
-        if (message.startsWith("RM_ERROR|")) {
-            String err = message.substring("RM_ERROR|".length());
-            Platform.runLater(() -> show(err));
-            return;
-        }
-
-        if (message.startsWith("RM_OK") || message.startsWith("RM_OK|")) {
-            Platform.runLater(() -> {
-                hideMsg();
-                onRefresh();
-            });
-            return;
-        }
-
-        if (message.startsWith("RM_TABLES|")) {
-            String data = message.substring("RM_TABLES|".length());
-            ArrayList<Table> newTables = new ArrayList<>();
-
-            if (!data.isBlank()) {
-                String[] rows = data.split(";");
-                for (String row : rows) {
-                    if (row == null || row.isBlank()) continue;
-
-                    String[] parts = row.split(",");
-                    if (parts.length < 2) continue;
-
-                    try {
-                        int tableNum = Integer.parseInt(parts[0].trim());
-                        int seats = Integer.parseInt(parts[1].trim());
-
-                        Table t = new Table();
-                        t.setTableNumber(tableNum);
-                        t.setSeatsAmount(seats);
-
-                        newTables.add(t);
-                    } catch (Exception ignored) {}
-                }
-            }
-
-            Platform.runLater(() -> {
-                tables.setAll(newTables);
-                hideMsg();
-            });
-            return;
-        }
-
-        System.out.println("UpdateTables got: " + message);
-    }
-
-
+    /* ================= HELPERS ================= */
 
     private Integer parseInt(String s, String field) {
         try {
-            if (s == null || s.isBlank()) { show(field + " is required"); return null; }
+            if (s == null || s.isBlank()) {
+                show(field + " is required");
+                return null;
+            }
             return Integer.parseInt(s.trim());
         } catch (NumberFormatException e) {
             show(field + " must be a number");
@@ -193,31 +243,9 @@ public class UpdateTablesController implements ChatIF {
         lblMsg.setManaged(true);
     }
 
-    private void hideMsg() {
+    private void hide() {
         lblMsg.setText("");
         lblMsg.setVisible(false);
         lblMsg.setManaged(false);
     }
-    private void showNotification(Notification n) {
-        lblMsg.setText(n.getMessage());
-        lblMsg.setVisible(true);
-        lblMsg.setManaged(true);
-
-        switch (n.getType()) {
-            case SUCCESS -> lblMsg.setStyle(
-                "-fx-background-color:#d6ffe1; -fx-text-fill:#0b5a1a; -fx-padding:8; -fx-background-radius:6;"
-            );
-            case ERROR -> lblMsg.setStyle(
-                "-fx-background-color:#ffd6d6; -fx-text-fill:#7a0000; -fx-padding:8; -fx-background-radius:6;"
-            );
-            case WARNING -> lblMsg.setStyle(
-                "-fx-background-color:#fff3cd; -fx-text-fill:#856404; -fx-padding:8; -fx-background-radius:6;"
-            );
-            case INFO -> lblMsg.setStyle(
-                "-fx-background-color:#e7f1ff; -fx-text-fill:#084298; -fx-padding:8; -fx-background-radius:6;"
-            );
-        }
-    }
-
-
 }

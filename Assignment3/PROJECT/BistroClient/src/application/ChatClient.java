@@ -146,4 +146,3 @@ public class ChatClient extends AbstractClient
   }
 
 }
-

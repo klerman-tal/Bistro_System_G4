@@ -332,4 +332,12 @@ public class RestaurantController {
         }
         return true;
     }
+    
+    public ArrayList<Table> getAllTables() throws SQLException {
+        if (restaurant.getTables() == null || restaurant.getTables().isEmpty()) {
+            loadTablesFromDb();
+        }
+        return new ArrayList<>(restaurant.getTables());
+    }
+
 }
