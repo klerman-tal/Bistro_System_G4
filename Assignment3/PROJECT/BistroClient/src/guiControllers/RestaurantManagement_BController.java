@@ -15,11 +15,9 @@ public class RestaurantManagement_BController {
     @FXML private BorderPane rootPane;
     @FXML private Label lblMessage;
 
-    // session
     private User user;
     private ChatClient chatClient;
 
-    // נקרא מה־Menu_BController
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
@@ -35,12 +33,22 @@ public class RestaurantManagement_BController {
 
             // ✅ Update Tables
             if (controller instanceof UpdateTablesController utc) {
-                utc.setClient(chatClient);
+                utc.setClient(user, chatClient); // ✅ היה רק chatClient
             }
 
             // ✅ Opening Hours
             if (controller instanceof OpeningHoursController ohc) {
                 ohc.setClient(user, chatClient);
+            }
+
+            // ✅ Select user menu
+            if (controller instanceof SelectUser_BController suc) {
+                suc.setClient(user, chatClient);
+            }
+
+            // ✅ Manage reservations
+            if (controller instanceof ManageReservationController mrc) {
+                mrc.setClient(user, chatClient);
             }
 
             // ✅ Back to Menu

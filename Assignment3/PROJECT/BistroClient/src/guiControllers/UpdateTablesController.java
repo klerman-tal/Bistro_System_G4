@@ -9,6 +9,7 @@ import dto.RequestDTO;
 import dto.ResponseDTO;
 import dto.SaveTableDTO;
 import entities.Table;
+import entities.User;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -27,6 +28,9 @@ public class UpdateTablesController implements ClientResponseHandler {
 
     private ChatClient chatClient;
 
+    // ✅ session כדי לחזור אחורה בלי לאבד משתמש
+    private User user;
+
     @FXML private BorderPane rootPane;
 
     @FXML private TableView<Table> tblTables;
@@ -40,8 +44,6 @@ public class UpdateTablesController implements ClientResponseHandler {
 
     private final ObservableList<Table> tables =
             FXCollections.observableArrayList();
-
-    /* ================= INIT ================= */
 
     @FXML
     private void initialize() {
@@ -61,16 +63,20 @@ public class UpdateTablesController implements ClientResponseHandler {
         });
     }
 
+    // ✅ חדש: סטנדרט אחיד עם user + chatClient
+    public void setClient(User user, ChatClient chatClient) {
+        this.user = user;
+        setClient(chatClient);
+    }
+
     /**
-     * חיבור ה־ChatClient למסך
+     * נשאר בשביל תאימות למקומות שכבר קוראים רק setClient(chatClient)
      */
     public void setClient(ChatClient chatClient) {
         this.chatClient = chatClient;
         chatClient.setResponseHandler(this);
         requestTables();
     }
-
-    /* ================= REQUESTS ================= */
 
     private void requestTables() {
         try {
@@ -128,8 +134,6 @@ public class UpdateTablesController implements ClientResponseHandler {
         requestTables();
     }
 
-    /* ================= RESPONSES ================= */
-
     @Override
     public void handleResponse(ResponseDTO response) {
 
@@ -140,7 +144,6 @@ public class UpdateTablesController implements ClientResponseHandler {
 
         Object data = response.getData();
 
-        // ✅ קיבלנו רשימת שולחנות (גם אם היא ריקה)
         if (data instanceof List<?> list) {
 
             if (!list.isEmpty() && !(list.get(0) instanceof Table)) {
@@ -158,7 +161,6 @@ public class UpdateTablesController implements ClientResponseHandler {
             return;
         }
 
-        // SAVE / DELETE הצליח → רענון
         Platform.runLater(() -> {
             hide();
             requestTables();
@@ -175,8 +177,6 @@ public class UpdateTablesController implements ClientResponseHandler {
         show("Connection closed");
     }
 
-    /* ================= NAV ================= */
-
     @FXML
     private void onBack() {
         try {
@@ -184,6 +184,12 @@ public class UpdateTablesController implements ClientResponseHandler {
                     new FXMLLoader(getClass().getResource("/gui/RestaurantManagement_B.fxml"));
 
             Parent root = loader.load();
+
+            // ✅ להעביר session חזרה
+            Object controller = loader.getController();
+            if (controller instanceof RestaurantManagement_BController rm) {
+                rm.setClient(user, chatClient);
+            }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setScene(new Scene(root));
@@ -194,8 +200,6 @@ public class UpdateTablesController implements ClientResponseHandler {
             e.printStackTrace();
         }
     }
-
-    /* ================= HELPERS ================= */
 
     private Integer parseInt(String s, String field) {
         try {
