@@ -25,15 +25,15 @@ public class Menu_BController {
     @FXML private Button btnLogout;
     @FXML private Label lblMessage;
 
-    private User user;
-    private ChatClient chatClient;
+    private User user;                 // המשתמש המחובר
+    private ChatClient chatClient;     // החיבור לשרת
     private ClientActions clientActions;
 
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
     }
 
-    // שמירה של ה-session מהלוגין
+    // session מה-login
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
@@ -41,20 +41,7 @@ public class Menu_BController {
 
     @FXML
     private void onSelectReservationClicked() {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/TableReservation_B.fxml"));
-            Parent root = loader.load();
-
-            TableReservation_BController nextController = loader.getController();
-            nextController.setClient(this.user, this.chatClient);
-
-            Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setScene(new Scene(root));
-            stage.setTitle("Bistro - Table Reservation");
-            stage.show();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        openWindow("TableReservation_B.fxml", "Table Reservation");
     }
 
     @FXML
@@ -62,6 +49,9 @@ public class Menu_BController {
         openWindow("Payment_B.fxml", "Payment");
     }
 
+    /**
+     * ⭐ מעבר ל-CLIENT DETAILS ⭐
+     */
     @FXML
     private void onSelectPersonalDetailsClicked() {
         openWindow("ClientDetails_B.fxml", "Client Details");
@@ -80,25 +70,35 @@ public class Menu_BController {
     @FXML
     private void onLogoutClicked() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Login_B.fxml"));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/Login_B.fxml"));
             Parent root = loader.load();
-            Stage stage = (Stage) rootPane.getScene().getWindow();
+
+            Stage stage =
+                    (Stage) rootPane.getScene().getWindow();
+
             stage.setTitle("Bistro - Login");
             stage.setScene(new Scene(root));
             stage.show();
+
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    /**
+     * מתודת ניווט כללית – לא נוגעים בלוגיקה הקיימת,
+     * רק מוודאים שה-session עובר למסכים הבאים
+     */
     private void openWindow(String fxmlName, String title) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
             Parent root = loader.load();
 
             Object controller = loader.getController();
 
-            // להעביר clientActions אם יש
+            // העברת clientActions אם קיים
             if (controller != null && clientActions != null) {
                 try {
                     controller.getClass()
@@ -107,7 +107,7 @@ public class Menu_BController {
                 } catch (Exception ignored) {}
             }
 
-            // להעביר user + chatClient אם יש setClient
+            // ⭐ העברת user + chatClient ⭐
             if (controller != null && user != null && chatClient != null) {
                 try {
                     controller.getClass()
@@ -116,7 +116,9 @@ public class Menu_BController {
                 } catch (Exception ignored) {}
             }
 
-            Stage stage = (Stage) rootPane.getScene().getWindow();
+            Stage stage =
+                    (Stage) rootPane.getScene().getWindow();
+
             stage.setTitle("Bistro - " + title);
             stage.setScene(new Scene(root));
             stage.show();

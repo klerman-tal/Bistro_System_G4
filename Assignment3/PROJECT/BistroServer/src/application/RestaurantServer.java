@@ -137,6 +137,26 @@ public class RestaurantServer extends AbstractServer {
         router.register(Commands.RECOVER_SUBSCRIBER_CODE,new RecoverSubscriberCodeHandler(userController));
         router.register(protocol.Commands.RECOVER_GUEST_CONFIRMATION_CODE,
                 new RecoverGuestConfirmationCodeHandler(reservationController, userController));
+        router.register(
+                Commands.REGISTER_SUBSCRIBER,
+                new RegisterSubscriberHandler(userController));
+        router.register(
+                protocol.Commands.UPDATE_SUBSCRIBER_DETAILS,
+                new UpdateSubscriberDetailsHandler(userController));
+        router.register(
+        	    Commands.GET_RESERVATION_HISTORY,
+        	    new GetReservationHistoryHandler(reservationController));
+        	
+
+
+
+        
+        
+
+        
+        
+
+
 
 
 

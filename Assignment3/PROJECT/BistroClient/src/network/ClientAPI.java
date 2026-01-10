@@ -100,18 +100,82 @@ public class ClientAPI {
 
         client.sendToServer(request);
     }
+    
+    
+    
+    public void registerSubscriber(
+            String username,
+            String firstName,
+            String lastName,
+            String phone,
+            String email,
+            UserRole role
+    ) throws IOException {
 
-    public void registerSubscriber(String username, String firstName, String lastName,
-            String phone, String email, int performedById) throws IOException {
+        dto.RegisterSubscriberDTO data =
+                new dto.RegisterSubscriberDTO(
+                        username,
+                        firstName,
+                        lastName,
+                        phone,
+                        email,
+                        role
+                );
 
-			dto.RegisterSubscriberDTO data =
-			new dto.RegisterSubscriberDTO(username, firstName, lastName, phone, email, performedById);
-			
-			dto.RequestDTO request =
-			new dto.RequestDTO(protocol.Commands.REGISTER_SUBSCRIBER, data);
-			
-			client.sendToServer(request);
-		}
+        dto.RequestDTO request =
+                new dto.RequestDTO(
+                        protocol.Commands.REGISTER_SUBSCRIBER,
+                        data
+                );
+
+        client.sendToServer(request);
+    }
+    
+    
+    public void updateSubscriberDetails(
+            int subscriberId,
+            String firstName,
+            String lastName,
+            String phone,
+            String email
+    ) throws IOException {
+
+        dto.UpdateSubscriberDetailsDTO data =
+                new dto.UpdateSubscriberDetailsDTO(
+                        subscriberId,
+                        firstName,
+                        lastName,
+                        phone,
+                        email
+                );
+
+        dto.RequestDTO request =
+                new dto.RequestDTO(
+                        protocol.Commands.UPDATE_SUBSCRIBER_DETAILS,
+                        data
+                );
+
+        client.sendToServer(request);
+    }
+    
+    public void getReservationHistory(int subscriberId) throws IOException {
+
+        dto.GetReservationHistoryDTO data =
+                new dto.GetReservationHistoryDTO(subscriberId);
+
+        dto.RequestDTO request =
+                new dto.RequestDTO(
+                        protocol.Commands.GET_RESERVATION_HISTORY,
+                        data
+                );
+
+        client.sendToServer(request);
+    }
+
+
+
+
+    
 
 
 }
