@@ -3,6 +3,8 @@ package dbControllers;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import entities.Enums;
 import entities.Enums.ReservationStatus;
@@ -630,6 +632,107 @@ public class Reservation_DB_Controller {
         return null;
     }
 
+ // =====================================================
+ // REPORTS – SUBSCRIBERS
+ // =====================================================
+
+ /**
+  * Counts distinct users by role who created at least one reservation
+  * up to the given year/month.
+  */
+ public int countDistinctUsersByRoleUntil(
+         Enums.UserRole role, int year, int month) throws SQLException {
+
+     String sql = """
+         SELECT COUNT(DISTINCT created_by)
+         FROM reservations
+         WHERE created_by_role = ?
+           AND YEAR(reservation_datetime) < ?
+            OR (YEAR(reservation_datetime) = ? AND MONTH(reservation_datetime) <= ?);
+         """;
+
+     try (PreparedStatement ps = conn.prepareStatement(sql)) {
+         ps.setString(1, role.name());
+         ps.setInt(2, year);
+         ps.setInt(3, year);
+         ps.setInt(4, month);
+
+         try (ResultSet rs = ps.executeQuery()) {
+             if (rs.next()) return rs.getInt(1);
+         }
+     }
+     return 0;
+ }
+
+ /**
+  * Counts subscribers that never made a reservation up to the given month.
+  * Assumption: subscriber exists if appeared at least once in reservations table.
+  */
+ public int countSubscribersWithoutReservationsUntil(int year, int month)
+         throws SQLException {
+
+     String sql = """
+         SELECT COUNT(DISTINCT created_by)
+         FROM reservations
+         WHERE created_by_role = 'Subscriber'
+           AND created_by NOT IN (
+               SELECT DISTINCT created_by
+               FROM reservations
+               WHERE created_by_role = 'Subscriber'
+                 AND (
+                      YEAR(reservation_datetime) < ?
+                   OR (YEAR(reservation_datetime) = ? AND MONTH(reservation_datetime) <= ?)
+                 )
+           );
+         """;
+
+     try (PreparedStatement ps = conn.prepareStatement(sql)) {
+         ps.setInt(1, year);
+         ps.setInt(2, year);
+         ps.setInt(3, month);
+
+         try (ResultSet rs = ps.executeQuery()) {
+             if (rs.next()) return rs.getInt(1);
+         }
+     }
+     return 0;
+ }
+
+ /**
+  * Returns number of reservations per day for a given role.
+  * Used for reservations trend chart.
+  */
+ public Map<Integer, Integer> getReservationsCountPerDayByRole(
+         Enums.UserRole role, int year, int month) throws SQLException {
+
+     String sql = """
+         SELECT DAY(reservation_datetime) AS day, COUNT(*) AS cnt
+         FROM reservations
+         WHERE created_by_role = ?
+           AND YEAR(reservation_datetime) = ?
+           AND MONTH(reservation_datetime) = ?
+         GROUP BY DAY(reservation_datetime)
+         ORDER BY day;
+         """;
+
+     Map<Integer, Integer> map = new HashMap<>();
+
+     try (PreparedStatement ps = conn.prepareStatement(sql)) {
+         ps.setString(1, role.name());
+         ps.setInt(2, year);
+         ps.setInt(3, month);
+
+         try (ResultSet rs = ps.executeQuery()) {
+             while (rs.next()) {
+                 map.put(
+                         rs.getInt("day"),
+                         rs.getInt("cnt")
+                 );
+             }
+         }
+     }
+     return map;
+ }
 
 
 }

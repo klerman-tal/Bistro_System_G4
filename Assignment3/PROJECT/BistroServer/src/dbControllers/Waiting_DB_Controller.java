@@ -3,6 +3,8 @@ package dbControllers;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import entities.Waiting;
 import entities.Enums.UserRole;
@@ -248,5 +250,46 @@ public class Waiting_DB_Controller {
             return ps.executeUpdate() > 0;
         }
     }
+    
+ // =====================================================
+ // REPORTS – WAITING LIST
+ // =====================================================
+
+ /**
+  * Returns waiting list entries count per day for a given role.
+  */
+ public Map<Integer, Integer> getWaitingCountPerDayByRole(
+         UserRole role, int year, int month) throws SQLException {
+
+     String sql = """
+         SELECT DAY(table_freed_time) AS day, COUNT(*) AS cnt
+         FROM waiting_list
+         WHERE created_by_role = ?
+           AND table_freed_time IS NOT NULL
+           AND YEAR(table_freed_time) = ?
+           AND MONTH(table_freed_time) = ?
+         GROUP BY DAY(table_freed_time)
+         ORDER BY day;
+         """;
+
+     Map<Integer, Integer> map = new HashMap<>();
+
+     try (PreparedStatement ps = conn.prepareStatement(sql)) {
+         ps.setString(1, role.name());
+         ps.setInt(2, year);
+         ps.setInt(3, month);
+
+         try (ResultSet rs = ps.executeQuery()) {
+             while (rs.next()) {
+                 map.put(
+                         rs.getInt("day"),
+                         rs.getInt("cnt")
+                 );
+             }
+         }
+     }
+     return map;
+ }
+
 
 }

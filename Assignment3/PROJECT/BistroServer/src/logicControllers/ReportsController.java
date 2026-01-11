@@ -1,8 +1,11 @@
 package logicControllers;
 
 import dbControllers.Reservation_DB_Controller;
-import entities.Reservation;
+import dbControllers.Waiting_DB_Controller;
+import dto.SubscribersReportDTO;
 import dto.TimeReportDTO;
+import entities.Enums.UserRole;
+import entities.Reservation;
 
 import java.sql.SQLException;
 import java.time.Duration;
@@ -11,9 +14,12 @@ import java.util.*;
 public class ReportsController {
 
     private final Reservation_DB_Controller reservationDB;
+    private final Waiting_DB_Controller waitingDB;
 
-    public ReportsController(Reservation_DB_Controller reservationDB) {
+    public ReportsController(Reservation_DB_Controller reservationDB,
+                             Waiting_DB_Controller waitingDB) {
         this.reservationDB = reservationDB;
+        this.waitingDB = waitingDB;
     }
 
     /**
@@ -21,7 +27,8 @@ public class ReportsController {
      * @param year  e.g. 2025
      * @param month 1-12
      */
-    public TimeReportDTO buildTimeReport(int year, int month) throws SQLException {
+    public TimeReportDTO buildTimeReport(int year, int month)
+            throws SQLException {
 
         ArrayList<Reservation> finished =
                 reservationDB.getFinishedReservationsByMonth(year, month);
@@ -67,7 +74,6 @@ public class ReportsController {
         // TAB 2: Stay Duration
         // =====================================================
 
-        // day -> list of stay minutes
         Map<Integer, List<Integer>> stayByDay = new HashMap<>();
 
         for (Reservation r : finished) {
@@ -82,18 +88,15 @@ public class ReportsController {
                             r.getCheckoutTime()
                     ).toMinutes();
 
-            if (stayMinutes <= 0) {
-                continue;
-            }
+            if (stayMinutes <= 0) continue;
 
             int day = r.getReservationTime().getDayOfMonth();
 
             stayByDay
-                .computeIfAbsent(day, d -> new ArrayList<>())
-                .add((int) stayMinutes);
+                    .computeIfAbsent(day, d -> new ArrayList<>())
+                    .add((int) stayMinutes);
         }
 
-        // ===== Calculate averages per day =====
         Map<Integer, Integer> avgStayPerDay = new TreeMap<>();
 
         int monthlySum = 0;
@@ -111,9 +114,9 @@ public class ReportsController {
 
             int avg =
                     (int) stays.stream()
-                               .mapToInt(x -> x)
-                               .average()
-                               .orElse(0);
+                            .mapToInt(x -> x)
+                            .average()
+                            .orElse(0);
 
             avgStayPerDay.put(day, avg);
 
@@ -140,6 +143,55 @@ public class ReportsController {
             dto.setMinAvgDay(minDay);
             dto.setMinAvgMinutes(minAvg);
         }
+
+        return dto;
+    }
+
+    /**
+     * Builds Subscribers Report for a given month.
+     * Subscribers are identified by created_by_role = Subscriber.
+     */
+    public SubscribersReportDTO buildSubscribersReport(int year, int month)
+            throws SQLException {
+
+        SubscribersReportDTO dto = new SubscribersReportDTO();
+        dto.setYear(year);
+        dto.setMonth(month);
+
+        // =====================================================
+        // TAB 1: Active / Inactive Subscribers
+        // =====================================================
+
+        int activeSubscribers =
+                reservationDB.countDistinctUsersByRoleUntil(
+                        UserRole.Subscriber, year, month);
+
+        int inactiveSubscribers =
+                reservationDB.countSubscribersWithoutReservationsUntil(
+                        year, month);
+
+        dto.setActiveSubscribersCount(activeSubscribers);
+        dto.setInactiveSubscribersCount(inactiveSubscribers);
+
+        // =====================================================
+        // TAB 2: Waiting List Activity (Subscribers)
+        // =====================================================
+
+        Map<Integer, Integer> waitingPerDay =
+                waitingDB.getWaitingCountPerDayByRole(
+                        UserRole.Subscriber, year, month);
+
+        dto.setWaitingListPerDay(waitingPerDay);
+
+        // =====================================================
+        // TAB 3: Reservations Trend (Subscribers)
+        // =====================================================
+
+        Map<Integer, Integer> reservationsPerDay =
+                reservationDB.getReservationsCountPerDayByRole(
+                        UserRole.Subscriber, year, month);
+
+        dto.setReservationsPerDay(reservationsPerDay);
 
         return dto;
     }

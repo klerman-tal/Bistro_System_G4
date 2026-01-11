@@ -3,31 +3,68 @@ package dto;
 import java.io.Serializable;
 import java.util.Map;
 
+/**
+ * Data Transfer Object for Monthly Time Report.
+ *
+ * Used to transfer aggregated arrival and stay-duration statistics
+ * for a specific month from the server to the client.
+ */
 public class TimeReportDTO implements Serializable {
 
-    // ===== Request fields =====
+    private static final long serialVersionUID = 1L;
+
+    /* =====================================================
+     * Request Parameters
+     * ===================================================== */
+
+    /** Report year (e.g. 2026) */
     private int year;
+
+    /** Report month (1-12) */
     private int month;
 
-    // ===== Arrival Status (TAB 1) =====
+    /* =====================================================
+     * Arrival Status Statistics (TAB 1)
+     * ===================================================== */
+
+    /** Number of on-time arrivals */
     private int onTimeCount;
+
+    /** Number of arrivals with minor delay */
     private int minorDelayCount;
+
+    /** Number of arrivals with significant delay */
     private int significantDelayCount;
 
-    // ===== Stay Duration (TAB 2) =====
+    /* =====================================================
+     * Stay Duration Statistics (TAB 2)
+     * ===================================================== */
 
-    // key = day of month (1–31), value = avg stay minutes
+    /**
+     * Average stay duration per day.
+     * Key   - day of month (1-31)
+     * Value - average stay duration in minutes
+     */
     private Map<Integer, Integer> avgStayMinutesPerDay;
 
+    /** Monthly average stay duration (minutes) */
     private int monthlyAvgStay;
 
+    /** Day with the highest average stay duration */
     private int maxAvgDay;
+
+    /** Highest average stay duration (minutes) */
     private int maxAvgMinutes;
 
+    /** Day with the lowest average stay duration */
     private int minAvgDay;
+
+    /** Lowest average stay duration (minutes) */
     private int minAvgMinutes;
 
-    // ===== getters / setters =====
+    /* =====================================================
+     * Getters and Setters
+     * ===================================================== */
 
     public int getYear() {
         return year;
