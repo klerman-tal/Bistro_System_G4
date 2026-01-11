@@ -49,6 +49,7 @@ public class GetTableChoice_BController {
 
             Object controller = loader.getController();
 
+            // Pass clientActions if exists
             if (controller != null && clientActions != null) {
                 try {
                     controller.getClass()
@@ -57,6 +58,7 @@ public class GetTableChoice_BController {
                 } catch (Exception ignored) {}
             }
 
+            // Pass user + chatClient to preserve session
             if (controller != null && user != null && chatClient != null) {
                 try {
                     controller.getClass()

@@ -9,9 +9,10 @@ import application.ChatClient;
 import dto.CreateReservationDTO;
 import dto.JoinWaitingDTO;
 import dto.RequestDTO;
-import protocol.Commands;
+import dto.WaitingCodeDTO;
 import entities.Enums.UserRole;
 import entities.User;
+import protocol.Commands;
 
 public class ClientAPI {
 
@@ -168,21 +169,20 @@ public class ClientAPI {
         client.sendToServer(request);
     }
 
-
     public void getWaitingStatus(String confirmationCode) throws IOException {
-        dto.WaitingCodeDTO data = new dto.WaitingCodeDTO(confirmationCode);
+        WaitingCodeDTO data = new WaitingCodeDTO(confirmationCode);
         RequestDTO req = new RequestDTO(Commands.GET_WAITING_STATUS, data);
         client.sendToServer(req);
     }
 
     public void cancelWaiting(String confirmationCode) throws IOException {
-        dto.WaitingCodeDTO data = new dto.WaitingCodeDTO(confirmationCode);
+        WaitingCodeDTO data = new WaitingCodeDTO(confirmationCode);
         RequestDTO req = new RequestDTO(Commands.CANCEL_WAITING, data);
         client.sendToServer(req);
     }
 
     public void confirmWaitingArrival(String confirmationCode) throws IOException {
-        dto.WaitingCodeDTO data = new dto.WaitingCodeDTO(confirmationCode);
+        WaitingCodeDTO data = new WaitingCodeDTO(confirmationCode);
         RequestDTO req = new RequestDTO(Commands.CONFIRM_WAITING_ARRIVAL, data);
         client.sendToServer(req);
     }
