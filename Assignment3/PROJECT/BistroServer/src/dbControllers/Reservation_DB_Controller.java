@@ -319,6 +319,42 @@ public class Reservation_DB_Controller {
             }
         }
     }
+    
+    /**
+     * Returns reservations that were completed (have checkout)
+     * for a specific year and month.
+     */
+    public ArrayList<Reservation> getFinishedReservationsByMonth(int year, int month)
+            throws SQLException {
+
+        String sql = """
+            SELECT *
+            FROM reservations
+            WHERE reservation_status = 'Finished'
+              AND checkin IS NOT NULL
+              AND checkout IS NOT NULL
+              AND YEAR(reservation_datetime) = ?
+              AND MONTH(reservation_datetime) = ?
+            ORDER BY reservation_datetime;
+            """;
+
+        ArrayList<Reservation> list = new ArrayList<>();
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, year);
+            ps.setInt(2, month);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRowToReservation(rs));
+                }
+            }
+        }
+
+        return list;
+    }
+
+
 
     // =====================================================
     // UPDATE
@@ -396,7 +432,10 @@ public class Reservation_DB_Controller {
     // =====================================================
     // MAPPING / HELPERS
     // =====================================================
+    
 
+
+    
     /**
      * Maps a ResultSet row to a Reservation entity (partial mapping for current project needs).
      */
@@ -406,23 +445,40 @@ public class Reservation_DB_Controller {
 
         r.setReservationId(rs.getInt("reservation_id"));
         r.setConfirmationCode(rs.getString("confirmation_code"));
-
         r.setGuestAmount(rs.getInt("number_of_guests"));
-        r.setReservationTime(rs.getTimestamp("reservation_datetime").toLocalDateTime());
+
+        r.setReservationTime(
+                rs.getTimestamp("reservation_datetime").toLocalDateTime()
+        );
 
         r.setCreatedByUserId(rs.getInt("created_by"));
-        r.setCreatedByRole(Enums.UserRole.valueOf(rs.getString("created_by_role")));
+        r.setCreatedByRole(
+                Enums.UserRole.valueOf(rs.getString("created_by_role"))
+        );
 
         r.setConfirmed(rs.getInt("is_confirmed") == 1);
         r.setActive(rs.getInt("is_active") == 1);
 
         String status = rs.getString("reservation_status");
         if (status != null) {
-            r.setReservationStatus(ReservationStatus.valueOf(status));
+            r.setReservationStatus(
+                    Enums.ReservationStatus.valueOf(status)
+            );
         }
 
         int tableNum = rs.getInt("table_number");
         r.setTableNumber(rs.wasNull() ? null : tableNum);
+
+        // ===== ✅ CHECK-IN / CHECK-OUT MAPPING =====
+        Timestamp checkinTs = rs.getTimestamp("checkin");
+        if (checkinTs != null) {
+            r.setCheckinTime(checkinTs.toLocalDateTime());
+        }
+
+        Timestamp checkoutTs = rs.getTimestamp("checkout");
+        if (checkoutTs != null) {
+            r.setCheckoutTime(checkoutTs.toLocalDateTime());
+        }
 
         return r;
     }

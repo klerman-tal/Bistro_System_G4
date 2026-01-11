@@ -1,6 +1,7 @@
 package guiControllers;
 
-import interfaces.ClientActions;
+import application.ChatClient;
+import entities.User;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -11,15 +12,22 @@ import javafx.stage.Stage;
 
 public class ReportsMenuController {
 
-    @FXML private BorderPane rootPane;
-    @FXML private Label lblMessage;
+    @FXML
+    private BorderPane rootPane;
 
-    private ClientActions clientActions;
+    @FXML
+    private Label lblMessage;
 
-    public void setClientActions(ClientActions clientActions) {
-        this.clientActions = clientActions;
+    private User user;
+    private ChatClient chatClient;
+
+    // ===== נקרא מהמסך הקודם =====
+    public void setClient(User user, ChatClient chatClient) {
+        this.user = user;
+        this.chatClient = chatClient;
     }
 
+    // ===== Navigation =====
     private void openWindow(String fxmlName, String title) {
         try {
             FXMLLoader loader =
@@ -29,10 +37,10 @@ public class ReportsMenuController {
             Object controller = loader.getController();
 
             if (controller instanceof TimeReportController) {
-                ((TimeReportController) controller).setClientActions(clientActions);
+                ((TimeReportController) controller).setClient(user, chatClient);
 
             } else if (controller instanceof SubscribersReportController) {
-                ((SubscribersReportController) controller).setClientActions(clientActions);
+                ((SubscribersReportController) controller).setClient(user, chatClient);
             }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
@@ -46,10 +54,10 @@ public class ReportsMenuController {
         }
     }
 
-
+    // ===== Buttons =====
     @FXML
     private void onTimeReportClicked() {
-    	openWindow("TimeReport.fxml", "Time Report");
+        openWindow("TimeReport.fxml", "Time Report");
     }
 
     @FXML
@@ -57,10 +65,28 @@ public class ReportsMenuController {
         openWindow("SubscribersReport.fxml", "Subscribers Report");
     }
 
-
     @FXML
     private void onBackClicked() {
-        openWindow("RestaurantManagement_B.fxml", "Restaurant Management");
+        try {
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/RestaurantManagement_B.fxml"));
+            Parent root = loader.load();
+
+            Object controller = loader.getController();
+            if (controller instanceof RestaurantManagement_BController) {
+                ((RestaurantManagement_BController) controller)
+                        .setClient(user, chatClient);
+            }
+
+            Stage stage = (Stage) rootPane.getScene().getWindow();
+            stage.setTitle("Bistro - Restaurant Management");
+            stage.setScene(new Scene(root));
+            stage.show();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            showMessage("Failed to go back.");
+        }
     }
 
     private void showMessage(String msg) {
