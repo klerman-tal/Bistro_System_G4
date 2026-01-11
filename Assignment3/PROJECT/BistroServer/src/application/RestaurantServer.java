@@ -190,7 +190,12 @@ public class RestaurantServer extends AbstractServer {
         router.register(Commands.GET_WAITING_STATUS, new GetWaitingStatusHandler(waitingController));
         router.register(Commands.CANCEL_WAITING, new CancelWaitingHandler(waitingController));
         router.register(Commands.CONFIRM_WAITING_ARRIVAL, new ConfirmWaitingArrivalHandler(waitingController));
+        router.register(Commands.CANCEL_RESERVATION, new CancelReservationHandler(reservationController)
 
+              
+        );
+
+ 
     }
 
     @Override

@@ -52,6 +52,24 @@ public class ClientAPI {
         RequestDTO request = new RequestDTO(Commands.GET_RESERVATION_HISTORY, data);
         client.sendToServer(request);
     }
+    
+    public void cancelReservation(String confirmationCode) throws IOException {
+
+        if (confirmationCode == null || confirmationCode.isBlank()) {
+            throw new IllegalArgumentException("Confirmation code is required");
+        }
+
+        dto.CancelReservationDTO data =
+                new dto.CancelReservationDTO(confirmationCode, null);
+
+        RequestDTO request =
+                new RequestDTO(Commands.CANCEL_RESERVATION, data);
+
+        client.sendToServer(request);
+    }
+
+    
+    
 
     // =========================
     // OPENING HOURS

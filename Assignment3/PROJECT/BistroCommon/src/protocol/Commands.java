@@ -4,6 +4,7 @@ public enum Commands {
     // Reservations
     CREATE_RESERVATION,
     GET_RESERVATION_HISTORY,
+    CANCEL_RESERVATION,
 
     // Waiting List
     JOIN_WAITING_LIST,

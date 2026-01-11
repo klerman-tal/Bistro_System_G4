@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane fx:id="rootPane"
+            xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="guiControllers.CancelReservation_BController"
+            stylesheets="@Style.css">
+
+    <!-- HEADER -->
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="15">
+            <padding>
+                <Insets top="18" right="25" bottom="18" left="25"/>
+            </padding>
+
+
+            <Label text="Cancel Reservation"
+                   styleClass="title"
+                   textFill="WHITE"/>
+        </HBox>
+    </top>
+
+    <!-- CENTER -->
+    <center>
+        <VBox spacing="15" alignment="TOP_CENTER">
+            <padding>
+                <Insets top="30" right="40" bottom="20" left="40"/>
+            </padding>
+
+            <children>
+
+                <Label text="Enter your reservation confirmation code"
+                       styleClass="section"/>
+
+                <!-- Confirmation Code -->
+                <TextField fx:id="txtConfirmationCode"
+                           promptText="Confirmation Code"
+                           maxWidth="260"/>
+
+                <!-- Optional reason -->
+                <ComboBox fx:id="cmbCancelReason"
+                          promptText="Cancellation reason (optional)"
+                          maxWidth="260"/>
+
+                <TextArea fx:id="txtOtherReason"
+                          promptText="Additional details (optional)"
+                          maxWidth="260"
+                          prefRowCount="3"/>
+
+                <!-- Message -->
+                <Label fx:id="lblMessage"
+                       visible="false"
+                       managed="false"
+                       styleClass="errorMsg"/>
+
+                <!-- Cancel button -->
+                <Button text="Cancel Reservation"
+                        onAction="#onCancelReservationClicked"
+                        prefWidth="260"
+                        styleClass="btnSecondary"/>
+                        
+                  <!-- BACK -->
+            <Button text="Back"
+                    onAction="#onBackClicked"
+                    prefWidth="260"
+                    styleClass="btnPrimary"/>
+
+            </children>
+        </VBox>
+    </center>
+
+</BorderPane>

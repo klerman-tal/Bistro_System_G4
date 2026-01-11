@@ -17,17 +17,20 @@ import javafx.stage.Stage;
 public class Menu_BController {
 
     @FXML private BorderPane rootPane;
+
     @FXML private Button btnReservation;
+    @FXML private Button btnCancelReservation; // ✅ NEW
     @FXML private Button btnPayment;
     @FXML private Button btnPersonalDetails;
     @FXML private Button btnGetTable;
-    @FXML private Button btnJoinWaiting; // ✅ NEW
+    @FXML private Button btnJoinWaiting;
     @FXML private Button btnRestaurantManagement;
     @FXML private Button btnLogout;
+
     @FXML private Label lblMessage;
 
-    private User user;                 
-    private ChatClient chatClient;     
+    private User user;
+    private ChatClient chatClient;
     private ClientActions clientActions;
 
     public void setClientActions(ClientActions clientActions) {
@@ -42,6 +45,12 @@ public class Menu_BController {
     @FXML
     private void onSelectReservationClicked() {
         openWindow("TableReservation_B.fxml", "Table Reservation");
+    }
+
+    // ✅ NEW
+    @FXML
+    private void onSelectCancelReservationClicked() {
+        openWindow("CancelReservation_B.fxml", "Cancel Reservation");
     }
 
     @FXML
@@ -59,8 +68,6 @@ public class Menu_BController {
         openWindow("GetTableChoice_B.fxml", "Get Table");
     }
 
-
-    // ✅ NEW
     @FXML
     private void onSelectJoinWaitingClicked() {
         openWindow("JoinWaiting_B.fxml", "Join Waiting List");
