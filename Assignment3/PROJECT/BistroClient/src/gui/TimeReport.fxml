@@ -49,20 +49,24 @@
 							styleClass="section" />
 
 						<!-- SUMMARY -->
-						<VBox alignment="CENTER_LEFT" spacing="4" maxWidth="700"
-							styleClass="summary-box">
+						<HBox alignment="CENTER_LEFT" maxWidth="Infinity">
+							<children>
+								<VBox spacing="4" prefWidth="700" maxWidth="700"
+									styleClass="summary-box">
 
-							<Label fx:id="lblSummaryTitle" styleClass="summary-title" />
+									<Label fx:id="lblArrivalSummaryTitle"
+										styleClass="summary-title" />
 
-							<Label fx:id="lblSummaryText" wrapText="true"
-								styleClass="summary-text" />
-						</VBox>
+									<Label fx:id="lblArrivalSummaryText" wrapText="true"
+										styleClass="summary-text" />
+								</VBox>
+							</children>
+						</HBox>
 
-						<!-- PIE -->
+
 						<PieChart fx:id="arrivalPieChart" prefWidth="500"
 							prefHeight="350" />
 
-						<!-- TEXT LEGEND -->
 						<VBox alignment="TOP_LEFT" spacing="6" prefWidth="500">
 							<Label fx:id="lblOnTime" />
 							<Label fx:id="lblMinorDelay" />
@@ -73,13 +77,29 @@
 
 				<!-- TAB 2: Stay Duration -->
 				<Tab text="Stay Duration" closable="false">
-					<VBox alignment="TOP_CENTER" spacing="20">
+					<VBox alignment="TOP_CENTER" spacing="18">
 						<padding>
 							<Insets top="25" right="30" bottom="20" left="30" />
 						</padding>
 
 						<Label text="Actual Stay Duration by Day (Minutes)"
 							styleClass="section" />
+
+						<!-- SUMMARY -->
+						<HBox alignment="CENTER_LEFT" maxWidth="Infinity">
+							<children>
+								<VBox spacing="4" prefWidth="700" maxWidth="700"
+									styleClass="summary-box">
+
+									<Label fx:id="lblStaySummaryTitle"
+										styleClass="summary-title" />
+
+									<Label fx:id="lblStaySummaryText" wrapText="true"
+										styleClass="summary-text" />
+								</VBox>
+							</children>
+						</HBox>
+
 
 						<BarChart fx:id="timesChart" prefWidth="850"
 							prefHeight="420" animated="false">

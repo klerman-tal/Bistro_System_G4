@@ -29,9 +29,13 @@ public class TimeReportController implements ClientResponseHandler {
     // ===== Root =====
     @FXML private BorderPane rootPane;
 
-    // ===== Summary =====
-    @FXML private Label lblSummaryTitle;
-    @FXML private Label lblSummaryText;
+    // ===== Summary – Arrival Status =====
+    @FXML private Label lblArrivalSummaryTitle;
+    @FXML private Label lblArrivalSummaryText;
+
+    // ===== Summary – Stay Duration =====
+    @FXML private Label lblStaySummaryTitle;
+    @FXML private Label lblStaySummaryText;
 
     // ===== Arrival Status =====
     @FXML private PieChart arrivalPieChart;
@@ -47,6 +51,7 @@ public class TimeReportController implements ClientResponseHandler {
 
     private ChatClient chatClient;
     private User user;
+    private YearMonth reportMonth;
 
     // =====================
     // Init
@@ -61,9 +66,24 @@ public class TimeReportController implements ClientResponseHandler {
         this.chatClient = chatClient;
         this.chatClient.setResponseHandler(this);
 
-        YearMonth lastMonth = YearMonth.now().minusMonths(1);
-        updateSummaryText(lastMonth);
-        requestTimeReport(lastMonth.getYear(), lastMonth.getMonthValue());
+        // תמיד מציגים את החודש שהסתיים
+        reportMonth = YearMonth.now().minusMonths(1);
+
+        updateSummary(
+                reportMonth,
+                lblArrivalSummaryTitle,
+                lblArrivalSummaryText,
+                "customer arrival status"
+        );
+
+        updateSummary(
+                reportMonth,
+                lblStaySummaryTitle,
+                lblStaySummaryText,
+                "average customer stay duration"
+        );
+
+        requestTimeReport(reportMonth.getYear(), reportMonth.getMonthValue());
     }
 
     // =====================
@@ -84,7 +104,7 @@ public class TimeReportController implements ClientResponseHandler {
     }
 
     // =====================
-    // Response
+    // Server → Client
     // =====================
     @Override
     public void handleResponse(ResponseDTO response) {
@@ -100,34 +120,35 @@ public class TimeReportController implements ClientResponseHandler {
     }
 
     // =====================
-    // Summary
+    // Shared Summary
     // =====================
-    private void updateSummaryText(YearMonth reportMonth) {
-
+    private void updateSummary(
+            YearMonth reportMonth,
+            Label titleLabel,
+            Label textLabel,
+            String topic
+    ) {
         DateTimeFormatter monthFormatter =
                 DateTimeFormatter.ofPattern("MMMM yyyy");
         DateTimeFormatter dateFormatter =
                 DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-        // החודש שמוצג בדוח (החודש שהסתיים)
-        lblSummaryTitle.setText(
-                "Summary: " + reportMonth.format(monthFormatter)
-        );
-
-        // החודש הבא שיוצג + תאריך פרסום
-        YearMonth nextReportMonth = reportMonth.plusMonths(1);
-        String nextReportName = nextReportMonth.format(monthFormatter);
-        String publishDate = nextReportMonth.plusMonths(1)
+        YearMonth nextMonth = reportMonth.plusMonths(1);
+        String publishDate = nextMonth.plusMonths(1)
                 .atDay(1)
                 .format(dateFormatter);
 
-        lblSummaryText.setText(
-                "This report presents data for " + reportMonth.format(monthFormatter) + ". " +
-                "The report for " + nextReportName +
-                " will be available starting " + publishDate + "."
+        titleLabel.setText(
+                "Summary: " + reportMonth.format(monthFormatter)
+        );
+
+        textLabel.setText(
+                "This report presents " + topic + " for "
+                + reportMonth.format(monthFormatter) + ".\n"
+                + "The " + nextMonth.format(monthFormatter)
+                + " report will be available starting " + publishDate + "."
         );
     }
-
 
     // =====================
     // Arrival Status
@@ -174,29 +195,33 @@ public class TimeReportController implements ClientResponseHandler {
         timesChart.getData().clear();
         if (dto.getAvgStayMinutesPerDay() == null) return;
 
-        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        XYChart.Series<String, Number> series =
+                new XYChart.Series<>();
         series.setName("Average Stay (minutes)");
 
-        for (Map.Entry<Integer, Integer> e :
-                dto.getAvgStayMinutesPerDay().entrySet()) {
+        int daysInMonth = reportMonth.lengthOfMonth();
+
+        for (int day = 1; day <= daysInMonth; day++) {
+            int value = dto.getAvgStayMinutesPerDay()
+                    .getOrDefault(day, 0);
+
             series.getData().add(
-                    new XYChart.Data<>(String.valueOf(e.getKey()), e.getValue())
+                    new XYChart.Data<>(String.valueOf(day), value)
             );
         }
 
         timesChart.getData().add(series);
 
         lblMonthlyAvg.setText(
-                "Monthly Average: " + dto.getMonthlyAvgStay() + " min"
-        );
+                "Monthly Average: " + dto.getMonthlyAvgStay() + " min");
+
         lblMaxDay.setText(
-                "Longest Stay: Day " + dto.getMaxAvgDay() +
-                " (" + dto.getMaxAvgMinutes() + " min)"
-        );
+                "Longest Stay: Day " + dto.getMaxAvgDay()
+                        + " (" + dto.getMaxAvgMinutes() + " min)");
+
         lblMinDay.setText(
-                "Shortest Stay: Day " + dto.getMinAvgDay() +
-                " (" + dto.getMinAvgMinutes() + " min)"
-        );
+                "Shortest Stay: Day " + dto.getMinAvgDay()
+                        + " (" + dto.getMinAvgMinutes() + " min)");
     }
 
     // =====================
