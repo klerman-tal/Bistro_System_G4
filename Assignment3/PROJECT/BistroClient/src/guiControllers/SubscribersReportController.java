@@ -1,6 +1,7 @@
 package guiControllers;
 
-import interfaces.ClientActions;
+import application.ChatClient;
+import entities.User;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -15,34 +16,43 @@ import javafx.stage.Stage;
 /**
  * Subscribers Report Controller
  *
- * This controller is responsible for displaying
- * monthly subscribers-related reports.
+ * Responsible for displaying monthly subscribers-related reports.
  *
  * Data will be provided later via DTOs from the server.
  */
 public class SubscribersReportController {
 
     // ===== Root =====
-    @FXML private BorderPane rootPane;
+    @FXML
+    private BorderPane rootPane;
 
     // ===== TAB 1: Active Subscribers =====
-    @FXML private PieChart activeSubscribersPie;
-    @FXML private Label lblActiveSubscribers;
-    @FXML private Label lblInactiveSubscribers;
+    @FXML
+    private PieChart activeSubscribersPie;
+
+    @FXML
+    private Label lblActiveSubscribers;
+    @FXML
+    private Label lblInactiveSubscribers;
 
     // ===== TAB 2: Waiting List Activity =====
-    @FXML private BarChart<String, Number> waitingListChart;
+    @FXML
+    private BarChart<String, Number> waitingListChart;
 
     // ===== TAB 3: Reservation Trend =====
-    @FXML private LineChart<String, Number> reservationsTrendChart;
+    @FXML
+    private LineChart<String, Number> reservationsTrendChart;
 
-    private ClientActions clientActions;
+    // ===== Client context =====
+    private User user;
+    private ChatClient chatClient;
 
     /**
      * Injected from previous screen
      */
-    public void setClientActions(ClientActions clientActions) {
-        this.clientActions = clientActions;
+    public void setClient(User user, ChatClient chatClient) {
+        this.user = user;
+        this.chatClient = chatClient;
     }
 
     /**
@@ -54,18 +64,23 @@ public class SubscribersReportController {
         /*
          * ===== FUTURE FLOW =====
          *
-         * 1. Request subscribers report data from server
-         * 2. Receive DTO containing:
-         *    - Active / inactive subscribers counts
-         *    - Waiting list entries per day
-         *    - Reservations per day
-         * 3. Populate charts accordingly
+         * 1. Send RequestDTO to server:
+         *      - GET_SUBSCRIBERS_REPORT
+         *
+         * 2. Server responds with SubscribersReportDTO:
+         *      - activeSubscribersCount
+         *      - inactiveSubscribersCount
+         *      - waitingListPerDay
+         *      - reservationsPerDay
+         *
+         * 3. Populate:
+         *      - PieChart (active vs inactive)
+         *      - BarChart (waiting list per day)
+         *      - LineChart (reservations trend)
          */
 
-        // Example future calls:
-        // requestActiveSubscribersData();
-        // requestWaitingListData();
-        // requestReservationTrendData();
+        // Future examples:
+        // requestSubscribersActivityReport();
     }
 
     // =========================
@@ -74,26 +89,18 @@ public class SubscribersReportController {
 
     /**
      * TODO:
-     * Request active vs inactive subscribers for selected month
+     * Request subscribers report DTO from server
      */
-    private void requestActiveSubscribersData() {
-        // clientActions.sendToServer(...)
-    }
-
-    /**
-     * TODO:
-     * Request waiting list entries per day (subscribers only)
-     */
-    private void requestWaitingListData() {
-        // clientActions.sendToServer(...)
-    }
-
-    /**
-     * TODO:
-     * Request subscriber reservations trend per day
-     */
-    private void requestReservationTrendData() {
-        // clientActions.sendToServer(...)
+    private void requestSubscribersActivityReport() {
+        // Example future code:
+        //
+        // SubscribersReportRequestDTO dto =
+        //      new SubscribersReportRequestDTO(year, month);
+        //
+        // RequestDTO request =
+        //      new RequestDTO(Commands.GET_SUBSCRIBERS_REPORT, dto);
+        //
+        // chatClient.sendToServer(request);
     }
 
     // =========================
@@ -107,8 +114,11 @@ public class SubscribersReportController {
                     new FXMLLoader(getClass().getResource("/gui/ReportsMenu.fxml"));
             Parent root = loader.load();
 
-            ReportsMenuController controller = loader.getController();
-            controller.setClientActions(clientActions);
+            Object controller = loader.getController();
+            if (controller instanceof ReportsMenuController) {
+                ((ReportsMenuController) controller)
+                        .setClient(user, chatClient);
+            }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setTitle("Bistro - Reports");

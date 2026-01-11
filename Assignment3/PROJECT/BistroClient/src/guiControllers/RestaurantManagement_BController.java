@@ -50,7 +50,12 @@ public class RestaurantManagement_BController {
             if (controller instanceof ManageReservationController mrc) {
                 mrc.setClient(user, chatClient);
             }
-
+            
+            // ✅ ⭐⭐ THIS WAS MISSING ⭐⭐
+            if (controller instanceof ReportsMenuController rmc) {
+                rmc.setClient(user, chatClient);
+            }
+            
             // ✅ Back to Menu
             if (controller instanceof Menu_BController menu) {
                 menu.setClient(user, chatClient);

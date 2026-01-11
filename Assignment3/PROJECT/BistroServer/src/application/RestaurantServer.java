@@ -18,6 +18,7 @@ import logicControllers.ReservationController;
 import logicControllers.RestaurantController;
 import logicControllers.UserController;
 import logicControllers.WaitingController;
+import logicControllers.ReportsController;
 import network.*;
 import ocsf.server.AbstractServer;
 import ocsf.server.ConnectionToClient;
@@ -34,6 +35,7 @@ public class RestaurantServer extends AbstractServer {
     private UserController userController;
     private Reservation_DB_Controller reservationDB;
     private Waiting_DB_Controller waitingDB;
+    private ReportsController reportsController;
 
     private ReservationController reservationController;
     private WaitingController waitingController;
@@ -103,6 +105,8 @@ public class RestaurantServer extends AbstractServer {
             restaurantController = new RestaurantController(restaurantDB);
             userController = new UserController(userDB);
             reservationController = new ReservationController(reservationDB, this, restaurantController);
+            reportsController = new ReportsController(reservationDB);
+
 
             // ✅ NEW
             waitingController = new WaitingController(waitingDB, this, restaurantController, reservationController);
@@ -190,12 +194,10 @@ public class RestaurantServer extends AbstractServer {
         router.register(Commands.GET_WAITING_STATUS, new GetWaitingStatusHandler(waitingController));
         router.register(Commands.CANCEL_WAITING, new CancelWaitingHandler(waitingController));
         router.register(Commands.CONFIRM_WAITING_ARRIVAL, new ConfirmWaitingArrivalHandler(waitingController));
-        router.register(Commands.CANCEL_RESERVATION, new CancelReservationHandler(reservationController)
-
-              
-        );
-
- 
+        router.register(Commands.CANCEL_RESERVATION, new CancelReservationHandler(reservationController));
+        		
+        		// ✅ REPORTS
+        router.register(Commands.GET_TIME_REPORT, new GetTimeReportHandler(reportsController));
     }
 
     @Override

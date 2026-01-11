@@ -1,6 +1,7 @@
 package network;
 
 import dto.RequestDTO;
+import dto.ResponseDTO;
 import dto.TimeReportDTO;
 import logicControllers.ReportsController;
 import ocsf.server.ConnectionToClient;
@@ -23,7 +24,17 @@ public class GetTimeReportHandler implements RequestHandler {
                         req.getYear(),
                         req.getMonth()
                 );
+        System.out.println("📤 Sending TimeReportDTO to client: "
+                + "onTime=" + result.getOnTimeCount()
+                + ", minor=" + result.getMinorDelayCount()
+                + ", major=" + result.getSignificantDelayCount());
 
-        client.sendToClient(result);
+        client.sendToClient(
+            new ResponseDTO(
+                true,
+                "Time report loaded",
+                result
+            )
+        );
     }
 }
