@@ -15,6 +15,7 @@ import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import network.ClientResponseHandler;
 import protocol.Commands;
@@ -22,28 +23,41 @@ import protocol.Commands;
 import java.io.IOException;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
-import java.util.Map;
 
+/**
+ * Controller for displaying monthly time reports.
+ * Handles arrival status statistics and stay duration analytics.
+ */
 public class TimeReportController implements ClientResponseHandler {
 
-    // ===== Root =====
+    /* =======================
+       Root
+       ======================= */
     @FXML private BorderPane rootPane;
 
-    // ===== Summary – Arrival Status =====
-    @FXML private Label lblArrivalSummaryTitle;
-    @FXML private Label lblArrivalSummaryText;
+    /* =======================
+       Arrival summary
+       ======================= */
+    @FXML private Label lblSummaryTitle;
+    @FXML private Text txtSummaryText;
 
-    // ===== Summary – Stay Duration =====
+    /* =======================
+       Stay summary
+       ======================= */
     @FXML private Label lblStaySummaryTitle;
-    @FXML private Label lblStaySummaryText;
+    @FXML private Text txtStaySummaryText;
 
-    // ===== Arrival Status =====
+    /* =======================
+       Arrival status
+       ======================= */
     @FXML private PieChart arrivalPieChart;
     @FXML private Label lblOnTime;
     @FXML private Label lblMinorDelay;
     @FXML private Label lblMajorDelay;
 
-    // ===== Stay Duration =====
+    /* =======================
+       Stay duration
+       ======================= */
     @FXML private BarChart<String, Number> timesChart;
     @FXML private Label lblMonthlyAvg;
     @FXML private Label lblMaxDay;
@@ -53,42 +67,32 @@ public class TimeReportController implements ClientResponseHandler {
     private User user;
     private YearMonth reportMonth;
 
-    // =====================
-    // Init
-    // =====================
+    /**
+     * JavaFX initialization hook.
+     * Disables legend for the pie chart.
+     */
     @FXML
     public void initialize() {
         arrivalPieChart.setLegendVisible(false);
     }
 
+    /**
+     * Initializes controller with user and active chat client.
+     * Automatically requests last month's time report.
+     */
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
         this.chatClient.setResponseHandler(this);
 
-        // תמיד מציגים את החודש שהסתיים
         reportMonth = YearMonth.now().minusMonths(1);
-
-        updateSummary(
-                reportMonth,
-                lblArrivalSummaryTitle,
-                lblArrivalSummaryText,
-                "customer arrival status"
-        );
-
-        updateSummary(
-                reportMonth,
-                lblStaySummaryTitle,
-                lblStaySummaryText,
-                "average customer stay duration"
-        );
-
+        updateSummaryTexts();
         requestTimeReport(reportMonth.getYear(), reportMonth.getMonthValue());
     }
 
-    // =====================
-    // Requests
-    // =====================
+    /**
+     * Sends time report request to the server.
+     */
     private void requestTimeReport(int year, int month) {
         TimeReportDTO dto = new TimeReportDTO();
         dto.setYear(year);
@@ -103,9 +107,9 @@ public class TimeReportController implements ClientResponseHandler {
         }
     }
 
-    // =====================
-    // Server → Client
-    // =====================
+    /**
+     * Handles server responses related to time reports.
+     */
     @Override
     public void handleResponse(ResponseDTO response) {
         if (response == null || !response.isSuccess()) return;
@@ -119,40 +123,45 @@ public class TimeReportController implements ClientResponseHandler {
         });
     }
 
-    // =====================
-    // Shared Summary
-    // =====================
-    private void updateSummary(
-            YearMonth reportMonth,
-            Label titleLabel,
-            Label textLabel,
-            String topic
-    ) {
-        DateTimeFormatter monthFormatter =
+    /* =======================
+       Summary text
+       ======================= */
+
+    /**
+     * Updates summary titles and descriptive text for both sections.
+     */
+    private void updateSummaryTexts() {
+
+        DateTimeFormatter monthFmt =
                 DateTimeFormatter.ofPattern("MMMM yyyy");
-        DateTimeFormatter dateFormatter =
+        DateTimeFormatter dateFmt =
                 DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-        YearMonth nextMonth = reportMonth.plusMonths(1);
-        String publishDate = nextMonth.plusMonths(1)
+        YearMonth nextReportMonth = reportMonth.plusMonths(1);
+        String publishDate = nextReportMonth.plusMonths(1)
                 .atDay(1)
-                .format(dateFormatter);
+                .format(dateFmt);
 
-        titleLabel.setText(
-                "Summary: " + reportMonth.format(monthFormatter)
-        );
+        String text =
+                "This report presents data for " +
+                reportMonth.format(monthFmt) + ".\n" +
+                "The " + nextReportMonth.format(monthFmt) +
+                " report will be available starting " + publishDate + ".";
 
-        textLabel.setText(
-                "This report presents " + topic + " for "
-                + reportMonth.format(monthFormatter) + ".\n"
-                + "The " + nextMonth.format(monthFormatter)
-                + " report will be available starting " + publishDate + "."
-        );
+        lblSummaryTitle.setText("Summary: " + reportMonth.format(monthFmt));
+        txtSummaryText.setText(text);
+
+        lblStaySummaryTitle.setText("Summary: " + reportMonth.format(monthFmt));
+        txtStaySummaryText.setText(text);
     }
 
-    // =====================
-    // Arrival Status
-    // =====================
+    /* =======================
+       Arrival status section
+       ======================= */
+
+    /**
+     * Draws arrival status pie chart and labels.
+     */
     private void drawArrivalStatus(TimeReportDTO dto) {
 
         int onTime = dto.getOnTimeCount();
@@ -166,42 +175,34 @@ public class TimeReportController implements ClientResponseHandler {
                 new PieChart.Data(percent(onTime, total), onTime)
         );
 
-        lblOnTime.setText(
-                "● On Time (< 3 min): " + onTime + " (" + percent(onTime, total) + ")"
-        );
-        lblOnTime.setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
-
-        lblMinorDelay.setText(
-                "● Minor Delay (3–14 min): " + minor + " (" + percent(minor, total) + ")"
-        );
-        lblMinorDelay.setStyle("-fx-text-fill: orange; -fx-font-weight: bold;");
-
-        lblMajorDelay.setText(
-                "● Significant Delay (≥ 15 min): " + major + " (" + percent(major, total) + ")"
-        );
-        lblMajorDelay.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
+        lblOnTime.setText("● On Time (< 3 min): " + onTime + " (" + percent(onTime, total) + ")");
+        lblMinorDelay.setText("● Minor Delay (3-14 min): " + minor + " (" + percent(minor, total) + ")");
+        lblMajorDelay.setText("● Significant Delay (≥ 15 min): " + major + " (" + percent(major, total) + ")");
     }
 
+    /**
+     * Calculates percentage string.
+     */
     private String percent(int value, int total) {
         if (total == 0) return "0%";
         return String.format("%.1f%%", (value * 100.0) / total);
     }
 
-    // =====================
-    // Stay Duration
-    // =====================
+    /* =======================
+       Stay duration section
+       ======================= */
+
+    /**
+     * Draws average stay duration per day bar chart.
+     */
     private void drawStayDuration(TimeReportDTO dto) {
 
         timesChart.getData().clear();
-        if (dto.getAvgStayMinutesPerDay() == null) return;
-
-        XYChart.Series<String, Number> series =
-                new XYChart.Series<>();
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
         series.setName("Average Stay (minutes)");
 
-        int daysInMonth = reportMonth.lengthOfMonth();
-
-        for (int day = 1; day <= daysInMonth; day++) {
+        int days = reportMonth.lengthOfMonth();
+        for (int day = 1; day <= days; day++) {
             int value = dto.getAvgStayMinutesPerDay()
                     .getOrDefault(day, 0);
 
@@ -212,21 +213,16 @@ public class TimeReportController implements ClientResponseHandler {
 
         timesChart.getData().add(series);
 
-        lblMonthlyAvg.setText(
-                "Monthly Average: " + dto.getMonthlyAvgStay() + " min");
-
-        lblMaxDay.setText(
-                "Longest Stay: Day " + dto.getMaxAvgDay()
-                        + " (" + dto.getMaxAvgMinutes() + " min)");
-
-        lblMinDay.setText(
-                "Shortest Stay: Day " + dto.getMinAvgDay()
-                        + " (" + dto.getMinAvgMinutes() + " min)");
+        lblMonthlyAvg.setText("Monthly Average: " + dto.getMonthlyAvgStay() + " min");
+        lblMaxDay.setText("Longest Stay: Day " + dto.getMaxAvgDay()
+                + " (" + dto.getMaxAvgMinutes() + " min)");
+        lblMinDay.setText("Shortest Stay: Day " + dto.getMinAvgDay()
+                + " (" + dto.getMinAvgMinutes() + " min)");
     }
 
-    // =====================
-    // Navigation
-    // =====================
+    /**
+     * Returns to reports menu screen.
+     */
     @FXML
     private void onBackClicked() {
         try {
