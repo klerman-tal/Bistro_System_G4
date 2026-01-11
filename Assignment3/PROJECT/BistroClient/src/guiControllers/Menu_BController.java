@@ -17,12 +17,16 @@ import javafx.stage.Stage;
 public class Menu_BController {
 
     @FXML private BorderPane rootPane;
+
     @FXML private Button btnReservation;
+    @FXML private Button btnCancelReservation; // ✅ NEW
     @FXML private Button btnPayment;
     @FXML private Button btnPersonalDetails;
     @FXML private Button btnGetTable;
+    @FXML private Button btnJoinWaiting;
     @FXML private Button btnRestaurantManagement;
     @FXML private Button btnLogout;
+
     @FXML private Label lblMessage;
 
     private User user;
@@ -33,7 +37,6 @@ public class Menu_BController {
         this.clientActions = clientActions;
     }
 
-    // שמירה של ה-session מהלוגין
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
@@ -41,20 +44,13 @@ public class Menu_BController {
 
     @FXML
     private void onSelectReservationClicked() {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/TableReservation_B.fxml"));
-            Parent root = loader.load();
+        openWindow("TableReservation_B.fxml", "Table Reservation");
+    }
 
-            TableReservation_BController nextController = loader.getController();
-            nextController.setClient(this.user, this.chatClient);
-
-            Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setScene(new Scene(root));
-            stage.setTitle("Bistro - Table Reservation");
-            stage.show();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    // ✅ NEW
+    @FXML
+    private void onSelectCancelReservationClicked() {
+        openWindow("CancelReservation_B.fxml", "Cancel Reservation");
     }
 
     @FXML
@@ -69,7 +65,12 @@ public class Menu_BController {
 
     @FXML
     private void onSelectGetTableClicked() {
-        openWindow("GetTable_B.fxml", "Get Table");
+        openWindow("GetTableChoice_B.fxml", "Get Table");
+    }
+
+    @FXML
+    private void onSelectJoinWaitingClicked() {
+        openWindow("JoinWaiting_B.fxml", "Join Waiting List");
     }
 
     @FXML
@@ -80,12 +81,15 @@ public class Menu_BController {
     @FXML
     private void onLogoutClicked() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Login_B.fxml"));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/Login_B.fxml"));
             Parent root = loader.load();
+
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setTitle("Bistro - Login");
             stage.setScene(new Scene(root));
             stage.show();
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -93,12 +97,12 @@ public class Menu_BController {
 
     private void openWindow(String fxmlName, String title) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
             Parent root = loader.load();
 
             Object controller = loader.getController();
 
-            // להעביר clientActions אם יש
             if (controller != null && clientActions != null) {
                 try {
                     controller.getClass()
@@ -107,7 +111,6 @@ public class Menu_BController {
                 } catch (Exception ignored) {}
             }
 
-            // להעביר user + chatClient אם יש setClient
             if (controller != null && user != null && chatClient != null) {
                 try {
                     controller.getClass()

@@ -3,7 +3,6 @@ package application;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.sql.Connection;
-import java.util.ArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -14,21 +13,15 @@ import dbControllers.Restaurant_DB_Controller;
 import dbControllers.User_DB_Controller;
 import dbControllers.Waiting_DB_Controller;
 import dto.RequestDTO;
-import entities.OpeningHouers;
-import entities.Restaurant;
-import entities.Table;
-import entities.User;
-
 import javafx.application.Platform;
-import logicControllers.ReportsController;
 import logicControllers.ReservationController;
 import logicControllers.RestaurantController;
 import logicControllers.UserController;
-import network.RequestRouter;
+import logicControllers.WaitingController;
+import network.*;
 import ocsf.server.AbstractServer;
 import ocsf.server.ConnectionToClient;
 import protocol.Commands;
-import network.*;
 
 public class RestaurantServer extends AbstractServer {
 
@@ -41,11 +34,14 @@ public class RestaurantServer extends AbstractServer {
     private UserController userController;
     private Reservation_DB_Controller reservationDB;
     private Waiting_DB_Controller waitingDB;
-    private ReservationController reservationController;
-    private RequestRouter router;
-    private ReportsController reportsController;
 
+    private ReservationController reservationController;
+    private WaitingController waitingController;
+    private ScheduledExecutorService waitingScheduler;
     
+
+    private RequestRouter router;
+
     private gui.ServerGUIController uiController;
     private String serverIp;
 
@@ -77,8 +73,7 @@ public class RestaurantServer extends AbstractServer {
     protected void serverStarted() {
         touchActivity();
         startIdleWatchdog();
-        
-        // ✨ הלוגים שביקשת להחזיר:
+
         log("Server started on IP: " + serverIp);
         log("Listening on port " + getPort());
 
@@ -91,29 +86,38 @@ public class RestaurantServer extends AbstractServer {
                 return;
             }
 
-            // --- אתחול קונטרולרים של DB ---
             restaurantDB = new Restaurant_DB_Controller(sqlConn);
             reservationDB = new Reservation_DB_Controller(sqlConn);
             userDB = new User_DB_Controller(sqlConn);
             waitingDB = new Waiting_DB_Controller(sqlConn);
 
-            // --- יצירת טבלאות אוטומטית ---
             log("⚙️ Ensuring all database tables exist...");
-            
             userDB.createSubscribersTable();
             userDB.createGuestsTable();
             restaurantDB.createRestaurantTablesTable();
             restaurantDB.createOpeningHoursTable();
             reservationDB.createReservationsTable();
             waitingDB.createWaitingListTable();
-
             log("✅ Database schema ensured.");
 
-            // --- אתחול קונטרולרים לוגיים ---
             restaurantController = new RestaurantController(restaurantDB);
             userController = new UserController(userDB);
             reservationController = new ReservationController(reservationDB, this, restaurantController);
-            reportsController = new ReportsController(reservationDB);
+
+            // ✅ NEW
+            waitingController = new WaitingController(waitingDB, this, restaurantController, reservationController);
+
+
+         // run every 10 seconds
+         waitingScheduler = Executors.newSingleThreadScheduledExecutor();
+         waitingScheduler.scheduleAtFixedRate(() -> {
+             try {
+            	 int c = waitingController.cancelExpiredWaitingsAndReservations();
+                 if (c > 0) log("⏳ Auto-cancelled expired waitings: " + c);
+             } catch (Exception e) {
+                 log("Waiting scheduler error: " + e.getMessage());
+             }
+         }, 10, 10, TimeUnit.SECONDS);
 
 
             registerHandlers();
@@ -125,33 +129,94 @@ public class RestaurantServer extends AbstractServer {
                 log("⚠️ Grid init failed: " + e.getMessage());
             }
 
-            log("All controllers and database tables initialized.");
+            log("✅ Server fully initialized.");
 
         } catch (Exception e) {
             log("❌ Initialization error: " + e.getMessage());
             e.printStackTrace();
         }
     }
-    
+
     private void registerHandlers() {
         log("⚙️ Registering DTO handlers...");
-        router.register(protocol.Commands.CREATE_RESERVATION, new CreateReservationHandler(reservationController));
-        router.register(protocol.Commands.GET_OPENING_HOURS, new GetOpeningHoursHandler(restaurantController));
-        router.register(Commands.SUBSCRIBER_LOGIN, new SubscriberLoginHandler(userController));
-        router.register(protocol.Commands.GUEST_LOGIN, new GuestLoginHandler(userController));
-        router.register(Commands.RECOVER_SUBSCRIBER_CODE,new RecoverSubscriberCodeHandler(userController));
-        router.register(protocol.Commands.RECOVER_GUEST_CONFIRMATION_CODE,new RecoverGuestConfirmationCodeHandler(reservationController, userController));
-                
-        router.register(protocol.Commands.GET_TIME_REPORT, new GetTimeReportHandler(reportsController));
 
-        	
+        // Reservations
+        router.register(Commands.CREATE_RESERVATION,
+                new CreateReservationHandler(reservationController));
 
+        router.register(Commands.GET_RESERVATION_HISTORY,
+                new GetReservationHistoryHandler(reservationController));
 
+        // Opening hours
+        router.register(Commands.GET_OPENING_HOURS,
+                new GetOpeningHoursHandler(restaurantController));
+
+        router.register(Commands.UPDATE_OPENING_HOURS,
+                new UpdateOpeningHoursHandler(restaurantController));
+
+        // Tables
+        router.register(Commands.GET_TABLES,
+                new GetTablesHandler(restaurantController));
+
+        router.register(Commands.SAVE_TABLE,
+                new SaveTableHandler(restaurantController));
+
+        router.register(Commands.DELETE_TABLE,
+                new DeleteTableHandler(restaurantController));
+
+        // Users
+        router.register(Commands.SUBSCRIBER_LOGIN,
+                new SubscriberLoginHandler(userController));
+
+        router.register(Commands.GUEST_LOGIN,
+                new GuestLoginHandler(userController));
+
+        router.register(Commands.RECOVER_SUBSCRIBER_CODE,
+                new RecoverSubscriberCodeHandler(userController));
+
+        router.register(Commands.RECOVER_GUEST_CONFIRMATION_CODE,
+                new RecoverGuestConfirmationCodeHandler(reservationController, userController));
+
+        router.register(Commands.REGISTER_SUBSCRIBER,
+                new RegisterSubscriberHandler(userController));
+
+        router.register(Commands.UPDATE_SUBSCRIBER_DETAILS,
+                new UpdateSubscriberDetailsHandler(userController));
+
+        // ✅ WAITING LIST
+        router.register(Commands.JOIN_WAITING_LIST,
+                new JoinWaitingListHandler(waitingController));
+
+        router.register(Commands.GET_WAITING_STATUS, new GetWaitingStatusHandler(waitingController));
+        router.register(Commands.CANCEL_WAITING, new CancelWaitingHandler(waitingController));
+        router.register(Commands.CONFIRM_WAITING_ARRIVAL, new ConfirmWaitingArrivalHandler(waitingController));
+        router.register(Commands.CANCEL_RESERVATION, new CancelReservationHandler(reservationController)
+
+              
+        );
+
+ 
+    }
+
+    @Override
+    protected void handleMessageFromClient(Object msg, ConnectionToClient client) {
+        touchActivity();
+
+        try {
+            if (msg instanceof RequestDTO request) {
+                log("📨 Received DTO command: " + request.getCommand());
+                router.route(request, client);
+            }
+        } catch (Exception e) {
+            log("❌ Error handling message: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     @Override
     protected void serverStopped() {
         idleScheduler.shutdownNow();
+        if (waitingScheduler != null) waitingScheduler.shutdownNow();
         log("Server stopped.");
     }
 
@@ -164,72 +229,11 @@ public class RestaurantServer extends AbstractServer {
         log("Client connected | IP: " + ip);
     }
 
-    @Override
-    protected void handleMessageFromClient(Object msg, ConnectionToClient client) {
-        touchActivity();
-        try {
-            if (msg instanceof RequestDTO) {
-                RequestDTO request = (RequestDTO) msg;
-                log("📨 Received DTO command: " + request.getCommand());
-                router.route(request, client);
-                return;
-            }
-             
-            if (!(msg instanceof ArrayList<?>)) return;
-            ArrayList<?> arr = (ArrayList<?>) msg;
-            if (arr.isEmpty()) return;
-            String command = arr.get(0).toString();
-
-            switch (command) {
-                case "CLIENT_LOGOUT": {
-                    client.close();
-                    break;
-                }
-                case "RM_GET_TABLES": {
-                    restaurantController.loadTablesFromDb();
-                    StringBuilder sb = new StringBuilder("RM_TABLES|");
-                    for (Table t : Restaurant.getInstance().getTables()) {
-                        sb.append(t.getTableNumber()).append(",")
-                          .append(t.getSeatsAmount())
-                          .append(";");
-                    }
-                    client.sendToClient(sb.toString());
-                    break;
-                }
-                default:
-                    log("Unknown command: " + command);
-            }
-        } catch (Exception e) {
-            log("Error handling message: " + e.getMessage());
-        }
-    }
-
-    private String safeHHMM(String t) {
-        if (t == null) return "";
-        t = t.trim();
-        if (t.matches("^\\d{2}:\\d{2}:\\d{2}$")) return t.substring(0, 5);
-        if (t.matches("^\\d{2}:\\d{2}$")) return t;
-        return t.length() >= 5 ? t.substring(0, 5) : t;
-    }
-
-    public static void main(String[] args) {
-        int port;
-        try {
-            port = Integer.parseInt(args[0]);
-        } catch (Exception e) {
-            port = DEFAULT_PORT;
-        }
-        RestaurantServer server = new RestaurantServer(port);
-        try {
-            server.listen();
-        } catch (Exception e) {
-            server.log("ERROR: Could not start server");
-        }
-    }
-    
-    private static final long IDLE_TIMEOUT_MS = 30L * 60L * 1000L; 
+    // ================= Idle Auto Shutdown =================
+    private static final long IDLE_TIMEOUT_MS = 30L * 60L * 1000L;
     private volatile long lastActivityMs = System.currentTimeMillis();
-    private final ScheduledExecutorService idleScheduler = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService idleScheduler =
+            Executors.newSingleThreadScheduledExecutor();
 
     private Runnable onAutoShutdown;
     public void setOnAutoShutdown(Runnable r) { this.onAutoShutdown = r; }
@@ -258,6 +262,22 @@ public class RestaurantServer extends AbstractServer {
         idleScheduler.shutdownNow();
         if (onAutoShutdown != null) {
             try { onAutoShutdown.run(); } catch (Exception ignored) {}
+        }
+    }
+
+    public static void main(String[] args) {
+        int port;
+        try {
+            port = Integer.parseInt(args[0]);
+        } catch (Exception e) {
+            port = DEFAULT_PORT;
+        }
+
+        RestaurantServer server = new RestaurantServer(port);
+        try {
+            server.listen();
+        } catch (Exception e) {
+            server.log("ERROR: Could not start server");
         }
     }
 }

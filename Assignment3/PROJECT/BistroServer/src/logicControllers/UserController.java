@@ -251,6 +251,25 @@ public class UserController {
 
         return subscriber;
     }
+    
+    public boolean updateSubscriberDetails(
+            int subscriberId,
+            String firstName,
+            String lastName,
+            String phone,
+            String email
+    ) {
+        if (subscriberId <= 0) return false;
+
+        return userDB.updateSubscriberDetails(
+                subscriberId,
+                firstName,
+                lastName,
+                phone,
+                email
+        );
+    }
+
 
     
 

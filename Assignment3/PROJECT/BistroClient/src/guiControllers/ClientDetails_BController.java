@@ -1,10 +1,18 @@
 package guiControllers;
 
+import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+import application.ChatClient;
+import dto.GetReservationHistoryDTO;
+import dto.RequestDTO;
+import dto.ResponseDTO;
+import dto.UpdateSubscriberDetailsDTO;
 import entities.Reservation;
 import entities.Subscriber;
+import entities.User;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -13,19 +21,22 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
+import network.ClientResponseHandler;
+import protocol.Commands;
 
-import java.io.IOException;
-
-public class ClientDetails_BController {
+public class ClientDetails_BController implements ClientResponseHandler {
 
     private Subscriber subscriber;
-    private List<Reservation> reservationHistory;
+    private ChatClient chatClient;
 
     @FXML private BorderPane rootPane;
 
     @FXML private TextField txtSubscriberNumber;
     @FXML private TextField txtUserName;
-    @FXML private TextArea txtContactDetails;
+    @FXML private TextField txtFirstName;
+    @FXML private TextField txtLastName;
+    @FXML private TextField txtPhoneNumber;
+    @FXML private TextField txtEmail;
 
     @FXML private Label lblMessage;
 
@@ -35,122 +46,167 @@ public class ClientDetails_BController {
     @FXML private TableColumn<Reservation, String> colCode;
     @FXML private TableColumn<Reservation, String> colStatus;
 
-    private final DateTimeFormatter dateTimeFormatter =
+    private final DateTimeFormatter formatter =
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     @FXML
     private void initialize() {
 
-        colDateTime.setCellValueFactory(res ->
+        colDateTime.setCellValueFactory(r ->
                 new SimpleStringProperty(
-                        res.getValue().getReservationTime() != null
-                                ? res.getValue().getReservationTime().format(dateTimeFormatter)
+                        r.getValue().getReservationTime() != null
+                                ? r.getValue().getReservationTime().format(formatter)
                                 : ""
                 ));
 
-        colGuests.setCellValueFactory(res ->
+        colGuests.setCellValueFactory(r ->
                 new SimpleStringProperty(
-                        String.valueOf(res.getValue().getGuestAmount())
+                        String.valueOf(r.getValue().getGuestAmount())
                 ));
 
-        colCode.setCellValueFactory(res ->
-        new SimpleStringProperty(res.getValue().getConfirmationCode())
-);
-
-        colStatus.setCellValueFactory(res ->
+        colCode.setCellValueFactory(r ->
                 new SimpleStringProperty(
-                        res.getValue().isConfirmed() ? "Confirmed" : "Pending"
+                        r.getValue().getConfirmationCode()
+                ));
+
+        colStatus.setCellValueFactory(r ->
+                new SimpleStringProperty(
+                        r.getValue().getReservationStatus().name()
                 ));
     }
 
-    /* =========================
-       DATA INJECTION FROM SERVER
-       ========================= */
+    public void setClient(User user, ChatClient chatClient) {
 
-    public void setSubscriber(Subscriber subscriber) {
-        this.subscriber = subscriber;
-        viewSubscriberDetails();
-    }
-
-    public void setReservationHistory(List<Reservation> history) {
-        this.reservationHistory = history;
-        viewReservationHistory();
-    }
-
-    /* =========================
-       VIEW METHODS
-       ========================= */
-
-    private void viewSubscriberDetails() {
-        clearMessage();
-
-        if (subscriber == null) {
-            showMessage("No subscriber data.");
+        if (!(user instanceof Subscriber)) {
+            showMessage("Only subscribers can view this screen.");
             return;
         }
 
-        txtSubscriberNumber.setText(
-                String.valueOf(subscriber.getUserId())
-        );
+        this.subscriber = (Subscriber) user;
+        this.chatClient = chatClient;
 
-        txtUserName.setText(
-                subscriber.getFirstName() + " " + subscriber.getLastName()
-        );
+        if (this.chatClient != null) {
+            this.chatClient.setResponseHandler(this);
+        }
 
-        txtContactDetails.setText(
-                "Phone: " + subscriber.getPhoneNumber() + "\n" +
-                "Email: " + subscriber.getEmail()
-        );
+        loadSubscriberDetails();
+        requestReservationHistory();
     }
 
-    private void viewReservationHistory() {
+    private void requestReservationHistory() {
+        try {
+            GetReservationHistoryDTO data =
+                    new GetReservationHistoryDTO(subscriber.getUserId());
 
-        if (reservationHistory == null) {
-            tblReservationHistory.getItems().clear();
+            RequestDTO request =
+                    new RequestDTO(Commands.GET_RESERVATION_HISTORY, data);
+
+            chatClient.sendToServer(request);
+
+        } catch (IOException e) {
+            showMessage("Failed to load reservation history");
+        }
+    }
+
+    @Override
+    public void handleResponse(ResponseDTO response) {
+
+        if (!response.isSuccess()) {
+            showMessage(response.getMessage());
             return;
         }
 
-        tblReservationHistory.getItems().setAll(reservationHistory);
+        if ("Details updated successfully".equals(response.getMessage())) {
+            showMessage("✔ Details updated successfully");
+            return;
+        }
+
+        if (response.getData() instanceof List<?> list &&
+            !list.isEmpty() &&
+            list.get(0) instanceof Reservation) {
+
+            @SuppressWarnings("unchecked")
+            List<Reservation> history = (List<Reservation>) list;
+
+            Platform.runLater(() ->
+                tblReservationHistory.getItems().setAll(history)
+            );
+        }
     }
 
-    /* =========================
-       NAVIGATION
-       ========================= */
+    @Override
+    public void handleConnectionError(Exception e) {
+        showMessage("Connection error: " + e.getMessage());
+    }
+
+    @Override
+    public void handleConnectionClosed() {
+        showMessage("Connection closed.");
+    }
+
+    private void loadSubscriberDetails() {
+        txtSubscriberNumber.setText(String.valueOf(subscriber.getUserId()));
+        txtUserName.setText(subscriber.getUsername());
+        txtFirstName.setText(subscriber.getFirstName());
+        txtLastName.setText(subscriber.getLastName());
+        txtPhoneNumber.setText(subscriber.getPhoneNumber());
+        txtEmail.setText(subscriber.getEmail());
+    }
+
+    @FXML
+    private void onUpdateDetailsClicked() {
+
+        try {
+            UpdateSubscriberDetailsDTO dto =
+                    new UpdateSubscriberDetailsDTO(
+                            subscriber.getUserId(),
+                            txtFirstName.getText().trim(),
+                            txtLastName.getText().trim(),
+                            txtPhoneNumber.getText().trim(),
+                            txtEmail.getText().trim()
+                    );
+
+            RequestDTO request =
+                    new RequestDTO(Commands.UPDATE_SUBSCRIBER_DETAILS, dto);
+
+            chatClient.sendToServer(request);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            showMessage("Failed to update details.");
+        }
+    }
 
     @FXML
     private void onBackToMenuClicked() {
+
         try {
             FXMLLoader loader =
                     new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
 
             Parent root = loader.load();
 
-            Stage stage =
-                    (Stage) rootPane.getScene().getWindow();
+            // ✅ להעביר session לתפריט
+            Menu_BController menu = loader.getController();
+            if (menu != null) {
+                menu.setClient(subscriber, chatClient);
+            }
+
+            Stage stage = (Stage) rootPane.getScene().getWindow();
 
             stage.setTitle("Bistro - Main Menu");
             stage.setScene(new Scene(root));
             stage.show();
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
-            showMessage("Failed to open main menu.");
+            showMessage("Failed to return to menu.");
         }
     }
-
-    /* =========================
-       UI HELPERS
-       ========================= */
 
     private void showMessage(String msg) {
         lblMessage.setText(msg);
         lblMessage.setVisible(true);
         lblMessage.setManaged(true);
-    }
-
-    private void clearMessage() {
-        lblMessage.setText("");
-        lblMessage.setVisible(false);
-        lblMessage.setManaged(false);
     }
 }

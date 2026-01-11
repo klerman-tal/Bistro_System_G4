@@ -11,6 +11,7 @@ import java.util.Map;
 import application.RestaurantServer;
 import dbControllers.Reservation_DB_Controller;
 import dto.CreateReservationDTO;
+import entities.Enums;
 import entities.Enums.ReservationStatus;
 import entities.Reservation;
 import entities.Restaurant;
@@ -79,8 +80,6 @@ public class ReservationController {
         }
     }
 
-
-
     /**
      * Attempts to reserve a table for 2 hours (4 slots of 30 minutes). Rolls back on failure.
      */
@@ -131,7 +130,7 @@ public class ReservationController {
      * If not available, fills availableTimesOut and returns null.
      */
     public Reservation CreateTableReservation(
-            CreateReservationDTO dto, 
+            CreateReservationDTO dto,
             ArrayList<LocalTime> availableTimesOut) {
 
         if (availableTimesOut != null) availableTimesOut.clear();
@@ -160,7 +159,7 @@ public class ReservationController {
             return null;
         }
 
-        // ניסיון נעילת שולחן ל-2 פעימות (שעה) או יותר לפי הלוגיקה שלך
+        // ניסיון נעילת שולחן ל-2 שעות (4 סלוטים)
         boolean locked2h = tryReserveForTwoHours(requested, table.getTableNumber());
         if (!locked2h) {
             fillAvailableTimesForDay(dto.getDate(), dto.getGuests(), dto.getTime(), availableTimesOut);
@@ -178,7 +177,6 @@ public class ReservationController {
         res.setReservationStatus(ReservationStatus.Active);
         res.setCreatedByRole(dto.getRole());
         res.generateAndSetConfirmationCode();
-
 
         try {
             int reservationId = db.addReservation(
@@ -204,6 +202,55 @@ public class ReservationController {
 
         return res;
     }
+
+    /**
+     * ✅ NEW (for Waiting flow):
+     * Creates a reservation using an EXISTING confirmation code (from Waiting).
+     * - locks table for 2 hours
+     * - inserts reservation row with the same code
+     * - rollback on failure
+     */
+    public boolean createReservationFromWaiting(
+            String confirmationCode,
+            LocalDateTime start,
+            int guests,
+            User user,
+            int tableNumber) {
+
+        if (confirmationCode == null || confirmationCode.isBlank()) return false;
+        if (start == null || user == null) return false;
+
+        // lock 2h
+        boolean locked2h = tryReserveForTwoHours(start, tableNumber);
+        if (!locked2h) return false;
+
+        try {
+            int reservationId = db.addReservation(
+                    start,
+                    guests,
+                    confirmationCode.trim(),
+                    user.getUserId(),
+                    user.getUserRole(),
+                    tableNumber
+            );
+
+            if (reservationId == -1) {
+                rollbackReservation(start, tableNumber);
+                return false;
+            }
+
+            server.log("Reservation created from waiting. Code=" + confirmationCode +
+                       ", Table=" + tableNumber + ", ReservationId=" + reservationId);
+            return true;
+
+        } catch (Exception e) {
+            rollbackReservation(start, tableNumber);
+            server.log("ERROR: createReservationFromWaiting failed. Code=" + confirmationCode +
+                       ", Msg=" + e.getMessage());
+            return false;
+        }
+    }
+
     /**
      * Cancels (deactivates) a reservation by confirmation code.
      */
@@ -230,7 +277,6 @@ public class ReservationController {
                 catch (Exception e) {
                     server.log("ERROR: Failed releasing slot during cancel. Slot=" +
                                start.plusMinutes(30L * i) + ", Table=" + tableNum + ", Msg=" + e.getMessage());
-                    // ממשיכים לשחרר אחרים כדי לא להשאיר חצי נעול
                 }
             }
 
@@ -250,7 +296,6 @@ public class ReservationController {
             return false;
         }
     }
-    
 
     /**
      * מתודת עזר לשחרור השולחן במידה וההרשמה ל-DB נכשלה
@@ -258,11 +303,9 @@ public class ReservationController {
     private void rollbackReservation(LocalDateTime requested, int tableNumber) {
         server.log("Rolling back: releasing 2 hours (4 slots) for table " + tableNumber);
         for (int i = 0; i < 4; i++) {
-            try { 
-                restaurantController.releaseSlot(requested.plusMinutes(30L * i), tableNumber); 
-            } catch (Exception ignore) {
-                // אנחנו כבר בתוך שגיאה, אז רק מנסים לנקות כמה שאפשר
-            }
+            try {
+                restaurantController.releaseSlot(requested.plusMinutes(30L * i), tableNumber);
+            } catch (Exception ignore) {}
         }
     }
 
@@ -270,22 +313,16 @@ public class ReservationController {
     // READ (QUERIES)
     // =====================================================
 
-    /**
-     * Returns all reservations created by the given user.
-     */
-    public ArrayList<Reservation> getReservationsForUser(User user) {
+    public ArrayList<Reservation> getReservationsForUser(int userId) {
         try {
-            return db.getReservationsByUser(user.getUserId());
+            return db.getReservationsByUser(userId);
         } catch (SQLException e) {
             server.log("ERROR: Failed to load reservations for user. UserId=" +
-                       user.getUserId() + ", Message=" + e.getMessage());
-            return null;
+                       userId + ", Message=" + e.getMessage());
+            return new ArrayList<>();
         }
     }
 
-    /**
-     * Returns all active reservations (DB filter).
-     */
     public ArrayList<Reservation> getAllActiveReservations() {
         try {
             return db.getActiveReservations();
@@ -295,9 +332,6 @@ public class ReservationController {
         }
     }
 
-    /**
-     * Returns full reservations history.
-     */
     public ArrayList<Reservation> getAllReservationsHistory() {
         try {
             return db.getAllReservations();
@@ -307,9 +341,6 @@ public class ReservationController {
         }
     }
 
-    /**
-     * Returns reservation by confirmation code (or null if not found).
-     */
     public Reservation getReservationByConfirmationCode(String confirmationCode) {
         try {
             return db.getReservationByConfirmationCode(confirmationCode);
@@ -324,9 +355,6 @@ public class ReservationController {
     // UPDATE
     // =====================================================
 
-    /**
-     * Updates the reservation status in DB.
-     */
     public boolean updateReservationStatus(int reservationId, ReservationStatus status) {
         try {
             boolean updated = db.updateReservationStatus(reservationId, status);
@@ -346,9 +374,6 @@ public class ReservationController {
         }
     }
 
-    /**
-     * Updates the reservation confirmation flag (is_confirmed) in DB.
-     */
     public boolean updateReservationConfirmation(int reservationId, boolean isConfirmed) {
         try {
             boolean updated = db.updateIsConfirmed(reservationId, isConfirmed);
@@ -368,9 +393,6 @@ public class ReservationController {
         }
     }
 
-    /**
-     * Updates check-in time in DB.
-     */
     public boolean updateCheckinTime(int reservationId, LocalDateTime checkinTime) {
         try {
             boolean updated = db.updateCheckinTime(reservationId, checkinTime);
@@ -390,9 +412,6 @@ public class ReservationController {
         }
     }
 
-    /**
-     * Updates check-out time in DB.
-     */
     public boolean updateCheckoutTime(int reservationId, LocalDateTime checkoutTime) {
         try {
             boolean updated = db.updateCheckoutTime(reservationId, checkoutTime);
@@ -411,7 +430,7 @@ public class ReservationController {
             return false;
         }
     }
-    
+
     public boolean FinishReservation(String confirmationCode) {
 
         try {
@@ -437,7 +456,6 @@ public class ReservationController {
                 } catch (Exception e) {
                     server.log("ERROR: Failed releasing slot during finish. Slot=" +
                                slot + ", Table=" + tableNum + ", Msg=" + e.getMessage());
-                    // Continue releasing the rest to avoid partial lock
                 }
             }
 
@@ -458,7 +476,7 @@ public class ReservationController {
             return false;
         }
     }
-    
+
     public Reservation findGuestReservationByContactAndTime(
             String phone,
             String email,
@@ -478,13 +496,11 @@ public class ReservationController {
         }
     }
 
-    
     public String recoverGuestConfirmationCode(
             String phone,
             String email,
             java.time.LocalDateTime reservationDateTime) {
 
-        // Validate: must have at least one contact
         if ((phone == null || phone.isBlank()) && (email == null || email.isBlank())) {
             return null;
         }
@@ -493,7 +509,6 @@ public class ReservationController {
         }
 
         try {
-            // 1) Find all guest ids that match phone/email
             java.util.ArrayList<Integer> guestIds =
                     db.getGuestIdsByContact(phone, email);
 
@@ -501,7 +516,6 @@ public class ReservationController {
                 return null;
             }
 
-            // 2) Find reservation by exact datetime + created_by in those guestIds
             return db.findGuestConfirmationCodeByDateTimeAndGuestIds(reservationDateTime, guestIds);
 
         } catch (Exception e) {
@@ -509,7 +523,64 @@ public class ReservationController {
             return null;
         }
     }
+    
+    public Reservation createNowReservationFromWaiting(
+            LocalDateTime start,
+            int guests,
+            User user,
+            String confirmationCode
+    ) {
+        if (start == null || user == null || confirmationCode == null || confirmationCode.isBlank()) return null;
 
+        Table table;
+        try {
+            table = restaurantController.getOneAvailableTableAt(start, guests);
+        } catch (Exception e) {
+            server.log("ERROR: Waiting -> check availability failed. " + e.getMessage());
+            return null;
+        }
 
+        if (table == null) return null;
+
+        boolean locked2h = tryReserveForTwoHours(start, table.getTableNumber());
+        if (!locked2h) return null;
+
+        Reservation res = new Reservation();
+        res.setCreatedByUserId(user.getUserId());
+        res.setCreatedByRole(user.getUserRole());
+        res.setGuestAmount(guests);
+        res.setReservationTime(start);
+        res.setConfirmed(true);
+        res.setActive(true);
+        res.setTableNumber(table.getTableNumber());
+        res.setReservationStatus(ReservationStatus.Active);
+
+        // IMPORTANT: keep the same confirmation code from Waiting
+        res.setConfirmationCode(confirmationCode);
+
+        try {
+            int reservationId = db.addReservation(
+                    start,
+                    guests,
+                    confirmationCode,
+                    user.getUserId(),
+                    user.getUserRole(),
+                    table.getTableNumber()
+            );
+
+            if (reservationId == -1) {
+                rollbackReservation(start, table.getTableNumber());
+                return null;
+            }
+
+            res.setReservationId(reservationId);
+            return res;
+
+        } catch (SQLException e) {
+            server.log("ERROR: Waiting -> addReservation failed. " + e.getMessage());
+            rollbackReservation(start, table.getTableNumber());
+            return null;
+        }
+    }
 
 }

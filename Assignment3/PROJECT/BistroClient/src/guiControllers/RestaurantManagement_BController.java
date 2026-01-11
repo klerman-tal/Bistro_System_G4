@@ -2,7 +2,6 @@ package guiControllers;
 
 import application.ChatClient;
 import entities.User;
-import interfaces.ClientActions;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -16,17 +15,9 @@ public class RestaurantManagement_BController {
     @FXML private BorderPane rootPane;
     @FXML private Label lblMessage;
 
-    private ClientActions clientActions;
-
-    // ✅ session
     private User user;
     private ChatClient chatClient;
 
-    public void setClientActions(ClientActions clientActions) {
-        this.clientActions = clientActions;
-    }
-
-    // ✅ נקרא מה-Menu_BController
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
@@ -34,35 +25,35 @@ public class RestaurantManagement_BController {
 
     private void openWindow(String fxmlName, String title) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
             Parent root = loader.load();
 
             Object controller = loader.getController();
 
-            // pass clientActions where needed (כמו שהיה לך)
-            if (controller instanceof UpdateTablesController) {
-                ((UpdateTablesController) controller).setClientActions(clientActions);
-
-            } else if (controller instanceof OpeningHoursController) {
-                ((OpeningHoursController) controller).setClientActions(clientActions);
-
-            } else if (controller instanceof SelectUser_BController) {
-                ((SelectUser_BController) controller).setClientActions(clientActions);
-
-            } else if (controller instanceof ManageReservationController) {
-                ((ManageReservationController) controller).setClientActions(clientActions);
-
-            } else if (controller instanceof ReportsMenuController) {
-                ((ReportsMenuController) controller).setClientActions(clientActions);
+            // ✅ Update Tables
+            if (controller instanceof UpdateTablesController utc) {
+                utc.setClient(user, chatClient); // ✅ היה רק chatClient
             }
 
-            // ✅ להעביר גם user+chatClient למי שצריך (במיוחד SelectUser)
-            if (controller != null && user != null && chatClient != null) {
-                try {
-                    controller.getClass()
-                            .getMethod("setClient", User.class, ChatClient.class)
-                            .invoke(controller, user, chatClient);
-                } catch (Exception ignored) {}
+            // ✅ Opening Hours
+            if (controller instanceof OpeningHoursController ohc) {
+                ohc.setClient(user, chatClient);
+            }
+
+            // ✅ Select user menu
+            if (controller instanceof SelectUser_BController suc) {
+                suc.setClient(user, chatClient);
+            }
+
+            // ✅ Manage reservations
+            if (controller instanceof ManageReservationController mrc) {
+                mrc.setClient(user, chatClient);
+            }
+
+            // ✅ Back to Menu
+            if (controller instanceof Menu_BController menu) {
+                menu.setClient(user, chatClient);
             }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
