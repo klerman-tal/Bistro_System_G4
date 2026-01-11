@@ -2,6 +2,8 @@ package guiControllers;
 
 import application.ChatClient;
 import dto.ResponseDTO;
+import entities.User;
+import entities.Waiting;
 import interfaces.ClientActions;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -15,7 +17,6 @@ import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import network.ClientAPI;
 import network.ClientResponseHandler;
-import entities.User;
 
 public class GetTableFromWaiting_BController implements ClientResponseHandler {
 
@@ -35,7 +36,7 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
         this.chatClient = chatClient;
         this.api = new ClientAPI(chatClient);
 
-        // this screen handles responses
+        // This screen handles responses
         this.chatClient.setResponseHandler(this);
     }
 
@@ -73,19 +74,32 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
     @Override
     public void handleResponse(ResponseDTO response) {
         Platform.runLater(() -> {
-            if (response == null) return;
-
             btnConfirm.setDisable(false);
 
+            if (response == null) return;
+
             if (response.isSuccess()) {
-                // server confirms: reservation created + seated
-                showSuccessAlert("Success", "You are seated! A reservation was created.");
-                showInfo("You are seated.");
+
+                Waiting w = null;
+                try {
+                    w = (Waiting) response.getData();
+                } catch (Exception ignored) {}
+
+                String tableMsg = "";
+                if (w != null && w.getTableNumber() != null) {
+                    tableMsg = "Your table number is: " + w.getTableNumber();
+                }
+
+                showSuccessAlert("You are seated!", "Welcome 🎉\n" + (tableMsg.isEmpty() ? "" : tableMsg));
+
+                showInfo(tableMsg.isEmpty() ? "You are seated." : tableMsg);
                 return;
             }
 
-            String msg = response.getMessage() != null ? response.getMessage()
-                    : "Arrival confirm failed (not ready / expired / not found).";
+            String msg = response.getMessage() != null
+                    ? response.getMessage()
+                    : "Arrival confirm failed (expired / not ready / not found)";
+
             showError(msg);
         });
     }
@@ -101,7 +115,6 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
     // =========================
     // Back navigation (preserve user + chatClient)
     // =========================
-
     @FXML
     private void onBackClicked() {
         if (chatClient != null) chatClient.setResponseHandler(null);
@@ -115,6 +128,7 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
 
             Object controller = loader.getController();
 
+            // Pass clientActions if exists
             if (controller != null && clientActions != null) {
                 try {
                     controller.getClass()
@@ -123,6 +137,7 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
                 } catch (Exception ignored) {}
             }
 
+            // Pass user + chatClient to preserve session
             if (controller != null && user != null && chatClient != null) {
                 try {
                     controller.getClass()
@@ -144,7 +159,6 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
     // =========================
     // UI helpers
     // =========================
-
     private void hideMessages() {
         lblError.setVisible(false);
         lblError.setManaged(false);

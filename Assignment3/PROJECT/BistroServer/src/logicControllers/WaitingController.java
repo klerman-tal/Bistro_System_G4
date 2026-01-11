@@ -1,6 +1,5 @@
 package logicControllers;
 
-import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 
@@ -8,7 +7,6 @@ import application.RestaurantServer;
 import dbControllers.Waiting_DB_Controller;
 import entities.Enums.UserRole;
 import entities.Enums.WaitingStatus;
-import entities.Reservation;
 import entities.Table;
 import entities.User;
 import entities.Waiting;
@@ -33,14 +31,6 @@ public class WaitingController {
         this.reservationController = reservationController;
     }
 
-    /**
-     * JOIN WAITING LIST (NOW)
-     * דרישה:
-     * 1) תמיד נוצרת רשומה ב-waiting_list (תיעוד לדוחות).
-     * 2) אם יש שולחן זמין מיידית -> אותה רשומה תעודכן ל-Seated + table_number + table_freed_time
-     *    וגם תיווצר Reservation עם אותו confirmation_code.
-     * 3) אם אין שולחן -> נשאר Waiting (table_freed_time NULL) ועדיין אין Reservation.
-     */
     public Waiting joinWaitingListNow(int guestsNumber, User user) {
         if (user == null || guestsNumber <= 0) return null;
 
@@ -49,11 +39,8 @@ public class WaitingController {
         w.setCreatedByRole(user.getUserRole());
         w.setGuestAmount(guestsNumber);
 
-        // 🔴 חובה
         w.generateAndSetConfirmationCode();
 
-
-        // 1) Always insert waiting row first (for reports)
         try {
             int waitingId = db.addToWaitingList(
                     guestsNumber,
@@ -69,15 +56,15 @@ public class WaitingController {
 
             w.setWaitingId(waitingId);
 
-        } catch (SQLException e) {
+        } catch (Exception e) {
             server.log("ERROR: Failed to insert waiting entry. " + e.getMessage());
             return null;
         }
 
-        // 2) Try immediate seating (NOW -> rounded to next half hour slot)
+        // immediate seating (scenario 1)
         LocalDateTime nowSlot = restaurantController.roundUpToNextHalfHour(LocalDateTime.now());
 
-        Reservation res = reservationController.createNowReservationFromWaiting(
+        var res = reservationController.createNowReservationFromWaiting(
                 nowSlot,
                 guestsNumber,
                 user,
@@ -85,7 +72,6 @@ public class WaitingController {
         );
 
         if (res != null) {
-            // Mark waiting row as SEATED + set table number + set freed time NOW (for reports)
             try {
                 boolean ok = db.markWaitingAsSeatedWithTable(w.getConfirmationCode(), res.getTableNumber());
                 if (ok) {
@@ -93,22 +79,16 @@ public class WaitingController {
                     w.setTableNumber(res.getTableNumber());
                     w.setTableFreedTime(LocalDateTime.now());
                 }
-            } catch (SQLException e) {
+            } catch (Exception e) {
                 server.log("ERROR: Failed to mark waiting as seated (immediate). " + e.getMessage());
             }
-
             return w;
         }
 
-        // 3) Otherwise stays WAITING
         w.setWaitingStatus(WaitingStatus.Waiting);
         return w;
     }
 
-    /**
-     * Cancel waiting by confirmation code.
-     * אם כבר נוצרה Reservation עבור code הזה - CancelReservation תשחרר סלוטים + תעדכן DB.
-     */
     public boolean leaveWaitingList(String confirmationCode) {
         if (confirmationCode == null || confirmationCode.isBlank()) return false;
 
@@ -122,26 +102,26 @@ public class WaitingController {
                 return false;
             }
 
-            // אם קיימת הזמנה פעילה עם אותו קוד -> מבטלים גם אותה
+            // if reservation exists with same code - cancel it too
             try { reservationController.CancelReservation(code); } catch (Exception ignore) {}
 
             server.log("Waiting cancelled. ConfirmationCode=" + code);
             return true;
 
-        } catch (SQLException e) {
+        } catch (Exception e) {
             server.log("ERROR: Failed to cancel waiting. Code=" + code + ", Message=" + e.getMessage());
             return false;
         }
     }
 
     /**
-     * Confirm arrival:
-     * הצלחה רק אם:
-     * - waiting_status=Waiting
-     * - table_freed_time != null
-     * - לא עברו 15 דקות מה-table_freed_time
-     *
-     * הערה: Reservation כבר אמורה להיות קיימת בשלב הזה (נוצרה כששולחן התפנה).
+     * Confirm arrival (scenario 2C):
+     * - must be Waiting
+     * - must have table_freed_time + table_number
+     * - must be within 15 minutes
+     * - creates reservation NOW based on the freed time slot (rounded)
+     * - locks 2 hours (4 slots)
+     * - marks waiting as Seated
      */
     public boolean confirmArrival(String confirmationCode) {
         if (confirmationCode == null || confirmationCode.isBlank()) return false;
@@ -154,16 +134,35 @@ public class WaitingController {
 
             if (w.getWaitingStatus() != WaitingStatus.Waiting) return false;
             if (w.getTableFreedTime() == null) return false;
+            if (w.getTableNumber() == null) return false;
 
             LocalDateTime now = LocalDateTime.now();
             if (w.getTableFreedTime().plusMinutes(15).isBefore(now)) {
-                // expired -> cancel waiting + cancel reservation (release slots)
                 db.cancelWaiting(code);
-                try { reservationController.CancelReservation(code); } catch (Exception ignore) {}
                 return false;
             }
 
-            // mark seated
+            // Use the freed time as the reservation start (rounded to slot)
+            LocalDateTime start = restaurantController.roundUpToNextHalfHour(w.getTableFreedTime());
+
+            // Minimal user from waiting row
+            User u = new User();
+            u.setUserId(w.getCreatedByUserId());
+            u.setUserRole(w.getCreatedByRole() == null ? UserRole.RandomClient : w.getCreatedByRole());
+
+            boolean created = reservationController.createReservationFromWaiting(
+                    code,
+                    start,
+                    w.getGuestAmount(),
+                    u,
+                    w.getTableNumber()
+            );
+
+            if (!created) {
+                server.log("WARN: confirmArrival - failed creating reservation. Code=" + code);
+                return false;
+            }
+
             return db.markWaitingAsSeated(code);
 
         } catch (Exception e) {
@@ -172,21 +171,13 @@ public class WaitingController {
         }
     }
 
-    /**
-     * כל 10 שניות:
-     * 1) מבטל waitings שפגו (15 דקות) + מבטל reservation תואמת + משחרר סלוטים.
-     */
     public int cancelExpiredWaitingsAndReservations() {
         try {
             LocalDateTime now = LocalDateTime.now();
 
-            // 1) bring codes that are expired (before update)
             ArrayList<String> expiredCodes = db.getExpiredWaitingCodes(now);
-
-            // 2) cancel them in waiting_list
             int count = db.cancelExpiredWaitings(now);
 
-            // 3) cancel matching reservations (releases slots)
             for (String code : expiredCodes) {
                 if (code == null) continue;
                 try { reservationController.CancelReservation(code); } catch (Exception ignore) {}
@@ -202,13 +193,10 @@ public class WaitingController {
     }
 
     /**
-     * Called when a table is freed (finish/checkout flow).
-     *
-     * Desired behavior:
-     * - Pick next waiting (FIFO) that fits seats AND that doesn't already have a freed table.
-     * - Create Reservation for NOW (rounded slot) with SAME confirmation code.
-     * - Update waiting row: set table_freed_time + table_number (status stays Waiting)
-     *   so the client has 15 minutes to confirm arrival.
+     * handleTableFreed (scenario 2B):
+     * - assigns table to next waiting (FIFO)
+     * - updates waiting row with freed time + table number
+     * - DOES NOT create reservation here
      */
     public boolean handleTableFreed(Table freedTable) {
         if (freedTable == null) return false;
@@ -217,30 +205,6 @@ public class WaitingController {
             Waiting next = db.getNextWaitingForSeats(freedTable.getSeatsAmount());
             if (next == null) return false;
 
-            // Build a minimal User from waiting row
-            User u = new User();
-            u.setUserId(next.getCreatedByUserId());
-            u.setUserRole(next.getCreatedByRole() == null ? UserRole.RandomClient : next.getCreatedByRole());
-
-            // Reservation starts "now" (aligned)
-            LocalDateTime start = restaurantController.roundUpToNextHalfHour(LocalDateTime.now());
-
-            // 1) Create reservation with the SAME confirmation code (locks 2h + inserts to DB)
-            boolean created = reservationController.createReservationFromWaiting(
-                    next.getConfirmationCode(),
-                    start,
-                    next.getGuestAmount(),
-                    u,
-                    freedTable.getTableNumber()
-            );
-
-            if (!created) {
-                server.log("WARN: handleTableFreed - failed creating reservation from waiting. Code=" +
-                        next.getConfirmationCode() + ", Table=" + freedTable.getTableNumber());
-                return false;
-            }
-
-            // 2) Update waiting row: set freed time + table number (status stays Waiting)
             boolean updated = db.setTableFreedForWaiting(
                     next.getConfirmationCode(),
                     LocalDateTime.now(),
@@ -250,11 +214,6 @@ public class WaitingController {
             if (updated) {
                 server.log("Assigned freed table to waiting. WaitingCode=" + next.getConfirmationCode() +
                         ", Table=" + freedTable.getTableNumber());
-            } else {
-                // If waiting row wasn't updated, we should cancel reservation to avoid holding slots with no waiting row
-                try { reservationController.CancelReservation(next.getConfirmationCode()); } catch (Exception ignore) {}
-                server.log("WARN: handleTableFreed - waiting row not updated, reservation cancelled. Code=" +
-                        next.getConfirmationCode());
             }
 
             return updated;
@@ -264,7 +223,7 @@ public class WaitingController {
             return false;
         }
     }
-    
+
     public Waiting getWaitingByCode(String confirmationCode) {
         if (confirmationCode == null || confirmationCode.isBlank()) return null;
         try {
@@ -274,5 +233,4 @@ public class WaitingController {
             return null;
         }
     }
-
 }
