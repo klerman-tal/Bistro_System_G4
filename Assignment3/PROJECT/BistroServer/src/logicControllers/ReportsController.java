@@ -48,7 +48,7 @@ public class ReportsController {
                             r.getCheckinTime()
                     ).toMinutes();
 
-            if (delayMinutes <= 5) {
+            if (delayMinutes < 3) {
                 onTime++;
             }
             else if (delayMinutes <= 15) {

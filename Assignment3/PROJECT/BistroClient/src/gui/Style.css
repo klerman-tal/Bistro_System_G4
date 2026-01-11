@@ -197,6 +197,24 @@
     -fx-underline: false;
 }
 
+/* ===== Time Report – Summary Section ===== */
+
+.summary-box {
+    -fx-padding: 6 0 12 0;
+}
+
+.summary-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #333333;
+}
+
+.summary-text {
+    -fx-font-size: 12px;
+    -fx-text-fill: #555555;
+}
+
+
 .linkBlue:hover {
     -fx-text-fill: #8f1b25;
 }

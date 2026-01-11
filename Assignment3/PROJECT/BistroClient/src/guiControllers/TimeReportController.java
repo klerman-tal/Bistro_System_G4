@@ -20,6 +20,8 @@ import network.ClientResponseHandler;
 import protocol.Commands;
 
 import java.io.IOException;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 public class TimeReportController implements ClientResponseHandler {
@@ -27,39 +29,41 @@ public class TimeReportController implements ClientResponseHandler {
     // ===== Root =====
     @FXML private BorderPane rootPane;
 
-    // ===== TAB 1: Arrival Status =====
+    // ===== Summary =====
+    @FXML private Label lblSummaryTitle;
+    @FXML private Label lblSummaryText;
+
+    // ===== Arrival Status =====
     @FXML private PieChart arrivalPieChart;
     @FXML private Label lblOnTime;
     @FXML private Label lblMinorDelay;
     @FXML private Label lblMajorDelay;
 
-    // ===== TAB 2: Stay Duration =====
+    // ===== Stay Duration =====
     @FXML private BarChart<String, Number> timesChart;
     @FXML private Label lblMonthlyAvg;
     @FXML private Label lblMaxDay;
     @FXML private Label lblMinDay;
 
-    // ===== Client =====
     private ChatClient chatClient;
     private User user;
 
-    /**
-     * Called from ReportsMenuController
-     */
+    // =====================
+    // Init
+    // =====================
+    @FXML
+    public void initialize() {
+        arrivalPieChart.setLegendVisible(false);
+    }
+
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
-
-        // register for responses
         this.chatClient.setResponseHandler(this);
-        System.out.println("📤 Sending GET_TIME_REPORT request");
 
-        requestTimeReport(2025, 1); // demo
-    }
-
-    @FXML
-    public void initialize() {
-        // ❗ No server calls here
+        YearMonth lastMonth = YearMonth.now().minusMonths(1);
+        updateSummaryText(lastMonth);
+        requestTimeReport(lastMonth.getYear(), lastMonth.getMonthValue());
     }
 
     // =====================
@@ -71,92 +75,128 @@ public class TimeReportController implements ClientResponseHandler {
         dto.setMonth(month);
 
         try {
-            RequestDTO request =
-                    new RequestDTO(Commands.GET_TIME_REPORT, dto);
-            		chatClient.sendToServer(request);
+            chatClient.sendToServer(
+                    new RequestDTO(Commands.GET_TIME_REPORT, dto)
+            );
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
     // =====================
-    // Server → Client
+    // Response
     // =====================
     @Override
     public void handleResponse(ResponseDTO response) {
-    	System.out.println("🟢 handleResponse called in TimeReportController");
-
         if (response == null || !response.isSuccess()) return;
-        if (!(response.getData() instanceof TimeReportDTO)) {
-        	System.out.println("📥 TimeReportDTO received in client");
-        	return;
-        }
-        	
-        	
+        if (!(response.getData() instanceof TimeReportDTO)) return;
 
         TimeReportDTO dto = (TimeReportDTO) response.getData();
 
         Platform.runLater(() -> {
             drawArrivalStatus(dto);
-            drawStayDuration(dto);   // כבר מוכן, גם אם ה-DTO ריק
+            drawStayDuration(dto);
         });
     }
 
     // =====================
-    // TAB 1 – Pie Chart
+    // Summary
+    // =====================
+    private void updateSummaryText(YearMonth reportMonth) {
+
+        DateTimeFormatter monthFormatter =
+                DateTimeFormatter.ofPattern("MMMM yyyy");
+        DateTimeFormatter dateFormatter =
+                DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+        // החודש שמוצג בדוח (החודש שהסתיים)
+        lblSummaryTitle.setText(
+                "Summary: " + reportMonth.format(monthFormatter)
+        );
+
+        // החודש הבא שיוצג + תאריך פרסום
+        YearMonth nextReportMonth = reportMonth.plusMonths(1);
+        String nextReportName = nextReportMonth.format(monthFormatter);
+        String publishDate = nextReportMonth.plusMonths(1)
+                .atDay(1)
+                .format(dateFormatter);
+
+        lblSummaryText.setText(
+                "This report presents data for " + reportMonth.format(monthFormatter) + ". " +
+                "The report for " + nextReportName +
+                " will be available starting " + publishDate + "."
+        );
+    }
+
+
+    // =====================
+    // Arrival Status
     // =====================
     private void drawArrivalStatus(TimeReportDTO dto) {
 
         int onTime = dto.getOnTimeCount();
         int minor = dto.getMinorDelayCount();
         int major = dto.getSignificantDelayCount();
+        int total = onTime + minor + major;
 
         arrivalPieChart.getData().setAll(
-                new PieChart.Data("On Time", onTime),
-                new PieChart.Data("Minor Delay", minor),
-                new PieChart.Data("Significant Delay", major)
+                new PieChart.Data(percent(major, total), major),
+                new PieChart.Data(percent(minor, total), minor),
+                new PieChart.Data(percent(onTime, total), onTime)
         );
 
-        lblOnTime.setText("On Time: " + onTime);
-        lblMinorDelay.setText("Minor Delay: " + minor);
-        lblMajorDelay.setText("Significant Delay: " + major);
+        lblOnTime.setText(
+                "● On Time (< 3 min): " + onTime + " (" + percent(onTime, total) + ")"
+        );
+        lblOnTime.setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
+
+        lblMinorDelay.setText(
+                "● Minor Delay (3–14 min): " + minor + " (" + percent(minor, total) + ")"
+        );
+        lblMinorDelay.setStyle("-fx-text-fill: orange; -fx-font-weight: bold;");
+
+        lblMajorDelay.setText(
+                "● Significant Delay (≥ 15 min): " + major + " (" + percent(major, total) + ")"
+        );
+        lblMajorDelay.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
+    }
+
+    private String percent(int value, int total) {
+        if (total == 0) return "0%";
+        return String.format("%.1f%%", (value * 100.0) / total);
     }
 
     // =====================
-    // TAB 2 – Bar Chart
+    // Stay Duration
     // =====================
     private void drawStayDuration(TimeReportDTO dto) {
 
         timesChart.getData().clear();
-
         if (dto.getAvgStayMinutesPerDay() == null) return;
 
-        XYChart.Series<String, Number> series =
-                new XYChart.Series<>();
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
         series.setName("Average Stay (minutes)");
 
         for (Map.Entry<Integer, Integer> e :
                 dto.getAvgStayMinutesPerDay().entrySet()) {
-
             series.getData().add(
-                    new XYChart.Data<>(
-                            String.valueOf(e.getKey()),
-                            e.getValue()
-                    )
+                    new XYChart.Data<>(String.valueOf(e.getKey()), e.getValue())
             );
         }
 
         timesChart.getData().add(series);
 
         lblMonthlyAvg.setText(
-                "Monthly Average: " + dto.getMonthlyAvgStay() + " min");
+                "Monthly Average: " + dto.getMonthlyAvgStay() + " min"
+        );
         lblMaxDay.setText(
-                "Longest Stay: Day " + dto.getMaxAvgDay()
-                        + " (" + dto.getMaxAvgMinutes() + " min)");
+                "Longest Stay: Day " + dto.getMaxAvgDay() +
+                " (" + dto.getMaxAvgMinutes() + " min)"
+        );
         lblMinDay.setText(
-                "Shortest Stay: Day " + dto.getMinAvgDay()
-                        + " (" + dto.getMinAvgMinutes() + " min)");
+                "Shortest Stay: Day " + dto.getMinAvgDay() +
+                " (" + dto.getMinAvgMinutes() + " min)"
+        );
     }
 
     // =====================
@@ -175,7 +215,6 @@ public class TimeReportController implements ClientResponseHandler {
             controller.setClient(user, chatClient);
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setTitle("Bistro - Reports");
             stage.setScene(new Scene(root));
             stage.show();
 
