@@ -26,256 +26,286 @@ import protocol.Commands;
 
 public class RestaurantServer extends AbstractServer {
 
-	public static final int DEFAULT_PORT = 5556;
+    public static final int DEFAULT_PORT = 5556;
 
-	private DBController conn;
-	private Restaurant_DB_Controller restaurantDB;
-	private RestaurantController restaurantController;
-	private User_DB_Controller userDB;
-	private UserController userController;
-	private Reservation_DB_Controller reservationDB;
-	private Waiting_DB_Controller waitingDB;
-	private ReportsController reportsController;
+    private DBController conn;
 
-	private ReservationController reservationController;
-	private WaitingController waitingController;
-	private ScheduledExecutorService waitingScheduler;
+    private Restaurant_DB_Controller restaurantDB;
+    private Reservation_DB_Controller reservationDB;
+    private User_DB_Controller userDB;
+    private Waiting_DB_Controller waitingDB;
 
-	private RequestRouter router;
+    private RestaurantController restaurantController;
+    private ReservationController reservationController;
+    private UserController userController;
+    private WaitingController waitingController;
+    private ReportsController reportsController;
 
-	private gui.ServerGUIController uiController;
-	private String serverIp;
+    private ScheduledExecutorService waitingScheduler;
+    private final ScheduledExecutorService idleScheduler =
+            Executors.newSingleThreadScheduledExecutor();
 
-	public void setUiController(gui.ServerGUIController controller) {
-		this.uiController = controller;
-	}
+    private RequestRouter router;
 
-	public void log(String msg) {
-		System.out.println(msg);
-		if (uiController != null) {
-			Platform.runLater(() -> uiController.addLog(msg));
-		}
-	}
+    private gui.ServerGUIController uiController;
+    private String serverIp;
 
-	public RestaurantServer(int port) {
-		super(port);
-		conn = new DBController();
-		conn.setServer(this);
-		this.router = new RequestRouter();
+    // ================= UI =================
+    public void setUiController(gui.ServerGUIController controller) {
+        this.uiController = controller;
+    }
 
-		try {
-			serverIp = InetAddress.getLocalHost().getHostAddress();
-		} catch (UnknownHostException e) {
-			serverIp = "UNKNOWN";
-		}
-	}
+    public void log(String msg) {
+        System.out.println(msg);
+        if (uiController != null) {
+            Platform.runLater(() -> uiController.addLog(msg));
+        }
+    }
 
-	@Override
-	protected void serverStarted() {
-		touchActivity();
-		startIdleWatchdog();
+    // ================= Constructor =================
+    public RestaurantServer(int port) {
+        super(port);
+        conn = new DBController();
+        conn.setServer(this);
+        router = new RequestRouter();
 
-		log("Server started on IP: " + serverIp);
-		log("Listening on port " + getPort());
+        try {
+            serverIp = InetAddress.getLocalHost().getHostAddress();
+        } catch (UnknownHostException e) {
+            serverIp = "UNKNOWN";
+        }
+    }
 
-		conn.ConnectToDb();
+    // ================= Server Start =================
+    @Override
+    protected void serverStarted() {
+        touchActivity();
+        startIdleWatchdog();
 
-		try {
-			Connection sqlConn = conn.getConnection();
-			if (sqlConn == null) {
-				log("❌ DB connection failed.");
-				return;
-			}
+        log("Server started on IP: " + serverIp);
+        log("Listening on port " + getPort());
 
-			restaurantDB = new Restaurant_DB_Controller(sqlConn);
-			reservationDB = new Reservation_DB_Controller(sqlConn);
-			userDB = new User_DB_Controller(sqlConn);
-			waitingDB = new Waiting_DB_Controller(sqlConn);
+        conn.ConnectToDb();
 
-			log("⚙️ Ensuring all database tables exist...");
-			userDB.createSubscribersTable();
-			userDB.createGuestsTable();
-			restaurantDB.createRestaurantTablesTable();
-			restaurantDB.createOpeningHoursTable();
-			reservationDB.createReservationsTable();
-			waitingDB.createWaitingListTable();
-			log("✅ Database schema ensured.");
+        try {
+            Connection sqlConn = conn.getConnection();
+            if (sqlConn == null) {
+                log("❌ DB connection failed.");
+                return;
+            }
 
-			restaurantController = new RestaurantController(restaurantDB);
-			userController = new UserController(userDB);
-			reservationController = new ReservationController(reservationDB, this, restaurantController);
-			reportsController = new ReportsController(reservationDB, waitingDB, userDB);
+            // ===== DB Controllers =====
+            restaurantDB = new Restaurant_DB_Controller(sqlConn);
+            reservationDB = new Reservation_DB_Controller(sqlConn);
+            userDB = new User_DB_Controller(sqlConn);
+            waitingDB = new Waiting_DB_Controller(sqlConn);
 
-			// ✅ NEW
-			waitingController = new WaitingController(waitingDB, this, restaurantController, reservationController);
+            log("⚙️ Ensuring all database tables exist...");
+            userDB.createSubscribersTable();
+            userDB.createGuestsTable();
+            restaurantDB.createRestaurantTablesTable();
+            restaurantDB.createOpeningHoursTable();
+            reservationDB.createReservationsTable();
+            waitingDB.createWaitingListTable();
+            log("✅ Database schema ensured.");
 
-			// run every 10 seconds
-			waitingScheduler = Executors.newSingleThreadScheduledExecutor();
-			waitingScheduler.scheduleAtFixedRate(() -> {
-				try {
-					int c = waitingController.cancelExpiredWaitingsAndReservations();
-					if (c > 0)
-						log("⏳ Auto-cancelled expired waitings: " + c);
-				} catch (Exception e) {
-					log("Waiting scheduler error: " + e.getMessage());
-				}
-			}, 10, 10, TimeUnit.SECONDS);
+            // ===== Logic Controllers =====
+            restaurantController = new RestaurantController(restaurantDB);
+            userController = new UserController(userDB);
+            reservationController =
+                    new ReservationController(reservationDB, this, restaurantController);
 
-			registerHandlers();
+            waitingController =
+                    new WaitingController(waitingDB, this, restaurantController, reservationController);
 
-			try {
-				restaurantController.initAvailabilityGridNext30Days();
-				log("📅 Availability grid ensured for the next 30 days.");
-			} catch (Exception e) {
-				log("⚠️ Grid init failed: " + e.getMessage());
-			}
+            // ⭐ REPORTS CONTROLLER (Time + Subscribers)
+            reportsController =
+                    new ReportsController(reservationDB, waitingDB, userDB);
 
-			log("✅ Server fully initialized.");
+            // ===== Waiting auto-cancel scheduler =====
+            waitingScheduler = Executors.newSingleThreadScheduledExecutor();
+            waitingScheduler.scheduleAtFixedRate(() -> {
+                try {
+                    int c = waitingController.cancelExpiredWaitingsAndReservations();
+                    if (c > 0)
+                        log("⏳ Auto-cancelled expired waitings: " + c);
+                } catch (Exception e) {
+                    log("Waiting scheduler error: " + e.getMessage());
+                }
+            }, 10, 10, TimeUnit.SECONDS);
 
-		} catch (Exception e) {
-			log("❌ Initialization error: " + e.getMessage());
-			e.printStackTrace();
-		}
-	}
+            registerHandlers();
 
-	private void registerHandlers() {
-		log("⚙️ Registering DTO handlers...");
+            try {
+                restaurantController.initAvailabilityGridNext30Days();
+                log("📅 Availability grid ensured for the next 30 days.");
+            } catch (Exception e) {
+                log("⚠️ Grid init failed: " + e.getMessage());
+            }
 
-		// Reservations
-		router.register(Commands.CREATE_RESERVATION, new CreateReservationHandler(reservationController));
+            log("✅ Server fully initialized.");
 
-		router.register(Commands.GET_RESERVATION_HISTORY, new GetReservationHistoryHandler(reservationController));
+        } catch (Exception e) {
+            log("❌ Initialization error: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 
-		// Opening hours
-		router.register(Commands.GET_OPENING_HOURS, new GetOpeningHoursHandler(restaurantController));
+    // ================= Router =================
+    private void registerHandlers() {
+        log("⚙️ Registering DTO handlers...");
 
-		router.register(Commands.UPDATE_OPENING_HOURS, new UpdateOpeningHoursHandler(restaurantController));
+        // ===== Reservations =====
+        router.register(Commands.CREATE_RESERVATION,
+                new CreateReservationHandler(reservationController));
 
-		// Tables
-		router.register(Commands.GET_TABLES, new GetTablesHandler(restaurantController));
+        router.register(Commands.GET_RESERVATION_HISTORY,
+                new GetReservationHistoryHandler(reservationController));
 
-		router.register(Commands.SAVE_TABLE, new SaveTableHandler(restaurantController));
+        router.register(Commands.CANCEL_RESERVATION,
+                new CancelReservationHandler(reservationController));
 
-		router.register(Commands.DELETE_TABLE, new DeleteTableHandler(restaurantController));
+        // ===== Opening Hours =====
+        router.register(Commands.GET_OPENING_HOURS,
+                new GetOpeningHoursHandler(restaurantController));
 
-		// Users
-		router.register(Commands.SUBSCRIBER_LOGIN, new SubscriberLoginHandler(userController));
+        router.register(Commands.UPDATE_OPENING_HOURS,
+                new UpdateOpeningHoursHandler(restaurantController));
 
-		router.register(Commands.GUEST_LOGIN, new GuestLoginHandler(userController));
+        // ===== Tables =====
+        router.register(Commands.GET_TABLES,
+                new GetTablesHandler(restaurantController));
 
-		router.register(Commands.RECOVER_SUBSCRIBER_CODE, new RecoverSubscriberCodeHandler(userController));
+        router.register(Commands.SAVE_TABLE,
+                new SaveTableHandler(restaurantController));
 
-		router.register(Commands.RECOVER_GUEST_CONFIRMATION_CODE,
-				new RecoverGuestConfirmationCodeHandler(reservationController, userController));
+        router.register(Commands.DELETE_TABLE,
+                new DeleteTableHandler(restaurantController));
 
-		router.register(Commands.REGISTER_SUBSCRIBER, new RegisterSubscriberHandler(userController));
+        // ===== Users =====
+        router.register(Commands.SUBSCRIBER_LOGIN,
+                new SubscriberLoginHandler(userController));
 
-		router.register(Commands.UPDATE_SUBSCRIBER_DETAILS, new UpdateSubscriberDetailsHandler(userController));
+        router.register(Commands.GUEST_LOGIN,
+                new GuestLoginHandler(userController));
 
-		// ✅ WAITING LIST
-		router.register(Commands.JOIN_WAITING_LIST, new JoinWaitingListHandler(waitingController));
+        router.register(Commands.REGISTER_SUBSCRIBER,
+                new RegisterSubscriberHandler(userController));
 
-		router.register(Commands.GET_WAITING_STATUS, new GetWaitingStatusHandler(waitingController));
-		router.register(Commands.CANCEL_WAITING, new CancelWaitingHandler(waitingController));
-		router.register(Commands.CONFIRM_WAITING_ARRIVAL, new ConfirmWaitingArrivalHandler(waitingController));
-		router.register(Commands.CANCEL_RESERVATION, new CancelReservationHandler(reservationController));
+        router.register(Commands.UPDATE_SUBSCRIBER_DETAILS,
+                new UpdateSubscriberDetailsHandler(userController));
 
-		// ✅ REPORTS
-		router.register(Commands.GET_TIME_REPORT, new GetTimeReportHandler(reportsController));
-		router.register(Commands.GET_SUBSCRIBERS_REPORT, new GetSubscribersReportHandler(reportsController));
+        router.register(Commands.RECOVER_SUBSCRIBER_CODE,
+                new RecoverSubscriberCodeHandler(userController));
 
-	}
+        router.register(Commands.RECOVER_GUEST_CONFIRMATION_CODE,
+                new RecoverGuestConfirmationCodeHandler(reservationController, userController));
 
-	@Override
-	protected void handleMessageFromClient(Object msg, ConnectionToClient client) {
-		touchActivity();
+        // ===== Waiting List =====
+        router.register(Commands.JOIN_WAITING_LIST,
+                new JoinWaitingListHandler(waitingController));
 
-		try {
-			if (msg instanceof RequestDTO request) {
-				log("📨 Received DTO command: " + request.getCommand());
-				router.route(request, client);
-			}
-		} catch (Exception e) {
-			log("❌ Error handling message: " + e.getMessage());
-			e.printStackTrace();
-		}
-	}
+        router.register(Commands.GET_WAITING_STATUS,
+                new GetWaitingStatusHandler(waitingController));
 
-	@Override
-	protected void serverStopped() {
-		idleScheduler.shutdownNow();
-		if (waitingScheduler != null)
-			waitingScheduler.shutdownNow();
-		log("Server stopped.");
-	}
+        router.register(Commands.CANCEL_WAITING,
+                new CancelWaitingHandler(waitingController));
 
-	@Override
-	protected synchronized void clientConnected(ConnectionToClient client) {
-		touchActivity();
-		String ip = client.getInetAddress() != null ? client.getInetAddress().getHostAddress() : "UNKNOWN";
-		log("Client connected | IP: " + ip);
-	}
+        router.register(Commands.CONFIRM_WAITING_ARRIVAL,
+                new ConfirmWaitingArrivalHandler(waitingController));
 
-	// ================= Idle Auto Shutdown =================
-	private static final long IDLE_TIMEOUT_MS = 30L * 60L * 1000L;
-	private volatile long lastActivityMs = System.currentTimeMillis();
-	private final ScheduledExecutorService idleScheduler = Executors.newSingleThreadScheduledExecutor();
+        // ===== REPORTS =====
+        router.register(Commands.GET_TIME_REPORT,
+                new GetTimeReportHandler(reportsController));
 
-	private Runnable onAutoShutdown;
+        router.register(Commands.GET_SUBSCRIBERS_REPORT,
+                new GetSubscribersReportHandler(reportsController));
+    }
 
-	public void setOnAutoShutdown(Runnable r) {
-		this.onAutoShutdown = r;
-	}
+    // ================= Messages =================
+    @Override
+    protected void handleMessageFromClient(Object msg, ConnectionToClient client) {
+        touchActivity();
 
-	private void touchActivity() {
-		lastActivityMs = System.currentTimeMillis();
-	}
+        try {
+            if (msg instanceof RequestDTO request) {
+                log("📨 Received DTO command: " + request.getCommand());
+                router.route(request, client);
+            }
+        } catch (Exception e) {
+            log("❌ Error handling message: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 
-	private void startIdleWatchdog() {
-		idleScheduler.scheduleAtFixedRate(() -> {
-			try {
-				long idle = System.currentTimeMillis() - lastActivityMs;
-				if (idle >= IDLE_TIMEOUT_MS && getNumberOfClients() == 0) {
-					log("AUTO-SHUTDOWN: No activity for 30 minutes. Closing server...");
-					shutdownServerNow();
-				}
-			} catch (Exception e) {
-				log("IdleWatchdog error: " + e.getMessage());
-			}
-		}, 1, 1, TimeUnit.MINUTES);
-	}
+    // ================= Shutdown =================
+    @Override
+    protected void serverStopped() {
+        idleScheduler.shutdownNow();
+        if (waitingScheduler != null)
+            waitingScheduler.shutdownNow();
+        log("Server stopped.");
+    }
 
-	private void shutdownServerNow() {
-		try {
-			stopListening();
-		} catch (Exception ignored) {
-		}
-		try {
-			close();
-		} catch (Exception ignored) {
-		}
-		idleScheduler.shutdownNow();
-		if (onAutoShutdown != null) {
-			try {
-				onAutoShutdown.run();
-			} catch (Exception ignored) {
-			}
-		}
-	}
+    @Override
+    protected synchronized void clientConnected(ConnectionToClient client) {
+        touchActivity();
+        String ip = client.getInetAddress() != null
+                ? client.getInetAddress().getHostAddress()
+                : "UNKNOWN";
+        log("Client connected | IP: " + ip);
+    }
 
-	public static void main(String[] args) {
-		int port;
-		try {
-			port = Integer.parseInt(args[0]);
-		} catch (Exception e) {
-			port = DEFAULT_PORT;
-		}
+    // ================= Idle Watchdog =================
+    private static final long IDLE_TIMEOUT_MS = 30L * 60L * 1000L;
+    private volatile long lastActivityMs = System.currentTimeMillis();
+    private Runnable onAutoShutdown;
 
-		RestaurantServer server = new RestaurantServer(port);
-		try {
-			server.listen();
-		} catch (Exception e) {
-			server.log("ERROR: Could not start server");
-		}
-	}
+    public void setOnAutoShutdown(Runnable r) {
+        this.onAutoShutdown = r;
+    }
+
+    private void touchActivity() {
+        lastActivityMs = System.currentTimeMillis();
+    }
+
+    private void startIdleWatchdog() {
+        idleScheduler.scheduleAtFixedRate(() -> {
+            try {
+                long idle = System.currentTimeMillis() - lastActivityMs;
+                if (idle >= IDLE_TIMEOUT_MS && getNumberOfClients() == 0) {
+                    log("AUTO-SHUTDOWN: No activity for 30 minutes. Closing server...");
+                    shutdownServerNow();
+                }
+            } catch (Exception e) {
+                log("IdleWatchdog error: " + e.getMessage());
+            }
+        }, 1, 1, TimeUnit.MINUTES);
+    }
+
+    private void shutdownServerNow() {
+        try { stopListening(); } catch (Exception ignored) {}
+        try { close(); } catch (Exception ignored) {}
+        idleScheduler.shutdownNow();
+        if (onAutoShutdown != null) {
+            try { onAutoShutdown.run(); } catch (Exception ignored) {}
+        }
+    }
+
+    // ================= Main =================
+    public static void main(String[] args) {
+        int port;
+        try {
+            port = Integer.parseInt(args[0]);
+        } catch (Exception e) {
+            port = DEFAULT_PORT;
+        }
+
+        RestaurantServer server = new RestaurantServer(port);
+        try {
+            server.listen();
+        } catch (Exception e) {
+            server.log("ERROR: Could not start server");
+        }
+    }
 }
