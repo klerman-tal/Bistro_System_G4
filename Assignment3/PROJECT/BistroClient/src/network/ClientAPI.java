@@ -139,14 +139,28 @@ public class ClientAPI {
         client.sendToServer(request);
     }
 
-    public void updateSubscriberDetails(int subscriberId, String firstName, String lastName, String phone, String email)
+    public void updateSubscriberDetails(int subscriberId, String username, String firstName, String lastName, String phone, String email)
             throws IOException {
 
         dto.UpdateSubscriberDetailsDTO data =
-                new dto.UpdateSubscriberDetailsDTO(subscriberId, firstName, lastName, phone, email);
+                new dto.UpdateSubscriberDetailsDTO(subscriberId,username,firstName, lastName, phone, email);
 
         RequestDTO request = new RequestDTO(Commands.UPDATE_SUBSCRIBER_DETAILS, data);
         client.sendToServer(request);
+    }
+        
+        
+        public void deleteSubscriber(int subscriberId) throws IOException {
+
+            dto.DeleteSubscriberDTO data =
+                    new dto.DeleteSubscriberDTO(subscriberId);
+
+            RequestDTO request =
+                    new RequestDTO(Commands.DELETE_SUBSCRIBER, data);
+
+            client.sendToServer(request);
+        
+
     }
 
     // =========================
@@ -205,6 +219,13 @@ public class ClientAPI {
         RequestDTO req = new RequestDTO(Commands.CONFIRM_WAITING_ARRIVAL, data);
         client.sendToServer(req);
     } 
+    
+    public void getAllSubscribers() throws IOException {
+        RequestDTO request =
+                new RequestDTO(Commands.GET_ALL_SUBSCRIBERS, null);
+        client.sendToServer(request);
+    }
+
 
    
 

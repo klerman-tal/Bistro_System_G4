@@ -153,7 +153,12 @@
                                             text="Create Subscriber"
                                             onAction="#onCreateSubscriberClicked"
                                             styleClass="btnPrimary"/>
-
+                                            
+                                    <Button fx:id="btnDelete"
+              								text="Delete Subscriber"
+              								onAction="#onDeleteClicked"
+                							styleClass="btnSecondary"/>
+						
                                     <Button fx:id="btnRefresh"
                                             text="Refresh"
                                             onAction="#onRefreshClicked"

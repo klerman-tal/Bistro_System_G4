@@ -160,6 +160,7 @@ public class ClientDetails_BController implements ClientResponseHandler {
             UpdateSubscriberDetailsDTO dto =
                     new UpdateSubscriberDetailsDTO(
                             subscriber.getUserId(),
+                            txtUserName.getText().trim(),
                             txtFirstName.getText().trim(),
                             txtLastName.getText().trim(),
                             txtPhoneNumber.getText().trim(),
@@ -176,6 +177,12 @@ public class ClientDetails_BController implements ClientResponseHandler {
             showMessage("Failed to update details.");
         }
     }
+    @FXML
+    private void onRefreshClicked() {
+        requestReservationHistory();
+        showMessage("✔ Data refreshed");
+    }
+
 
     @FXML
     private void onBackToMenuClicked() {

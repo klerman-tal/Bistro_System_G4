@@ -242,25 +242,18 @@ public class UserController {
         return userDB.deleteGuest(guestId);
     }
     
-    public boolean deleteRestaurantAgent(int agentId, Subscriber performedBy) {
-
-        // Validate performing user
-        if (performedBy == null) {
-            return false;
-        }
-
-        // Only RestaurantManager can delete restaurant agents
-        if (performedBy.getUserRole() != Enums.UserRole.RestaurantManager) {
-            return false;
-        }
+    public boolean deleteSubscriber(int subscriberId, Subscriber performedBy) {
 
         // Validate input
-        if (agentId <= 0) {
+        if (subscriberId <= 0) {
             return false;
         }
 
-        // Delegate deletion to DB layer
-        return userDB.deleteRestaurantAgent(agentId);
+        // NOTE:
+        // Authorization is intentionally skipped for now
+        // (will be enforced later – Manager / Agent)
+
+        return userDB.deleteSubscriber(subscriberId);
     }
 
     public Subscriber recoverSubscriberCode(
@@ -283,21 +276,24 @@ public class UserController {
     
     public boolean updateSubscriberDetails(
             int subscriberId,
+            String username,
             String firstName,
             String lastName,
             String phone,
             String email
-    ) {
+    ) throws SQLException {
         if (subscriberId <= 0) return false;
 
         return userDB.updateSubscriberDetails(
                 subscriberId,
+                username,
                 firstName,
                 lastName,
                 phone,
                 email
         );
     }
+
 
     public int generateNextUserId() throws SQLException {
         int max = userDB.getMaxUserIdFromGuestsAndSubscribers();
