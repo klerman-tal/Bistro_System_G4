@@ -16,74 +16,79 @@ import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import network.ClientResponseHandler;
 import protocol.Commands;
 
 import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 /**
- * SubscribersReportController
- *
- * Displays monthly subscribers-related reports:
- * 1. Active vs Inactive subscribers
- * 2. Waiting list activity per day
- * 3. Subscribers reservations trend per day
+ * Displays monthly subscribers-related reports.
  */
 public class SubscribersReportController implements ClientResponseHandler {
 
-    // ===== Root =====
-    @FXML
-    private BorderPane rootPane;
+    /* =======================
+       Root
+       ======================= */
+    @FXML private BorderPane rootPane;
 
-    // ===== TAB 1: Active Subscribers =====
-    @FXML
-    private PieChart activeSubscribersPie;
-    @FXML
-    private Label lblActiveSubscribers;
-    @FXML
-    private Label lblInactiveSubscribers;
+    /* =======================
+       Subscribers summary
+       ======================= */
+    @FXML private Label lblSubscribersSummaryTitle;
+    @FXML private Text txtSubscribersSummaryText;
 
-    // ===== TAB 2: Waiting List Activity =====
-    @FXML
-    private BarChart<String, Number> waitingListChart;
+    /* =======================
+       Waiting list summary
+       ======================= */
+    @FXML private Label lblWaitingSummaryTitle;
+    @FXML private Text txtWaitingSummaryText;
 
-    // ===== TAB 3: Reservation Trend =====
-    @FXML
-    private LineChart<String, Number> reservationsTrendChart;
+    /* =======================
+       Reservations trend summary
+       ======================= */
+    @FXML private Label lblReservationsSummaryTitle;
+    @FXML private Text txtReservationsSummaryText;
 
-    // ===== Client context =====
+    /* =======================
+       Charts
+       ======================= */
+    @FXML private PieChart activeSubscribersPie;
+    @FXML private Label lblActiveSubscribers;
+    @FXML private Label lblInactiveSubscribers;
+
+    @FXML private BarChart<String, Number> waitingListChart;
+    @FXML private LineChart<String, Number> reservationsTrendChart;
+
     private User user;
     private ChatClient chatClient;
     private YearMonth reportMonth;
 
-    // =====================
-    // Init
-    // =====================
     @FXML
     public void initialize() {
         activeSubscribersPie.setLegendVisible(false);
     }
 
-    /**
-     * Injected from previous screen
-     */
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
+        this.chatClient.setResponseHandler(this);
 
-        chatClient.setResponseHandler(this);
-
-        // Always display the last full month
         reportMonth = YearMonth.now().minusMonths(1);
+
+        updateSubscribersSummary();
+        updateWaitingSummary();
+        updateReservationsSummary();
 
         requestSubscribersReport();
     }
 
-    // =====================
-    // Request
-    // =====================
+    /* =======================
+       Request
+       ======================= */
     private void requestSubscribersReport() {
 
         SubscribersReportDTO dto = new SubscribersReportDTO();
@@ -94,15 +99,14 @@ public class SubscribersReportController implements ClientResponseHandler {
             chatClient.sendToServer(
                     new RequestDTO(Commands.GET_SUBSCRIBERS_REPORT, dto)
             );
-            System.out.println("📤 Sent SubscribersReport request");
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    // =====================
-    // Response
-    // =====================
+    /* =======================
+       Response
+       ======================= */
     @Override
     public void handleResponse(ResponseDTO response) {
 
@@ -119,9 +123,58 @@ public class SubscribersReportController implements ClientResponseHandler {
         });
     }
 
-    // =====================
-    // TAB 1 – Active vs Inactive
-    // =====================
+    /* =======================
+       Summaries
+       ======================= */
+
+    private void updateSubscribersSummary() {
+
+        DateTimeFormatter fmt =
+                DateTimeFormatter.ofPattern("MMMM yyyy");
+
+        lblSubscribersSummaryTitle.setText(
+                "Subscribers Status: " + reportMonth.format(fmt)
+        );
+
+        txtSubscribersSummaryText.setText(
+                "Shows the number of active subscribers who made at least one reservation " +
+                "versus inactive subscribers during the selected month."
+        );
+    }
+
+    private void updateWaitingSummary() {
+
+        DateTimeFormatter fmt =
+                DateTimeFormatter.ofPattern("MMMM yyyy");
+
+        lblWaitingSummaryTitle.setText(
+                "Waiting List Activity: " + reportMonth.format(fmt)
+        );
+
+        txtWaitingSummaryText.setText(
+                "Displays daily waiting list activity created by subscribers " +
+                "throughout the selected month."
+        );
+    }
+
+    private void updateReservationsSummary() {
+
+        DateTimeFormatter fmt =
+                DateTimeFormatter.ofPattern("MMMM yyyy");
+
+        lblReservationsSummaryTitle.setText(
+                "Reservations Trend: " + reportMonth.format(fmt)
+        );
+
+        txtReservationsSummaryText.setText(
+                "Presents the daily number of reservations made by subscribers, " +
+                "highlighting trends and peak activity days."
+        );
+    }
+
+    /* =======================
+       TAB 1 – Active vs Inactive
+       ======================= */
     private void drawSubscribersStatus(SubscribersReportDTO dto) {
 
         int active = dto.getActiveSubscribersCount();
@@ -138,9 +191,9 @@ public class SubscribersReportController implements ClientResponseHandler {
                 "Inactive Subscribers: " + inactive);
     }
 
-    // =====================
-    // TAB 2 – Waiting List per Day
-    // =====================
+    /* =======================
+       TAB 2 – Waiting List
+       ======================= */
     private void drawWaitingList(SubscribersReportDTO dto) {
 
         waitingListChart.getData().clear();
@@ -156,19 +209,16 @@ public class SubscribersReportController implements ClientResponseHandler {
         for (int day = 1; day <= daysInMonth; day++) {
             int value = data.getOrDefault(day, 0);
             series.getData().add(
-                    new XYChart.Data<>(
-                            String.valueOf(day),
-                            value
-                    )
+                    new XYChart.Data<>(String.valueOf(day), value)
             );
         }
 
         waitingListChart.getData().add(series);
     }
 
-    // =====================
-    // TAB 3 – Reservations Trend
-    // =====================
+    /* =======================
+       TAB 3 – Reservations Trend
+       ======================= */
     private void drawReservationsTrend(SubscribersReportDTO dto) {
 
         reservationsTrendChart.getData().clear();
@@ -184,19 +234,16 @@ public class SubscribersReportController implements ClientResponseHandler {
         for (int day = 1; day <= daysInMonth; day++) {
             int value = data.getOrDefault(day, 0);
             series.getData().add(
-                    new XYChart.Data<>(
-                            String.valueOf(day),
-                            value
-                    )
+                    new XYChart.Data<>(String.valueOf(day), value)
             );
         }
 
         reservationsTrendChart.getData().add(series);
     }
 
-    // =====================
-    // Navigation
-    // =====================
+    /* =======================
+       Navigation
+       ======================= */
     @FXML
     private void onBackClicked() {
         try {
@@ -213,7 +260,6 @@ public class SubscribersReportController implements ClientResponseHandler {
 
             Stage stage =
                     (Stage) rootPane.getScene().getWindow();
-            stage.setTitle("Bistro - Reports");
             stage.setScene(new Scene(root));
             stage.show();
 

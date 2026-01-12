@@ -9,6 +9,9 @@ import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+import javafx.scene.text.Text;
 
 public class ReportsMenuController {
 
@@ -17,6 +20,9 @@ public class ReportsMenuController {
 
     @FXML
     private Label lblMessage;
+    
+    @FXML private Label lblReportsSummaryTitle;
+    @FXML private Text txtReportsSummaryText;
 
     private User user;
     private ChatClient chatClient;
@@ -25,6 +31,39 @@ public class ReportsMenuController {
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
+        
+        updateReportsSummaryText();
+    }
+    
+    /**
+     * Updates the general reports explanation text.
+     * Uses the same logic as all report screens (last full month).
+     */
+    private void updateReportsSummaryText() {
+
+        YearMonth reportMonth = YearMonth.now().minusMonths(1);
+
+        DateTimeFormatter monthFmt =
+                DateTimeFormatter.ofPattern("MMMM yyyy");
+        DateTimeFormatter dateFmt =
+                DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+        YearMonth nextReportMonth = reportMonth.plusMonths(1);
+        String publishDate =
+                nextReportMonth.plusMonths(1)
+                        .atDay(1)
+                        .format(dateFmt);
+
+        lblReportsSummaryTitle.setText(
+                "Reports Summary: " + reportMonth.format(monthFmt)
+        );
+
+        txtReportsSummaryText.setText(
+                "All reports present data for " +
+                reportMonth.format(monthFmt) + ".\n" +
+                "The " + nextReportMonth.format(monthFmt) +
+                " reports will be available starting " + publishDate + "."
+        );
     }
 
     // ===== Navigation =====
