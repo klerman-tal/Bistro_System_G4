@@ -39,9 +39,6 @@
 							<Insets top="25" />
 						</padding>
 
-						<Label text="Active vs Inactive Subscribers"
-							styleClass="section" />
-
 						<!-- Summary -->
 						<VBox prefWidth="700" maxWidth="700" spacing="6"
 							styleClass="summary-box">
@@ -57,8 +54,11 @@
 							prefHeight="350" />
 
 						<VBox spacing="6" alignment="TOP_LEFT">
-							<Label fx:id="lblActiveSubscribers" />
-							<Label fx:id="lblInactiveSubscribers" />
+							<Label fx:id="lblActiveSubscribers"
+								styleClass="arrival-major-delay" />
+							<Label fx:id="lblInactiveSubscribers"
+								styleClass="arrival-minor-delay" />
+
 						</VBox>
 					</VBox>
 				</Tab>
@@ -69,9 +69,6 @@
 						<padding>
 							<Insets top="25" />
 						</padding>
-
-						<Label text="Waiting List Activity by Subscribers"
-							styleClass="section" />
 
 						<!-- Summary -->
 						<VBox prefWidth="700" maxWidth="700" spacing="6"
@@ -93,6 +90,13 @@
 								<NumberAxis label="Entries" />
 							</yAxis>
 						</BarChart>
+
+						<VBox prefWidth="850" spacing="6">
+							<Label fx:id="lblWaitingTotal" />
+							<Label fx:id="lblWaitingAvg" />
+							<Label fx:id="lblWaitingPeak" />
+						</VBox>
+
 					</VBox>
 				</Tab>
 
@@ -102,9 +106,6 @@
 						<padding>
 							<Insets top="25" />
 						</padding>
-
-						<Label text="Subscriber Reservations Trend"
-							styleClass="section" />
 
 						<!-- Summary -->
 						<VBox prefWidth="700" maxWidth="700" spacing="6"
@@ -126,6 +127,13 @@
 								<NumberAxis label="Reservations" />
 							</yAxis>
 						</LineChart>
+
+						<VBox prefWidth="850" spacing="6">
+							<Label fx:id="lblReservationsTotal" />
+							<Label fx:id="lblReservationsAvg" />
+							<Label fx:id="lblReservationsPeak" />
+						</VBox>
+
 					</VBox>
 				</Tab>
 

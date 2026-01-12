@@ -50,8 +50,6 @@
                             <Insets top="25" right="30" bottom="20" left="30"/>
                         </padding>
 
-                        <Label text="Arrival Status Distribution" styleClass="section"/>
-
                         <VBox prefWidth="700" maxWidth="700" spacing="6" styleClass="summary-box">
                             <Label fx:id="lblSummaryTitle" styleClass="summary-title"/>
                             <TextFlow>
@@ -75,8 +73,6 @@
                         <padding>
                             <Insets top="25" right="30" bottom="20" left="30"/>
                         </padding>
-
-                        <Label text="Actual Stay Duration by Day (Minutes)" styleClass="section"/>
 
                         <VBox prefWidth="700" maxWidth="700" spacing="6" styleClass="summary-box">
                             <Label fx:id="lblStaySummaryTitle" styleClass="summary-title"/>
