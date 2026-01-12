@@ -77,8 +77,11 @@ public class ManageSubscriberController {
                     loader.getController();
 
             if (popupController != null) {
-                // ✅ רק זה צריך לעבור לפופאפ
+                // ✅ הזרקה מלאה לפופאפ
                 popupController.setClientAPI(clientAPI);
+                popupController.setPerformedByRole(
+                        performedBy.getUserRole()
+                );
             }
 
             Stage popupStage = new Stage();

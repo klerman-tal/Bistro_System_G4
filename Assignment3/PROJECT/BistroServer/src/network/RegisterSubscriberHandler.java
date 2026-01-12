@@ -16,20 +16,23 @@ public class RegisterSubscriberHandler implements RequestHandler {
     }
 
     @Override
-    public void handle(RequestDTO request, ConnectionToClient client) throws Exception {
+    public void handle(RequestDTO request, ConnectionToClient client) {
 
+        // 1️⃣ בדיקת DTO נכון
         Object dataObj = request.getData();
         if (!(dataObj instanceof RegisterSubscriberDTO dto)) {
-            client.sendToClient(new ResponseDTO(false, "Invalid register data", null));
+            send(client, new ResponseDTO(false, "Invalid register data", null));
             return;
         }
 
-        Object userObj = client.getInfo("user");
-        if (!(userObj instanceof Subscriber performedBy)) {
-            client.sendToClient(new ResponseDTO(false, "Unauthorized", null));
+        // 2️⃣ מי מבצע את הפעולה (Agent / Manager)
+        Object performerObj = client.getInfo("user");
+        if (!(performerObj instanceof Subscriber performedBy)) {
+            send(client, new ResponseDTO(false, "Unauthorized", null));
             return;
         }
 
+        // 3️⃣ קריאה נכונה ל־UserController
         Subscriber created =
                 userController.registerSubscriber(
                         dto.getUsername(),
@@ -42,14 +45,27 @@ public class RegisterSubscriberHandler implements RequestHandler {
                 );
 
         if (created == null) {
-            client.sendToClient(
-                    new ResponseDTO(false, "Failed to create subscriber", null)
-            );
+            send(client, new ResponseDTO(
+                    false,
+                    "Permission denied or invalid data",
+                    null
+            ));
             return;
         }
 
-        client.sendToClient(
-                new ResponseDTO(true, "Subscriber created successfully", created)
-        );
+        // 4️⃣ הצלחה
+        send(client, new ResponseDTO(
+                true,
+                "User created successfully",
+                created
+        ));
+    }
+
+    private void send(ConnectionToClient client, ResponseDTO res) {
+        try {
+            client.sendToClient(res);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

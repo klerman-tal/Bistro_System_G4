@@ -19,7 +19,7 @@ public class Menu_BController {
     @FXML private BorderPane rootPane;
 
     @FXML private Button btnReservation;
-    @FXML private Button btnCancelReservation; // ✅ NEW
+    @FXML private Button btnCancelReservation;
     @FXML private Button btnPayment;
     @FXML private Button btnPersonalDetails;
     @FXML private Button btnGetTable;
@@ -33,6 +33,10 @@ public class Menu_BController {
     private ChatClient chatClient;
     private ClientActions clientActions;
 
+    /* =======================
+       SETTERS
+       ======================= */
+
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
     }
@@ -42,12 +46,15 @@ public class Menu_BController {
         this.chatClient = chatClient;
     }
 
+    /* =======================
+       BUTTON ACTIONS
+       ======================= */
+
     @FXML
     private void onSelectReservationClicked() {
         openWindow("TableReservation_B.fxml", "Table Reservation");
     }
 
-    // ✅ NEW
     @FXML
     private void onSelectCancelReservationClicked() {
         openWindow("CancelReservation_B.fxml", "Cancel Reservation");
@@ -95,6 +102,10 @@ public class Menu_BController {
         }
     }
 
+    /* =======================
+       NAVIGATION
+       ======================= */
+
     private void openWindow(String fxmlName, String title) {
         try {
             FXMLLoader loader =
@@ -103,6 +114,7 @@ public class Menu_BController {
 
             Object controller = loader.getController();
 
+            // מסכים שעובדים עם ClientActions
             if (controller != null && clientActions != null) {
                 try {
                     controller.getClass()
@@ -111,6 +123,7 @@ public class Menu_BController {
                 } catch (Exception ignored) {}
             }
 
+            // מסכים שעובדים עם User + ChatClient
             if (controller != null && user != null && chatClient != null) {
                 try {
                     controller.getClass()

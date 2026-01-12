@@ -181,8 +181,6 @@ public class RestaurantServer extends AbstractServer {
         router.register(Commands.RECOVER_GUEST_CONFIRMATION_CODE,
                 new RecoverGuestConfirmationCodeHandler(reservationController, userController));
 
-        router.register(Commands.REGISTER_SUBSCRIBER,
-                new RegisterSubscriberHandler(userController));
 
         router.register(Commands.UPDATE_SUBSCRIBER_DETAILS,
                 new UpdateSubscriberDetailsHandler(userController));
@@ -198,6 +196,11 @@ public class RestaurantServer extends AbstractServer {
         		
         		// ✅ REPORTS
         router.register(Commands.GET_TIME_REPORT, new GetTimeReportHandler(reportsController));
+        router.register(
+                Commands.REGISTER_SUBSCRIBER,
+                new RegisterSubscriberHandler(userController)
+        );
+
     }
 
     @Override
