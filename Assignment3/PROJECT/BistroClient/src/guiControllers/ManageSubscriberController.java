@@ -9,8 +9,6 @@ import entities.Subscriber;
 import entities.User;
 import interfaces.ClientActions;
 import javafx.application.Platform;
-import javafx.beans.property.SimpleIntegerProperty;
-import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -30,28 +28,58 @@ import network.ClientResponseHandler;
 
 public class ManageSubscriberController {
 
-    @FXML private BorderPane rootPane;
-    @FXML private Label lblStatus;
+    @FXML
+    private BorderPane rootPane;
+
+    @FXML
+    private Label lblStatus;
 
     // ===== TABLE =====
-    @FXML private TableView<Subscriber> tblSubscribers;
+    @FXML
+    private TableView<Subscriber> tblSubscribers;
 
-    @FXML private TableColumn<Subscriber, Integer> colSubscriberId;
-    @FXML private TableColumn<Subscriber, String> colUsername;
-    @FXML private TableColumn<Subscriber, String> colFirstName;
-    @FXML private TableColumn<Subscriber, String> colLastName;
-    @FXML private TableColumn<Subscriber, String> colPhone;
-    @FXML private TableColumn<Subscriber, String> colEmail;
-    @FXML private TableColumn<Subscriber, String> colRole;
+    @FXML
+    private TableColumn<Subscriber, Integer> colSubscriberId;
+
+    @FXML
+    private TableColumn<Subscriber, String> colUsername;
+
+    @FXML
+    private TableColumn<Subscriber, String> colFirstName;
+
+    @FXML
+    private TableColumn<Subscriber, String> colLastName;
+
+    @FXML
+    private TableColumn<Subscriber, String> colPhone;
+
+    @FXML
+    private TableColumn<Subscriber, String> colEmail;
+
+    @FXML
+    private TableColumn<Subscriber, String> colRole;
 
     // ===== FORM FIELDS =====
-    @FXML private TextField txtSubscriberId;
-    @FXML private TextField txtUsername;
-    @FXML private TextField txtFirstName;
-    @FXML private TextField txtLastName;
-    @FXML private TextField txtPhone;
-    @FXML private TextField txtEmail;
-    @FXML private TextField txtRole;
+    @FXML
+    private TextField txtSubscriberId;
+
+    @FXML
+    private TextField txtUsername;
+
+    @FXML
+    private TextField txtFirstName;
+
+    @FXML
+    private TextField txtLastName;
+
+    @FXML
+    private TextField txtPhone;
+
+    @FXML
+    private TextField txtEmail;
+
+    @FXML
+    private TextField txtRole;
 
     private ClientActions clientActions;
     private User performedBy;
@@ -64,6 +92,7 @@ public class ManageSubscriberController {
     /* =======================
        SESSION SETUP
        ======================= */
+
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
     }
@@ -88,7 +117,8 @@ public class ManageSubscriberController {
                 }
 
                 @Override
-                public void handleConnectionClosed() {}
+                public void handleConnectionClosed() {
+                }
             });
         }
 
@@ -99,6 +129,7 @@ public class ManageSubscriberController {
     /* =======================
        TABLE INITIALIZATION
        ======================= */
+
     private void initializeTableBehavior() {
 
         colSubscriberId.setCellValueFactory(
@@ -133,7 +164,6 @@ public class ManageSubscriberController {
                 });
     }
 
-
     private void fillForm(Subscriber s) {
         txtSubscriberId.setText(String.valueOf(s.getUserId()));
         txtUsername.setText(s.getUsername());
@@ -144,9 +174,20 @@ public class ManageSubscriberController {
         txtRole.setText(s.getUserRole().name());
     }
 
+    private void clearForm() {
+        txtSubscriberId.clear();
+        txtUsername.clear();
+        txtFirstName.clear();
+        txtLastName.clear();
+        txtPhone.clear();
+        txtEmail.clear();
+        txtRole.clear();
+    }
+
     /* =======================
        DATA LOADING
        ======================= */
+
     private void loadSubscribersOnEnter() {
         hideMessage();
         try {
@@ -161,9 +202,11 @@ public class ManageSubscriberController {
     /* =======================
        SERVER RESPONSES
        ======================= */
+
     private void handleServerResponse(ResponseDTO response) {
         if (response == null) return;
 
+        // GET ALL SUBSCRIBERS
         if (response.isSuccess() && response.getData() instanceof List<?>) {
             @SuppressWarnings("unchecked")
             List<Subscriber> list = (List<Subscriber>) response.getData();
@@ -172,24 +215,83 @@ public class ManageSubscriberController {
             return;
         }
 
-        if ("Subscriber created successfully".equals(response.getMessage())
-                && response.isSuccess()) {
-            showMessage("Subscriber created successfully ✅");
+        // UPDATE SUCCESS
+        if (response.isSuccess()
+                && "Details updated successfully".equals(response.getMessage())) {
+
+            showMessage("Subscriber updated successfully ✅");
+            loadSubscribersOnEnter();
+            return;
+        }
+
+        // DELETE SUCCESS
+        if (response.isSuccess() && response.getData() == null) {
+            showMessage("Subscriber deleted successfully ✅");
+            clearForm();
+            loadSubscribersOnEnter();
+            return;
+        }
+
+        if (!response.isSuccess()) {
+            showMessage(response.getMessage());
         }
     }
 
     /* =======================
        BUTTONS
        ======================= */
+
     @FXML
     private void onRefreshClicked() {
         loadSubscribersOnEnter();
     }
 
     @FXML
-    private void onUpdateClicked() {
-        showMessage("Update - TODO");
+    private void onDeleteClicked() {
+
+        Subscriber selected = tblSubscribers.getSelectionModel().getSelectedItem();
+
+        if (selected == null) {
+            showMessage("Please select a subscriber to delete.");
+            return;
+        }
+
+        try {
+            clientAPI.deleteSubscriber(selected.getUserId());
+            showMessage("Deleting subscriber...");
+        } catch (IOException e) {
+            e.printStackTrace();
+            showMessage("Failed to delete subscriber.");
+        }
     }
+
+    @FXML
+    private void onUpdateClicked() {
+
+        Subscriber selected = tblSubscribers.getSelectionModel().getSelectedItem();
+
+        if (selected == null) {
+            showMessage("Please select a subscriber to update.");
+            return;
+        }
+
+        try {
+            clientAPI.updateSubscriberDetails(
+                    selected.getUserId(),
+                    txtUsername.getText().trim(),     // ✅ username
+                    txtFirstName.getText().trim(),    // ✅ firstName
+                    txtLastName.getText().trim(),     // ✅ lastName
+                    txtPhone.getText().trim(),        // ✅ phone
+                    txtEmail.getText().trim()         // ✅ email
+            );
+
+            showMessage("Updating subscriber...");
+        } catch (IOException e) {
+            e.printStackTrace();
+            showMessage("Failed to update subscriber.");
+        }
+    }
+
 
     @FXML
     private void onBackClicked() {
@@ -233,6 +335,7 @@ public class ManageSubscriberController {
     /* =======================
        NAVIGATION
        ======================= */
+
     private void navigateTo(String fxmlPath, String title) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
@@ -262,6 +365,10 @@ public class ManageSubscriberController {
             showMessage("Failed to open screen.");
         }
     }
+
+    /* =======================
+       UI MESSAGES
+       ======================= */
 
     private void showMessage(String msg) {
         lblStatus.setText(msg);

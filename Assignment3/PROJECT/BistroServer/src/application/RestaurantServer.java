@@ -225,6 +225,11 @@ public class RestaurantServer extends AbstractServer {
         	    Commands.GET_ALL_SUBSCRIBERS,
         	    new GetAllSubscribersHandler(userController)
         	);
+        router.register(
+                Commands.DELETE_SUBSCRIBER,
+                new DeleteSubscriberHandler(userController)
+        );
+
 
     }
 
