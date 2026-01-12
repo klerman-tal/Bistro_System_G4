@@ -28,6 +28,9 @@ public class SubscriberLoginController implements ClientResponseHandler {
     private ChatClient chatClient;
     private ClientAPI api;
 
+    // ✅ שומרים את ה-Stage שבו נמצאים (מוגדר בזמן קליק)
+    private Stage stage;
+
     /**
      * חיבור ל־ChatClient + רישום כ־ResponseHandler
      */
@@ -41,25 +44,35 @@ public class SubscriberLoginController implements ClientResponseHandler {
 
     @FXML
     public void initialize() {
-        subscriberIdField.textProperty().addListener((obs, oldVal, newVal) -> {
-            if (!newVal.matches("\\d*")) {
-                subscriberIdField.setText(newVal.replaceAll("[^\\d]", ""));
-            }
-            if (newVal.length() > 10) {
-                subscriberIdField.setText(oldVal);
-            }
-        });
+        if (subscriberIdField != null) {
+            subscriberIdField.textProperty().addListener((obs, oldVal, newVal) -> {
+                if (!newVal.matches("\\d*")) {
+                    subscriberIdField.setText(newVal.replaceAll("[^\\d]", ""));
+                }
+                if (newVal.length() > 10) {
+                    subscriberIdField.setText(oldVal);
+                }
+            });
+        }
     }
 
     @FXML
     private void handleSubscriberLogin(ActionEvent event) {
         hideMessage();
 
+        // ✅ לוכדים את ה-Stage מהאירוע (זה תמיד קיים בזמן קליק)
+        this.stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+
         String idStr = subscriberIdField.getText().trim();
         String user = usernameField.getText().trim();
 
         if (idStr.isEmpty() || user.isEmpty()) {
             showError("Please fill in all fields.");
+            return;
+        }
+
+        if (api == null) {
+            showError("Internal error: client not initialized.");
             return;
         }
 
@@ -79,7 +92,7 @@ public class SubscriberLoginController implements ClientResponseHandler {
     public void handleResponse(ResponseDTO response) {
         Platform.runLater(() -> {
 
-            // ✅ קריטי: מסך זה מטפל רק בתשובת LOGIN
+            // ✅ מסך זה מטפל רק בתשובת LOGIN שמחזירה Subscriber
             if (!(response.getData() instanceof Subscriber)) {
                 return;
             }
@@ -98,15 +111,25 @@ public class SubscriberLoginController implements ClientResponseHandler {
      */
     private void goToMenu(Subscriber subscriber) {
         try {
-            FXMLLoader loader =
-                    new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
             Parent root = loader.load();
 
             Menu_BController menu = loader.getController();
             menu.setClient(subscriber, chatClient); // ✅ הזרקה נכונה
 
-            Stage stage =
-                    (Stage) subscriberIdField.getScene().getWindow();
+            // ✅ משתמשים ב-stage ששמרנו בזמן הלחיצה
+            if (stage == null) {
+                // fallback אחרון (במקרה קיצון)
+                if (subscriberIdField != null && subscriberIdField.getScene() != null) {
+                    stage = (Stage) subscriberIdField.getScene().getWindow();
+                }
+            }
+
+            if (stage == null) {
+                showError("Internal error: window not found.");
+                return;
+            }
+
             stage.setScene(new Scene(root));
             stage.centerOnScreen();
             stage.show();
@@ -120,8 +143,7 @@ public class SubscriberLoginController implements ClientResponseHandler {
     @FXML
     private void handleForgotCode(ActionEvent event) {
         try {
-            FXMLLoader loader =
-                    new FXMLLoader(getClass().getResource("/gui/ForgotSubscriberCode.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/ForgotSubscriberCode.fxml"));
             Parent root = loader.load();
 
             ForgotCodeController controller = loader.getController();
@@ -152,11 +174,12 @@ public class SubscriberLoginController implements ClientResponseHandler {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
             Parent root = loader.load();
-            Stage stage =
-                    (Stage) ((Node) event.getSource()).getScene().getWindow();
-            stage.setScene(new Scene(root));
-            stage.centerOnScreen();
-            stage.show();
+
+            Stage stageLocal = (Stage) ((Node) event.getSource()).getScene().getWindow();
+            stageLocal.setScene(new Scene(root));
+            stageLocal.centerOnScreen();
+            stageLocal.show();
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -165,6 +188,7 @@ public class SubscriberLoginController implements ClientResponseHandler {
     /* ================= UI HELPERS ================= */
 
     private void showError(String msg) {
+        if (lblMessage == null) return;
         lblMessage.setText(msg);
         lblMessage.setStyle("-fx-text-fill: red;");
         lblMessage.setVisible(true);
@@ -172,6 +196,7 @@ public class SubscriberLoginController implements ClientResponseHandler {
     }
 
     private void showInfo(String msg) {
+        if (lblMessage == null) return;
         lblMessage.setText(msg);
         lblMessage.setStyle("-fx-text-fill: black;");
         lblMessage.setVisible(true);
@@ -179,6 +204,7 @@ public class SubscriberLoginController implements ClientResponseHandler {
     }
 
     private void hideMessage() {
+        if (lblMessage == null) return;
         lblMessage.setVisible(false);
         lblMessage.setManaged(false);
     }

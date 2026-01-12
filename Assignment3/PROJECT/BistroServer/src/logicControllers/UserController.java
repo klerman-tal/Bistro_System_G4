@@ -1,5 +1,6 @@
 package logicControllers;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;   // ✅ FIX: correct List import
 
@@ -43,19 +44,28 @@ public class UserController {
             return null;
         }
 
-        int guestId = Restaurant.getInstance().getNextUserId();
+		try {
+			int guestId = generateNextUserId();
+			
+			 // שליחה ל-DB (ה-DB יקבל null עבור השדה הריק)
+	        User guest = userDB.loginGuest(guestId, phone, email);
 
-        // שליחה ל-DB (ה-DB יקבל null עבור השדה הריק)
-        User guest = userDB.loginGuest(guestId, phone, email);
+	        if (guest == null) {
+	            return null;
+	        }
 
-        if (guest == null) {
-            return null;
-        }
-
-        return guest;
+	        return guest;
+		
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			
+			return null;
+		}
     }
+       
 
-    public Subscriber registerSubscriber(
+    public int registerSubscriber(
             String username,
             String firstName,
             String lastName,
@@ -66,7 +76,7 @@ public class UserController {
 
         // Validate performing user
         if (performedBy == null) {
-            return null;
+            return -1;
         }
 
         // Authorization rules:
@@ -74,12 +84,12 @@ public class UserController {
         // - RestaurantManager can create Subscriber or RestaurantAgent
         if (performedBy.getUserRole() == Enums.UserRole.RestaurantAgent &&
             role != Enums.UserRole.Subscriber) {
-            return null;
+            return -1;
         }
 
         if (performedBy.getUserRole() == Enums.UserRole.Subscriber ||
             performedBy.getUserRole() == Enums.UserRole.RandomClient) {
-            return null;
+            return -1;
         }
 
         // Validate input data
@@ -88,25 +98,36 @@ public class UserController {
             lastName == null || lastName.isBlank() ||
             phone == null || phone.isBlank() ||
             email == null || email.isBlank()) {
-            return null;
+            return -1;
         }
 
         // Generate global subscriber ID
-        int subscriberId = Restaurant.getInstance().getNextUserId();
+		try {
+			 int subscriberId = generateNextUserId();
+			
+			// Delegate persistence to DB layer
+	        userDB.registerSubscriber(
+	                subscriberId,
+	                username,
+	                firstName,
+	                lastName,
+	                phone,
+	                email,
+	                role
+	        );
+	        
+	        return subscriberId;
+	        
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return -1;
+		}
 
-        // Delegate persistence to DB layer
-        return userDB.registerSubscriber(
-                subscriberId,
-                username,
-                firstName,
-                lastName,
-                phone,
-                email,
-                role
-        );
+        
     }
     
-    public Subscriber addRestaurantAgent(
+    public int addRestaurantAgent(
             String username,
             String firstName,
             String lastName,
@@ -116,12 +137,12 @@ public class UserController {
 
         // Validate performing user
         if (performedBy == null) {
-            return null;
+            return -1;
         }
 
         // Only RestaurantManager can add restaurant agents
         if (performedBy.getUserRole() != Enums.UserRole.RestaurantManager) {
-            return null;
+            return -1;
         }
 
         // Validate input
@@ -130,22 +151,30 @@ public class UserController {
             lastName == null || lastName.isBlank() ||
             phone == null || phone.isBlank() ||
             email == null || email.isBlank()) {
-            return null;
+            return -1;
         }
 
-        // Generate global ID
-        int agentId = Restaurant.getInstance().getNextUserId();
-
+		try {
+			int agentId = generateNextUserId();
+			
+			 userDB.registerSubscriber(
+		                agentId,
+		                username,
+		                firstName,
+		                lastName,
+		                phone,
+		                email,
+		                Enums.UserRole.RestaurantAgent
+		        );
+			 
+			 return agentId;
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return -1;
+		}
         // Delegate creation to DB layer
-        return userDB.registerSubscriber(
-                agentId,
-                username,
-                firstName,
-                lastName,
-                phone,
-                email,
-                Enums.UserRole.RestaurantAgent
-        );
+       
     }
 
 
@@ -270,6 +299,10 @@ public class UserController {
         );
     }
 
+    public int generateNextUserId() throws SQLException {
+        int max = userDB.getMaxUserIdFromGuestsAndSubscribers();
+        return max + 1;
+    }
 
     
 

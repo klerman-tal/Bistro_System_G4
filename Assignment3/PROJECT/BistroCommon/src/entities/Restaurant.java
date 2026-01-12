@@ -10,7 +10,6 @@ public class Restaurant {
 
     // ====== Fields ======
     private static Restaurant instance;
-    private int globalUserCounter = 0;
     private ArrayList<Table> tables;
 
     private HashMap<LocalDateTime, Table> avelibleTableAtSpecificTimeAndDate;
@@ -42,12 +41,6 @@ public class Restaurant {
             instance = new Restaurant();
         }
         return instance;
-    }
-    //=======Lior=============
-  
-
-    public synchronized int getNextUserId() {
-        return ++globalUserCounter;
     }
     
     

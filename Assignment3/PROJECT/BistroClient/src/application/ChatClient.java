@@ -144,5 +144,10 @@ public class ChatClient extends AbstractClient
       }
       clientUI.display("Connection error: " + exception.getMessage());
   }
+  
+  public ClientResponseHandler getResponseHandler() {
+	    return responseHandler;
+	}
+
 
 }

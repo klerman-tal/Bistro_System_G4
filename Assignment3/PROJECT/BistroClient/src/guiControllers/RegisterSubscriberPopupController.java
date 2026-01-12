@@ -38,18 +38,17 @@ public class RegisterSubscriberPopupController {
         hideMessage();
         clearFieldStyles();
 
-        // ❗ חשוב: לא נוגעים כאן ב-roleCombo
-        // ההחלטה על roles נעשית רק ב-setPerformedByRole()
-
         // 📞 טלפון – רק ספרות, עד 10
-        phoneField.textProperty().addListener((obs, oldV, newV) -> {
-            if (!newV.matches("\\d*")) {
-                phoneField.setText(newV.replaceAll("[^\\d]", ""));
-            }
-            if (newV.length() > 10) {
-                phoneField.setText(oldV);
-            }
-        });
+        if (phoneField != null) {
+            phoneField.textProperty().addListener((obs, oldV, newV) -> {
+                if (!newV.matches("\\d*")) {
+                    phoneField.setText(newV.replaceAll("[^\\d]", ""));
+                }
+                if (newV.length() > 10) {
+                    phoneField.setText(oldV);
+                }
+            });
+        }
     }
 
     /* =======================
@@ -64,6 +63,11 @@ public class RegisterSubscriberPopupController {
      */
     public void setPerformedByRole(Enums.UserRole performedByRole) {
 
+        if (roleCombo == null) {
+            // fx:id="roleCombo" לא מחובר נכון ב-FXML
+            return;
+        }
+
         roleCombo.getItems().clear();
 
         if (performedByRole == Enums.UserRole.RestaurantManager) {
@@ -72,8 +76,7 @@ public class RegisterSubscriberPopupController {
                     Enums.UserRole.RestaurantAgent,
                     Enums.UserRole.RestaurantManager
             );
-        } 
-        else if (performedByRole == Enums.UserRole.RestaurantAgent) {
+        } else if (performedByRole == Enums.UserRole.RestaurantAgent) {
             roleCombo.getItems().setAll(
                     Enums.UserRole.Subscriber
             );
@@ -92,6 +95,12 @@ public class RegisterSubscriberPopupController {
 
         if (clientAPI == null) {
             showMessage("Internal error: client not initialized");
+            return;
+        }
+
+        if (firstNameField == null || lastNameField == null || usernameField == null ||
+            phoneField == null || emailField == null || roleCombo == null) {
+            showMessage("Internal error: FXML fields not initialized");
             return;
         }
 
@@ -154,25 +163,28 @@ public class RegisterSubscriberPopupController {
     }
 
     private void clearFieldStyles() {
-        firstNameField.setStyle(NORMAL_STYLE);
-        lastNameField.setStyle(NORMAL_STYLE);
-        usernameField.setStyle(NORMAL_STYLE);
-        phoneField.setStyle(NORMAL_STYLE);
-        emailField.setStyle(NORMAL_STYLE);
+        if (firstNameField != null) firstNameField.setStyle(NORMAL_STYLE);
+        if (lastNameField != null) lastNameField.setStyle(NORMAL_STYLE);
+        if (usernameField != null) usernameField.setStyle(NORMAL_STYLE);
+        if (phoneField != null) phoneField.setStyle(NORMAL_STYLE);
+        if (emailField != null) emailField.setStyle(NORMAL_STYLE);
     }
 
     private void closeWindow() {
+        if (firstNameField == null || firstNameField.getScene() == null) return;
         Stage stage = (Stage) firstNameField.getScene().getWindow();
         if (stage != null) stage.close();
     }
 
     private void showMessage(String msg) {
+        if (lblMessage == null) return;
         lblMessage.setText(msg);
         lblMessage.setVisible(true);
         lblMessage.setManaged(true);
     }
 
     private void hideMessage() {
+        if (lblMessage == null) return;
         lblMessage.setVisible(false);
         lblMessage.setManaged(false);
     }
