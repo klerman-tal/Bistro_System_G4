@@ -8,6 +8,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import dbControllers.DBController;
+import dbControllers.Notification_DB_Controller;
 import dbControllers.Reservation_DB_Controller;
 import dbControllers.Restaurant_DB_Controller;
 import dbControllers.User_DB_Controller;
@@ -30,17 +31,21 @@ public class RestaurantServer extends AbstractServer {
 
     private DBController conn;
 
+    // ===== DB Controllers =====
     private Restaurant_DB_Controller restaurantDB;
     private Reservation_DB_Controller reservationDB;
     private User_DB_Controller userDB;
     private Waiting_DB_Controller waitingDB;
+    private Notification_DB_Controller notificationDB; // ✅ NEW
 
+    // ===== Logic Controllers =====
     private RestaurantController restaurantController;
     private ReservationController reservationController;
     private UserController userController;
     private WaitingController waitingController;
     private ReportsController reportsController;
 
+    // ===== Schedulers =====
     private ScheduledExecutorService waitingScheduler;
     private final ScheduledExecutorService idleScheduler =
             Executors.newSingleThreadScheduledExecutor();
@@ -99,6 +104,7 @@ public class RestaurantServer extends AbstractServer {
             reservationDB = new Reservation_DB_Controller(sqlConn);
             userDB = new User_DB_Controller(sqlConn);
             waitingDB = new Waiting_DB_Controller(sqlConn);
+            notificationDB = new Notification_DB_Controller(sqlConn); // ✅ NEW
 
             log("⚙️ Ensuring all database tables exist...");
             userDB.createSubscribersTable();
@@ -107,18 +113,19 @@ public class RestaurantServer extends AbstractServer {
             restaurantDB.createOpeningHoursTable();
             reservationDB.createReservationsTable();
             waitingDB.createWaitingListTable();
+            notificationDB.createNotificationsTable(); // ✅ NEW
             log("✅ Database schema ensured.");
 
             // ===== Logic Controllers =====
             restaurantController = new RestaurantController(restaurantDB);
             userController = new UserController(userDB);
             reservationController =
-                    new ReservationController(reservationDB, this, restaurantController);
+                    new ReservationController(reservationDB, notificationDB, this, restaurantController);
 
             waitingController =
                     new WaitingController(waitingDB, this, restaurantController, reservationController);
 
-            // ⭐ REPORTS CONTROLLER (Time + Subscribers)
+            // ===== Reports Controller =====
             reportsController =
                     new ReportsController(reservationDB, waitingDB, userDB);
 
@@ -199,7 +206,12 @@ public class RestaurantServer extends AbstractServer {
                 new RecoverSubscriberCodeHandler(userController));
 
         router.register(Commands.RECOVER_GUEST_CONFIRMATION_CODE,
-                new RecoverGuestConfirmationCodeHandler(reservationController, userController));
+                new RecoverGuestConfirmationCodeHandler(
+                        reservationController,
+                        userController,
+                        notificationDB,
+                        this::log
+                ));
 
         // ===== Waiting List =====
         router.register(Commands.JOIN_WAITING_LIST,
@@ -214,7 +226,7 @@ public class RestaurantServer extends AbstractServer {
         router.register(Commands.CONFIRM_WAITING_ARRIVAL,
                 new ConfirmWaitingArrivalHandler(waitingController));
 
-        // ===== REPORTS =====
+        // ===== Reports =====
         router.register(Commands.GET_TIME_REPORT,
                 new GetTimeReportHandler(reportsController));
 

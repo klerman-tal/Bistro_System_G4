@@ -9,18 +9,21 @@ import java.util.Comparator;
 import java.util.Map;
 
 import application.RestaurantServer;
+import dbControllers.Notification_DB_Controller;
 import dbControllers.Reservation_DB_Controller;
 import dto.CreateReservationDTO;
-import entities.Enums;
 import entities.Enums.ReservationStatus;
 import entities.Reservation;
 import entities.Restaurant;
 import entities.Table;
 import entities.User;
+import entities.Notification;
+import entities.Enums;
 
 public class ReservationController {
 
     private final Reservation_DB_Controller db;
+    private final Notification_DB_Controller notificationDB; // ✅ NEW
     private final Restaurant restaurant;
     private final RestaurantServer server;
     private final RestaurantController restaurantController;
@@ -28,11 +31,64 @@ public class ReservationController {
     /**
      * Constructor: connects controller to DB layer, server logger, and restaurant availability logic.
      */
-    public ReservationController(Reservation_DB_Controller db, RestaurantServer server, RestaurantController rc) {
+    public ReservationController(Reservation_DB_Controller db,
+                                 Notification_DB_Controller notificationDB,
+                                 RestaurantServer server,
+                                 RestaurantController rc) {
         this.db = db;
+        this.notificationDB = notificationDB;
         this.server = server;
         this.restaurant = Restaurant.getInstance();
         this.restaurantController = rc;
+    }
+
+    // =====================================================
+    // NOTIFICATIONS (SCHEDULED)
+    // =====================================================
+
+    /**
+     * Schedules reminder notifications 2 hours before reservation time (SMS + Email).
+     * English texts:
+     * - SMS/Email content: "Reminder: Your reservation is in 2 hours. Confirmation code: <CODE>"
+     */
+    private void scheduleReservationReminder2HoursBefore(int userId, LocalDateTime reservationDateTime, String confirmationCode) {
+        try {
+            if (notificationDB == null) return;
+            if (reservationDateTime == null) return;
+            if (confirmationCode == null || confirmationCode.isBlank()) return;
+
+            LocalDateTime scheduledFor = reservationDateTime.minusHours(2);
+
+            // If it's already too late, skip scheduling
+            if (scheduledFor.isBefore(LocalDateTime.now())) {
+                return;
+            }
+
+            // Full channel messages (can include code – this is the simulated SMS/Email content)
+            String smsBody = "Reminder: Your reservation is in 2 hours. Confirmation code: " + confirmationCode;
+            String emailBody = "Reminder: Your reservation is in 2 hours. Confirmation code: " + confirmationCode;
+
+            // SMS
+            notificationDB.addNotification(new Notification(
+                    userId,
+                    Enums.Channel.SMS,
+                    Enums.NotificationType.RESERVATION_REMINDER_2H,
+                    smsBody,
+                    scheduledFor
+            ));
+
+            // EMAIL
+            notificationDB.addNotification(new Notification(
+                    userId,
+                    Enums.Channel.EMAIL,
+                    Enums.NotificationType.RESERVATION_REMINDER_2H,
+                    emailBody,
+                    scheduledFor
+            ));
+
+        } catch (Exception e) {
+            server.log("ERROR: Failed to schedule 2h reminder. UserId=" + userId + ", Msg=" + e.getMessage());
+        }
     }
 
     // =====================================================
@@ -52,24 +108,20 @@ public class ReservationController {
         out.clear();
 
         try {
-            // For each slot in that day -> one candidate table that fits guests (single-slot availability)
             Map<LocalDateTime, Table> map =
                     restaurantController.getOneAvailableTablePerSlot(date, guestsNumber);
 
-            // keySet order is not guaranteed -> sort by time
             ArrayList<LocalDateTime> times = new ArrayList<>(map.keySet());
             times.sort(Comparator.naturalOrder());
 
             for (LocalDateTime dt : times) {
                 LocalTime t = dt.toLocalTime();
 
-                // Only times from the requested time and onward
                 if (fromTime != null && t.isBefore(fromTime)) continue;
 
                 Table table = map.get(dt);
                 if (table == null) continue;
 
-                // IMPORTANT: must be free for 2 hours (4 slots), not just one slot
                 if (restaurantController.isTableFreeForTwoHours(dt, table.getTableNumber())) {
                     out.add(t);
                 }
@@ -91,7 +143,6 @@ public class ReservationController {
             for (int i = 0; i < 4; i++) {
                 boolean ok = restaurantController.tryReserveSlot(slot, tableNumber);
                 if (!ok) {
-                    // Rollback: release what we already locked
                     for (LocalDateTime s : locked) {
                         try { restaurantController.releaseSlot(s, tableNumber); }
                         catch (Exception ignore) {}
@@ -106,7 +157,6 @@ public class ReservationController {
             return true;
 
         } catch (Exception e) {
-            // Rollback: release what we already locked
             for (LocalDateTime s : locked) {
                 try { restaurantController.releaseSlot(s, tableNumber); }
                 catch (Exception ignore) {}
@@ -136,10 +186,8 @@ public class ReservationController {
         if (availableTimesOut != null) availableTimesOut.clear();
 
         LocalDateTime now = LocalDateTime.now();
-        // שימוש בנתונים מה-DTO
         LocalDateTime requested = LocalDateTime.of(dto.getDate(), dto.getTime());
 
-        // בדיקת חלון זמן (שעה קדימה עד חודש)
         if (requested.isBefore(now.plusHours(1)) || requested.isAfter(now.plusMonths(1))) {
             server.log("WARN: Invalid reservation time. UserId=" + dto.getUserId());
             return null;
@@ -147,7 +195,6 @@ public class ReservationController {
 
         Table table;
         try {
-            // בדיקת זמינות שולחן לפי כמות האורחים מה-DTO
             table = restaurantController.getOneAvailableTableAt(requested, dto.getGuests());
         } catch (Exception e) {
             server.log("ERROR: Failed to check availability. " + e.getMessage());
@@ -159,14 +206,12 @@ public class ReservationController {
             return null;
         }
 
-        // ניסיון נעילת שולחן ל-2 שעות (4 סלוטים)
         boolean locked2h = tryReserveForTwoHours(requested, table.getTableNumber());
         if (!locked2h) {
             fillAvailableTimesForDay(dto.getDate(), dto.getGuests(), dto.getTime(), availableTimesOut);
             return null;
         }
 
-        // יצירת אובייקט ה-Entity לשמירה ב-DB
         Reservation res = new Reservation();
         res.setCreatedByUserId(dto.getUserId());
         res.setGuestAmount(dto.getGuests());
@@ -194,6 +239,9 @@ public class ReservationController {
             }
             res.setReservationId(reservationId);
 
+            // ✅ NEW: schedule reminder 2 hours before
+            scheduleReservationReminder2HoursBefore(dto.getUserId(), requested, res.getConfirmationCode());
+
         } catch (SQLException e) {
             server.log("ERROR: DB Insert failed: " + e.getMessage());
             rollbackReservation(requested, table.getTableNumber());
@@ -206,9 +254,6 @@ public class ReservationController {
     /**
      * ✅ NEW (for Waiting flow):
      * Creates a reservation using an EXISTING confirmation code (from Waiting).
-     * - locks table for 2 hours
-     * - inserts reservation row with the same code
-     * - rollback on failure
      */
     public boolean createReservationFromWaiting(
             String confirmationCode,
@@ -220,7 +265,6 @@ public class ReservationController {
         if (confirmationCode == null || confirmationCode.isBlank()) return false;
         if (start == null || user == null) return false;
 
-        // lock 2h
         boolean locked2h = tryReserveForTwoHours(start, tableNumber);
         if (!locked2h) return false;
 
@@ -238,6 +282,9 @@ public class ReservationController {
                 rollbackReservation(start, tableNumber);
                 return false;
             }
+
+            // ✅ NEW: schedule reminder 2 hours before (only if still relevant)
+            scheduleReservationReminder2HoursBefore(user.getUserId(), start, confirmationCode.trim());
 
             server.log("Reservation created from waiting. Code=" + confirmationCode +
                        ", Table=" + tableNumber + ", ReservationId=" + reservationId);
@@ -271,7 +318,6 @@ public class ReservationController {
                 return false;
             }
 
-            // 1) release 2 hours (4 slots)
             for (int i = 0; i < 4; i++) {
                 try { restaurantController.releaseSlot(start.plusMinutes(30L * i), tableNum); }
                 catch (Exception e) {
@@ -280,7 +326,6 @@ public class ReservationController {
                 }
             }
 
-            // 2) update DB
             boolean cancelled = db.cancelReservationByConfirmationCode(confirmationCode);
 
             if (cancelled) {
@@ -298,7 +343,7 @@ public class ReservationController {
     }
 
     /**
-     * מתודת עזר לשחרור השולחן במידה וההרשמה ל-DB נכשלה
+     * Helper: release table slots if DB insert failed.
      */
     private void rollbackReservation(LocalDateTime requested, int tableNumber) {
         server.log("Rolling back: releasing 2 hours (4 slots) for table " + tableNumber);
@@ -448,7 +493,6 @@ public class ReservationController {
                 return false;
             }
 
-            // 1) Release 2 hours (4 slots) in availability grid
             for (int i = 0; i < 4; i++) {
                 LocalDateTime slot = start.plusMinutes(30L * i);
                 try {
@@ -459,7 +503,6 @@ public class ReservationController {
                 }
             }
 
-            // 2) Update DB: Finished + checkout + inactive
             LocalDateTime checkoutTime = LocalDateTime.now();
             boolean finished = db.finishReservationByConfirmationCode(confirmationCode, checkoutTime);
 
@@ -523,7 +566,7 @@ public class ReservationController {
             return null;
         }
     }
-    
+
     public Reservation createNowReservationFromWaiting(
             LocalDateTime start,
             int guests,
@@ -555,7 +598,6 @@ public class ReservationController {
         res.setTableNumber(table.getTableNumber());
         res.setReservationStatus(ReservationStatus.Active);
 
-        // IMPORTANT: keep the same confirmation code from Waiting
         res.setConfirmationCode(confirmationCode);
 
         try {
@@ -574,6 +616,10 @@ public class ReservationController {
             }
 
             res.setReservationId(reservationId);
+
+            // ✅ NEW: schedule reminder 2 hours before (only if still relevant)
+            scheduleReservationReminder2HoursBefore(user.getUserId(), start, confirmationCode);
+
             return res;
 
         } catch (SQLException e) {
@@ -582,5 +628,4 @@ public class ReservationController {
             return null;
         }
     }
-
 }
