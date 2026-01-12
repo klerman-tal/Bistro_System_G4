@@ -29,4 +29,5 @@ public enum Commands {
     REGISTER_SUBSCRIBER,
     UPDATE_SUBSCRIBER_DETAILS,
     GET_TIME_REPORT
+
 }

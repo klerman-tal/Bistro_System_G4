@@ -6,6 +6,7 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
+import network.ClientAPI;
 
 public class RegisterSubscriberPopupController {
 
@@ -18,37 +19,33 @@ public class RegisterSubscriberPopupController {
     @FXML private ComboBox<Enums.UserRole> roleCombo;
     @FXML private Label lblMessage;
 
-    // API for sending requests to server
-    private network.ClientAPI clientAPI;
+    private ClientAPI clientAPI;
+
+    // ===== REGEX =====
+    private static final String EMAIL_REGEX =
+            "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
+
+    // ===== STYLE =====
+    private static final String ERROR_STYLE =
+            "-fx-border-color: #e74c3c; -fx-border-width: 2;";
+    private static final String NORMAL_STYLE = "";
 
     /* =======================
        INITIALIZE
        ======================= */
-
     @FXML
     public void initialize() {
         hideMessage();
+        clearFieldStyles();
 
-        // 📌 תמיד לאפשר ComboBox
-        roleCombo.setDisable(false);
+        // ❗ חשוב: לא נוגעים כאן ב-roleCombo
+        // ההחלטה על roles נעשית רק ב-setPerformedByRole()
 
-        // 📌 תמיד להציג את כל ה-ROLEים
-        roleCombo.getItems().setAll(
-                Enums.UserRole.Subscriber,
-                Enums.UserRole.RestaurantAgent,
-                Enums.UserRole.RestaurantManager
-        );
-        roleCombo.getSelectionModel().selectFirst();
-
-        // Phone: digits only, max 10
+        // 📞 טלפון – רק ספרות, עד 10
         phoneField.textProperty().addListener((obs, oldV, newV) -> {
-            if (newV == null) return;
-
             if (!newV.matches("\\d*")) {
                 phoneField.setText(newV.replaceAll("[^\\d]", ""));
-                return;
             }
-
             if (newV.length() > 10) {
                 phoneField.setText(oldV);
             }
@@ -56,52 +53,65 @@ public class RegisterSubscriberPopupController {
     }
 
     /* =======================
-       SETTERS
+       SETTERS (חובה)
        ======================= */
-
-    public void setClientAPI(network.ClientAPI clientAPI) {
+    public void setClientAPI(ClientAPI clientAPI) {
         this.clientAPI = clientAPI;
+    }
+
+    /**
+     * נקרא מה-Controller שפותח את ה-Popup
+     */
+    public void setPerformedByRole(Enums.UserRole performedByRole) {
+
+        roleCombo.getItems().clear();
+
+        if (performedByRole == Enums.UserRole.RestaurantManager) {
+            roleCombo.getItems().setAll(
+                    Enums.UserRole.Subscriber,
+                    Enums.UserRole.RestaurantAgent,
+                    Enums.UserRole.RestaurantManager
+            );
+        } 
+        else if (performedByRole == Enums.UserRole.RestaurantAgent) {
+            roleCombo.getItems().setAll(
+                    Enums.UserRole.Subscriber
+            );
+        }
+
+        roleCombo.getSelectionModel().selectFirst();
     }
 
     /* =======================
        CREATE
        ======================= */
-
     @FXML
     private void handleCreate() {
         hideMessage();
+        clearFieldStyles();
 
         if (clientAPI == null) {
-            showMessage("Internal error: client API not initialized.");
+            showMessage("Internal error: client not initialized");
             return;
         }
 
-        String firstName = safeTrim(firstNameField.getText());
-        String lastName  = safeTrim(lastNameField.getText());
-        String username  = safeTrim(usernameField.getText());
-        String phone     = safeTrim(phoneField.getText());
-        String email     = safeTrim(emailField.getText());
+        String firstName = firstNameField.getText().trim();
+        String lastName  = lastNameField.getText().trim();
+        String username  = usernameField.getText().trim();
+        String phone     = phoneField.getText().trim();
+        String email     = emailField.getText().trim();
+        Enums.UserRole role = roleCombo.getValue();
 
-        Enums.UserRole selectedRole = roleCombo.getValue();
+        boolean valid = true;
 
-        if (firstName.isEmpty() || lastName.isEmpty()
-                || username.isEmpty() || phone.isEmpty() || email.isEmpty()) {
-            showMessage("Please fill in all fields.");
-            return;
-        }
+        if (firstName.isEmpty()) { markInvalid(firstNameField); valid = false; }
+        if (lastName.isEmpty())  { markInvalid(lastNameField);  valid = false; }
+        if (username.isEmpty())  { markInvalid(usernameField);  valid = false; }
+        if (!isValidPhone(phone)) { markInvalid(phoneField);    valid = false; }
+        if (!isValidEmail(email)) { markInvalid(emailField);    valid = false; }
 
-        if (selectedRole == null) {
-            showMessage("Please choose a role.");
-            return;
-        }
-
-        if (!email.contains("@") || !email.contains(".")) {
-            showMessage("Please enter a valid email address.");
-            return;
-        }
-
-        if (!phone.matches("\\d{9,10}")) {
-            showMessage("Phone number must be 9-10 digits.");
+        if (!valid) {
+            showMessage("Please correct the highlighted fields");
             return;
         }
 
@@ -112,14 +122,11 @@ public class RegisterSubscriberPopupController {
                     lastName,
                     phone,
                     email,
-                    selectedRole
+                    role
             );
-
-            // סגירת החלון אחרי שליחה
             closeWindow();
-
         } catch (Exception e) {
-            showMessage("Failed to send request to server.");
+            showMessage("Failed to send request");
         }
     }
 
@@ -129,8 +136,30 @@ public class RegisterSubscriberPopupController {
     }
 
     /* =======================
-       HELPERS
+       VALIDATION
        ======================= */
+    private boolean isValidEmail(String email) {
+        return email.matches(EMAIL_REGEX) && !email.contains("..");
+    }
+
+    private boolean isValidPhone(String phone) {
+        return phone.matches("\\d{10}");
+    }
+
+    /* =======================
+       UI HELPERS
+       ======================= */
+    private void markInvalid(TextField field) {
+        field.setStyle(ERROR_STYLE);
+    }
+
+    private void clearFieldStyles() {
+        firstNameField.setStyle(NORMAL_STYLE);
+        lastNameField.setStyle(NORMAL_STYLE);
+        usernameField.setStyle(NORMAL_STYLE);
+        phoneField.setStyle(NORMAL_STYLE);
+        emailField.setStyle(NORMAL_STYLE);
+    }
 
     private void closeWindow() {
         Stage stage = (Stage) firstNameField.getScene().getWindow();
@@ -144,12 +173,7 @@ public class RegisterSubscriberPopupController {
     }
 
     private void hideMessage() {
-        lblMessage.setText("");
         lblMessage.setVisible(false);
         lblMessage.setManaged(false);
-    }
-
-    private String safeTrim(String s) {
-        return s == null ? "" : s.trim();
     }
 }

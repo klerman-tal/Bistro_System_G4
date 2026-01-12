@@ -8,6 +8,7 @@ import logicControllers.UserController;
 import ocsf.server.ConnectionToClient;
 
 public class SubscriberLoginHandler implements RequestHandler {
+
     private final UserController userController;
 
     public SubscriberLoginHandler(UserController userController) {
@@ -15,19 +16,36 @@ public class SubscriberLoginHandler implements RequestHandler {
     }
 
     @Override
-    public void handle(RequestDTO request, ConnectionToClient client) throws Exception {
-        SubscriberLoginDTO loginData = (SubscriberLoginDTO) request.getData();
-        
-        // קריאה ללוגיקה הקיימת שלך ב-UserController
-        Subscriber subscriber = userController.loginSubscriber(
-            loginData.getSubscriberId(), 
-            loginData.getUsername()
-        );
+    public void handle(RequestDTO request, ConnectionToClient client) {
 
-        if (subscriber != null) {
-            client.sendToClient(new ResponseDTO(true, "Login successful", subscriber));
-        } else {
-            client.sendToClient(new ResponseDTO(false, "Invalid ID or Username", null));
+        Object dataObj = request.getData();
+        if (!(dataObj instanceof SubscriberLoginDTO loginData)) {
+            send(client, new ResponseDTO(false, "Invalid login data", null));
+            return;
+        }
+
+        Subscriber subscriber =
+                userController.loginSubscriber(
+                        loginData.getSubscriberId(),
+                        loginData.getUsername()
+                );
+
+        if (subscriber == null) {
+            send(client, new ResponseDTO(false, "Invalid ID or Username", null));
+            return;
+        }
+
+        // 🔥🔥🔥 זה הקו שהיה חסר – וזה שובר לך את ה-REGISTER 🔥🔥🔥
+        client.setInfo("user", subscriber);
+
+        send(client, new ResponseDTO(true, "Login successful", subscriber));
+    }
+
+    private void send(ConnectionToClient client, ResponseDTO res) {
+        try {
+            client.sendToClient(res);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }

@@ -8,6 +8,7 @@ import java.time.LocalTime;
 import application.ChatClient;
 import dto.CreateReservationDTO;
 import dto.JoinWaitingDTO;
+import dto.RegisterSubscriberDTO;
 import dto.RequestDTO;
 import dto.WaitingCodeDTO;
 import entities.Enums.UserRole;
@@ -203,5 +204,8 @@ public class ClientAPI {
         WaitingCodeDTO data = new WaitingCodeDTO(confirmationCode);
         RequestDTO req = new RequestDTO(Commands.CONFIRM_WAITING_ARRIVAL, data);
         client.sendToServer(req);
-    }
+    } 
+
+   
+
 }
