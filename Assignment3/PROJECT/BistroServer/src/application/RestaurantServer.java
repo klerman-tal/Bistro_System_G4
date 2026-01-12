@@ -104,7 +104,7 @@ public class RestaurantServer extends AbstractServer {
 			restaurantController = new RestaurantController(restaurantDB);
 			userController = new UserController(userDB);
 			reservationController = new ReservationController(reservationDB, this, restaurantController);
-			reportsController = new ReportsController(reservationDB, waitingDB);
+			reportsController = new ReportsController(reservationDB, waitingDB, userDB);
 
 			// ✅ NEW
 			waitingController = new WaitingController(waitingDB, this, restaurantController, reservationController);

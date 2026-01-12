@@ -23,6 +23,14 @@ import protocol.Commands;
 import java.time.YearMonth;
 import java.util.Map;
 
+/**
+ * SubscribersReportController
+ *
+ * Displays monthly subscribers-related reports:
+ * 1. Active vs Inactive subscribers
+ * 2. Waiting list activity per day
+ * 3. Subscribers reservations trend per day
+ */
 public class SubscribersReportController implements ClientResponseHandler {
 
     // ===== Root =====
@@ -67,7 +75,7 @@ public class SubscribersReportController implements ClientResponseHandler {
 
         chatClient.setResponseHandler(this);
 
-        // Always show last full month
+        // Always display the last full month
         reportMonth = YearMonth.now().minusMonths(1);
 
         requestSubscribersReport();
@@ -124,8 +132,10 @@ public class SubscribersReportController implements ClientResponseHandler {
                 new PieChart.Data("Inactive", inactive)
         );
 
-        lblActiveSubscribers.setText("Active Subscribers: " + active);
-        lblInactiveSubscribers.setText("Inactive Subscribers: " + inactive);
+        lblActiveSubscribers.setText(
+                "Active Subscribers: " + active);
+        lblInactiveSubscribers.setText(
+                "Inactive Subscribers: " + inactive);
     }
 
     // =====================
