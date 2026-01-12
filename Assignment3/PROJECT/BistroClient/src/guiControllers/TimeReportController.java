@@ -69,6 +69,7 @@ public class TimeReportController implements ClientResponseHandler {
     @FXML
     public void initialize() {
         arrivalPieChart.setLegendVisible(false);
+        timesChart.setLegendVisible(false);
     }
 
     public void setClient(User user, ChatClient chatClient) {
