@@ -30,4 +30,14 @@ public class OnlineUsersRegistry {
     public boolean isOnline(int userId) {
         return userIdToClient.containsKey(userId);
     }
+
+    /**
+     * Removes a client from registry (when disconnected).
+     */
+    public void removeClient(ConnectionToClient client) {
+        if (client == null) return;
+
+        // remove any userId that points to this client instance
+        userIdToClient.entrySet().removeIf(e -> e.getValue() == client);
+    }
 }

@@ -23,10 +23,13 @@ import entities.Enums;
 public class ReservationController {
 
     private final Reservation_DB_Controller db;
-    private final Notification_DB_Controller notificationDB; // ✅ NEW
+    private final Notification_DB_Controller notificationDB; // ✅ scheduled notifications
     private final Restaurant restaurant;
     private final RestaurantServer server;
     private final RestaurantController restaurantController;
+
+    // ✅ NEW: link to waiting logic for "table freed" scenario
+    private WaitingController waitingController;
 
     /**
      * Constructor: connects controller to DB layer, server logger, and restaurant availability logic.
@@ -40,6 +43,13 @@ public class ReservationController {
         this.server = server;
         this.restaurant = Restaurant.getInstance();
         this.restaurantController = rc;
+    }
+
+    /**
+     * ✅ NEW: connect waiting controller after construction (avoid circular constructor dependency).
+     */
+    public void setWaitingController(WaitingController waitingController) {
+        this.waitingController = waitingController;
     }
 
     // =====================================================
@@ -64,11 +74,9 @@ public class ReservationController {
                 return;
             }
 
-            // Full channel messages (can include code – this is the simulated SMS/Email content)
             String smsBody = "Reminder: Your reservation is in 2 hours. Confirmation code: " + confirmationCode;
             String emailBody = "Reminder: Your reservation is in 2 hours. Confirmation code: " + confirmationCode;
 
-            // SMS
             notificationDB.addNotification(new Notification(
                     userId,
                     Enums.Channel.SMS,
@@ -77,7 +85,6 @@ public class ReservationController {
                     scheduledFor
             ));
 
-            // EMAIL
             notificationDB.addNotification(new Notification(
                     userId,
                     Enums.Channel.EMAIL,
@@ -95,9 +102,6 @@ public class ReservationController {
     // AVAILABILITY HELPERS
     // =====================================================
 
-    /**
-     * Fills a list with available times for the given day (starting from fromTime).
-     */
     private void fillAvailableTimesForDay(
             LocalDate date,
             int guestsNumber,
@@ -132,9 +136,6 @@ public class ReservationController {
         }
     }
 
-    /**
-     * Attempts to reserve a table for 2 hours (4 slots of 30 minutes). Rolls back on failure.
-     */
     private boolean tryReserveForTwoHours(LocalDateTime start, int tableNumber) {
         ArrayList<LocalDateTime> locked = new ArrayList<>();
         LocalDateTime slot = start;
@@ -168,17 +169,50 @@ public class ReservationController {
     }
 
     // =====================================================
-    // CREATE / CANCEL RESERVATION
+    // TABLE FREED -> WAITING HOOK
     // =====================================================
 
     /**
-     * Creates a table reservation:
-     * - validates time window (1 hour ahead up to 1 month)
-     * - finds a suitable table
-     * - locks the table for 2 hours (4 slots)
-     * - inserts reservation into DB
-     * If not available, fills availableTimesOut and returns null.
+     * ✅ NEW: after cancel/finish releases a table, notify waiting list (scenario 2B).
      */
+    private void notifyWaitingTableFreed(Integer tableNumber) {
+        if (waitingController == null) return;
+        if (tableNumber == null) return;
+
+        try {
+            // Try to find the real table object from Restaurant cache (so we have correct seats_amount)
+            Table freed = null;
+
+            try {
+                // If your Restaurant singleton keeps tables in memory, use it
+                // (common in your project because you load tables into Restaurant cache).
+                for (Table t : restaurant.getTables()) {
+                    if (t != null && t.getTableNumber() == tableNumber) {
+                        freed = t;
+                        break;
+                    }
+                }
+            } catch (Exception ignore) {}
+
+            // Fallback: minimal table (won't crash, but seats may be missing if cache isn't loaded)
+            if (freed == null) {
+                freed = new Table();
+                freed.setTableNumber(tableNumber);
+                // IMPORTANT: if you reach here and seats_amount is needed, ensure Restaurant cache is loaded.
+                freed.setSeatsAmount(Integer.MAX_VALUE);
+            }
+
+            waitingController.handleTableFreed(freed);
+
+        } catch (Exception e) {
+            server.log("ERROR: notifyWaitingTableFreed failed. Table=" + tableNumber + ", Msg=" + e.getMessage());
+        }
+    }
+
+    // =====================================================
+    // CREATE / CANCEL RESERVATION
+    // =====================================================
+
     public Reservation CreateTableReservation(
             CreateReservationDTO dto,
             ArrayList<LocalTime> availableTimesOut) {
@@ -239,7 +273,7 @@ public class ReservationController {
             }
             res.setReservationId(reservationId);
 
-            // ✅ NEW: schedule reminder 2 hours before
+            // ✅ schedule reminder 2 hours before
             scheduleReservationReminder2HoursBefore(dto.getUserId(), requested, res.getConfirmationCode());
 
         } catch (SQLException e) {
@@ -251,10 +285,6 @@ public class ReservationController {
         return res;
     }
 
-    /**
-     * ✅ NEW (for Waiting flow):
-     * Creates a reservation using an EXISTING confirmation code (from Waiting).
-     */
     public boolean createReservationFromWaiting(
             String confirmationCode,
             LocalDateTime start,
@@ -283,7 +313,6 @@ public class ReservationController {
                 return false;
             }
 
-            // ✅ NEW: schedule reminder 2 hours before (only if still relevant)
             scheduleReservationReminder2HoursBefore(user.getUserId(), start, confirmationCode.trim());
 
             server.log("Reservation created from waiting. Code=" + confirmationCode +
@@ -298,9 +327,6 @@ public class ReservationController {
         }
     }
 
-    /**
-     * Cancels (deactivates) a reservation by confirmation code.
-     */
     public boolean CancelReservation(String confirmationCode) {
 
         try {
@@ -318,6 +344,7 @@ public class ReservationController {
                 return false;
             }
 
+            // 1) release 2 hours (4 slots)
             for (int i = 0; i < 4; i++) {
                 try { restaurantController.releaseSlot(start.plusMinutes(30L * i), tableNum); }
                 catch (Exception e) {
@@ -326,10 +353,15 @@ public class ReservationController {
                 }
             }
 
+            // 2) update DB
             boolean cancelled = db.cancelReservationByConfirmationCode(confirmationCode);
 
             if (cancelled) {
                 server.log("Reservation canceled. Code=" + confirmationCode);
+
+                // ✅ NEW: after cancel -> try to notify waiting list
+                notifyWaitingTableFreed(tableNum);
+
                 return true;
             }
 
@@ -342,9 +374,6 @@ public class ReservationController {
         }
     }
 
-    /**
-     * Helper: release table slots if DB insert failed.
-     */
     private void rollbackReservation(LocalDateTime requested, int tableNumber) {
         server.log("Rolling back: releasing 2 hours (4 slots) for table " + tableNumber);
         for (int i = 0; i < 4; i++) {
@@ -493,6 +522,7 @@ public class ReservationController {
                 return false;
             }
 
+            // 1) Release 2 hours (4 slots)
             for (int i = 0; i < 4; i++) {
                 LocalDateTime slot = start.plusMinutes(30L * i);
                 try {
@@ -503,11 +533,16 @@ public class ReservationController {
                 }
             }
 
+            // 2) Update DB: Finished + checkout + inactive
             LocalDateTime checkoutTime = LocalDateTime.now();
             boolean finished = db.finishReservationByConfirmationCode(confirmationCode, checkoutTime);
 
             if (finished) {
                 server.log("Reservation finished. Code=" + confirmationCode + ", Checkout=" + checkoutTime);
+
+                // ✅ NEW: after payment/finish -> try to notify waiting list
+                notifyWaitingTableFreed(tableNum);
+
                 return true;
             }
 
@@ -519,6 +554,8 @@ public class ReservationController {
             return false;
         }
     }
+
+    // ========= recovery helpers (kept as-is) =========
 
     public Reservation findGuestReservationByContactAndTime(
             String phone,
@@ -617,7 +654,6 @@ public class ReservationController {
 
             res.setReservationId(reservationId);
 
-            // ✅ NEW: schedule reminder 2 hours before (only if still relevant)
             scheduleReservationReminder2HoursBefore(user.getUserId(), start, confirmationCode);
 
             return res;
