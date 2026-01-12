@@ -26,7 +26,6 @@ import java.time.format.DateTimeFormatter;
 
 /**
  * Controller for displaying monthly time reports.
- * Handles arrival status statistics and stay duration analytics.
  */
 public class TimeReportController implements ClientResponseHandler {
 
@@ -67,32 +66,24 @@ public class TimeReportController implements ClientResponseHandler {
     private User user;
     private YearMonth reportMonth;
 
-    /**
-     * JavaFX initialization hook.
-     * Disables legend for the pie chart.
-     */
     @FXML
     public void initialize() {
         arrivalPieChart.setLegendVisible(false);
     }
 
-    /**
-     * Initializes controller with user and active chat client.
-     * Automatically requests last month's time report.
-     */
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
         this.chatClient.setResponseHandler(this);
 
         reportMonth = YearMonth.now().minusMonths(1);
-        updateSummaryTexts();
+
+        updateArrivalSummary();
+        updateStaySummary();
+
         requestTimeReport(reportMonth.getYear(), reportMonth.getMonthValue());
     }
 
-    /**
-     * Sends time report request to the server.
-     */
     private void requestTimeReport(int year, int month) {
         TimeReportDTO dto = new TimeReportDTO();
         dto.setYear(year);
@@ -107,9 +98,6 @@ public class TimeReportController implements ClientResponseHandler {
         }
     }
 
-    /**
-     * Handles server responses related to time reports.
-     */
     @Override
     public void handleResponse(ResponseDTO response) {
         if (response == null || !response.isSuccess()) return;
@@ -124,44 +112,44 @@ public class TimeReportController implements ClientResponseHandler {
     }
 
     /* =======================
-       Summary text
+       Arrival summary
        ======================= */
+    private void updateArrivalSummary() {
 
-    /**
-     * Updates summary titles and descriptive text for both sections.
-     */
-    private void updateSummaryTexts() {
-
-        DateTimeFormatter monthFmt =
+        DateTimeFormatter fmt =
                 DateTimeFormatter.ofPattern("MMMM yyyy");
-        DateTimeFormatter dateFmt =
-                DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-        YearMonth nextReportMonth = reportMonth.plusMonths(1);
-        String publishDate = nextReportMonth.plusMonths(1)
-                .atDay(1)
-                .format(dateFmt);
+        lblSummaryTitle.setText(
+                "Arrival Status: " + reportMonth.format(fmt)
+        );
 
-        String text =
-                "This report presents data for " +
-                reportMonth.format(monthFmt) + ".\n" +
-                "The " + nextReportMonth.format(monthFmt) +
-                " report will be available starting " + publishDate + ".";
-
-        lblSummaryTitle.setText("Summary: " + reportMonth.format(monthFmt));
-        txtSummaryText.setText(text);
-
-        lblStaySummaryTitle.setText("Summary: " + reportMonth.format(monthFmt));
-        txtStaySummaryText.setText(text);
+        txtSummaryText.setText(
+                "Displays the distribution of customer arrival times, " +
+                "showing on-time arrivals and delays."
+        );
     }
 
     /* =======================
-       Arrival status section
+       Stay summary
        ======================= */
+    private void updateStaySummary() {
 
-    /**
-     * Draws arrival status pie chart and labels.
-     */
+        DateTimeFormatter fmt =
+                DateTimeFormatter.ofPattern("MMMM yyyy");
+
+        lblStaySummaryTitle.setText(
+                "Stay Duration: " + reportMonth.format(fmt)
+        );
+
+        txtStaySummaryText.setText(
+                "Shows the average customer stay duration per day " +
+                "for the selected month."
+        );
+    }
+
+    /* =======================
+       Arrival status
+       ======================= */
     private void drawArrivalStatus(TimeReportDTO dto) {
 
         int onTime = dto.getOnTimeCount();
@@ -176,29 +164,24 @@ public class TimeReportController implements ClientResponseHandler {
         );
 
         lblOnTime.setText("● On Time (< 3 min): " + onTime + " (" + percent(onTime, total) + ")");
-        lblMinorDelay.setText("● Minor Delay (3-14 min): " + minor + " (" + percent(minor, total) + ")");
+        lblMinorDelay.setText("● Minor Delay (3–14 min): " + minor + " (" + percent(minor, total) + ")");
         lblMajorDelay.setText("● Significant Delay (≥ 15 min): " + major + " (" + percent(major, total) + ")");
     }
 
-    /**
-     * Calculates percentage string.
-     */
     private String percent(int value, int total) {
         if (total == 0) return "0%";
         return String.format("%.1f%%", (value * 100.0) / total);
     }
 
     /* =======================
-       Stay duration section
+       Stay duration
        ======================= */
-
-    /**
-     * Draws average stay duration per day bar chart.
-     */
     private void drawStayDuration(TimeReportDTO dto) {
 
         timesChart.getData().clear();
-        XYChart.Series<String, Number> series = new XYChart.Series<>();
+
+        XYChart.Series<String, Number> series =
+                new XYChart.Series<>();
         series.setName("Average Stay (minutes)");
 
         int days = reportMonth.lengthOfMonth();
@@ -220,9 +203,9 @@ public class TimeReportController implements ClientResponseHandler {
                 + " (" + dto.getMinAvgMinutes() + " min)");
     }
 
-    /**
-     * Returns to reports menu screen.
-     */
+    /* =======================
+       Navigation
+       ======================= */
     @FXML
     private void onBackClicked() {
         try {
@@ -232,10 +215,12 @@ public class TimeReportController implements ClientResponseHandler {
                     new FXMLLoader(getClass().getResource("/gui/ReportsMenu.fxml"));
             Parent root = loader.load();
 
-            ReportsMenuController controller = loader.getController();
+            ReportsMenuController controller =
+                    loader.getController();
             controller.setClient(user, chatClient);
 
-            Stage stage = (Stage) rootPane.getScene().getWindow();
+            Stage stage =
+                    (Stage) rootPane.getScene().getWindow();
             stage.setScene(new Scene(root));
             stage.show();
 

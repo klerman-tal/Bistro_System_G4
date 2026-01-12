@@ -1,146 +1,187 @@
 package logicControllers;
 
 import dbControllers.Reservation_DB_Controller;
-import entities.Reservation;
+import dbControllers.Waiting_DB_Controller;
+import dbControllers.User_DB_Controller;
+
+import dto.SubscribersReportDTO;
 import dto.TimeReportDTO;
+import entities.Enums.UserRole;
+import entities.Reservation;
 
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.*;
 
+/**
+ * ReportsController
+ *
+ * Responsible for building all monthly reports: - Time Report - Subscribers
+ * Report
+ *
+ * Data is aggregated directly from DB controllers.
+ */
 public class ReportsController {
 
-    private final Reservation_DB_Controller reservationDB;
+	private final Reservation_DB_Controller reservationDB;
+	private final Waiting_DB_Controller waitingDB;
+	private final User_DB_Controller userDB;
 
-    public ReportsController(Reservation_DB_Controller reservationDB) {
-        this.reservationDB = reservationDB;
-    }
+	public ReportsController(Reservation_DB_Controller reservationDB, Waiting_DB_Controller waitingDB,
+			User_DB_Controller userDB) {
+		this.reservationDB = reservationDB;
+		this.waitingDB = waitingDB;
+		this.userDB = userDB;
+	}
 
-    /**
-     * Builds Time Report for a given month.
-     * @param year  e.g. 2025
-     * @param month 1-12
-     */
-    public TimeReportDTO buildTimeReport(int year, int month) throws SQLException {
+	// =====================================================
+	// TIME REPORT
+	// =====================================================
 
-        ArrayList<Reservation> finished =
-                reservationDB.getFinishedReservationsByMonth(year, month);
+	/**
+	 * Builds Time Report for a given month.
+	 *
+	 * @param year  report year (e.g. 2025)
+	 * @param month report month (1–12)
+	 */
+	public TimeReportDTO buildTimeReport(int year, int month) throws SQLException {
 
-        TimeReportDTO dto = new TimeReportDTO();
+		ArrayList<Reservation> finished = reservationDB.getFinishedReservationsByMonth(year, month);
 
-        // =====================================================
-        // TAB 1: Arrival Status
-        // =====================================================
+		TimeReportDTO dto = new TimeReportDTO();
 
-        int onTime = 0;
-        int minorDelay = 0;
-        int significantDelay = 0;
+		// ================= TAB 1: Arrival Status =================
 
-        for (Reservation r : finished) {
+		int onTime = 0;
+		int minorDelay = 0;
+		int significantDelay = 0;
 
-            if (r.getReservationTime() == null || r.getCheckinTime() == null) {
-                continue;
-            }
+		for (Reservation r : finished) {
 
-            long delayMinutes =
-                    Duration.between(
-                            r.getReservationTime(),
-                            r.getCheckinTime()
-                    ).toMinutes();
+			if (r.getReservationTime() == null || r.getCheckinTime() == null)
+				continue;
 
-            if (delayMinutes < 3) {
-                onTime++;
-            }
-            else if (delayMinutes <= 15) {
-                minorDelay++;
-            }
-            else {
-                significantDelay++;
-            }
-        }
+			long delayMinutes = Duration.between(r.getReservationTime(), r.getCheckinTime()).toMinutes();
 
-        dto.setOnTimeCount(onTime);
-        dto.setMinorDelayCount(minorDelay);
-        dto.setSignificantDelayCount(significantDelay);
+			if (delayMinutes < 3) {
+				onTime++;
+			} else if (delayMinutes <= 15) {
+				minorDelay++;
+			} else {
+				significantDelay++;
+			}
+		}
 
-        // =====================================================
-        // TAB 2: Stay Duration
-        // =====================================================
+		dto.setOnTimeCount(onTime);
+		dto.setMinorDelayCount(minorDelay);
+		dto.setSignificantDelayCount(significantDelay);
 
-        // day -> list of stay minutes
-        Map<Integer, List<Integer>> stayByDay = new HashMap<>();
+		// ================= TAB 2: Stay Duration =================
 
-        for (Reservation r : finished) {
+		Map<Integer, List<Integer>> stayByDay = new HashMap<>();
 
-            if (r.getCheckinTime() == null || r.getCheckoutTime() == null) {
-                continue;
-            }
+		for (Reservation r : finished) {
 
-            long stayMinutes =
-                    Duration.between(
-                            r.getCheckinTime(),
-                            r.getCheckoutTime()
-                    ).toMinutes();
+			if (r.getCheckinTime() == null || r.getCheckoutTime() == null)
+				continue;
 
-            if (stayMinutes <= 0) {
-                continue;
-            }
+			long stayMinutes = Duration.between(r.getCheckinTime(), r.getCheckoutTime()).toMinutes();
 
-            int day = r.getReservationTime().getDayOfMonth();
+			if (stayMinutes <= 0)
+				continue;
 
-            stayByDay
-                .computeIfAbsent(day, d -> new ArrayList<>())
-                .add((int) stayMinutes);
-        }
+			int day = r.getReservationTime().getDayOfMonth();
 
-        // ===== Calculate averages per day =====
-        Map<Integer, Integer> avgStayPerDay = new TreeMap<>();
+			stayByDay.computeIfAbsent(day, d -> new ArrayList<>()).add((int) stayMinutes);
+		}
 
-        int monthlySum = 0;
-        int daysCount = 0;
+		Map<Integer, Integer> avgStayPerDay = new TreeMap<>();
 
-        int maxAvg = Integer.MIN_VALUE;
-        int minAvg = Integer.MAX_VALUE;
-        int maxDay = -1;
-        int minDay = -1;
+		int monthlySum = 0;
+		int daysCount = 0;
 
-        for (Map.Entry<Integer, List<Integer>> entry : stayByDay.entrySet()) {
+		int maxAvg = Integer.MIN_VALUE;
+		int minAvg = Integer.MAX_VALUE;
+		int maxDay = -1;
+		int minDay = -1;
 
-            int day = entry.getKey();
-            List<Integer> stays = entry.getValue();
+		for (Map.Entry<Integer, List<Integer>> entry : stayByDay.entrySet()) {
 
-            int avg =
-                    (int) stays.stream()
-                               .mapToInt(x -> x)
-                               .average()
-                               .orElse(0);
+			int day = entry.getKey();
+			List<Integer> stays = entry.getValue();
 
-            avgStayPerDay.put(day, avg);
+			int avg = (int) stays.stream().mapToInt(x -> x).average().orElse(0);
 
-            monthlySum += avg;
-            daysCount++;
+			avgStayPerDay.put(day, avg);
 
-            if (avg > maxAvg) {
-                maxAvg = avg;
-                maxDay = day;
-            }
+			monthlySum += avg;
+			daysCount++;
 
-            if (avg < minAvg) {
-                minAvg = avg;
-                minDay = day;
-            }
-        }
+			if (avg > maxAvg) {
+				maxAvg = avg;
+				maxDay = day;
+			}
 
-        dto.setAvgStayMinutesPerDay(avgStayPerDay);
+			if (avg < minAvg) {
+				minAvg = avg;
+				minDay = day;
+			}
+		}
 
-        if (daysCount > 0) {
-            dto.setMonthlyAvgStay(monthlySum / daysCount);
-            dto.setMaxAvgDay(maxDay);
-            dto.setMaxAvgMinutes(maxAvg);
-            dto.setMinAvgDay(minDay);
-            dto.setMinAvgMinutes(minAvg);
-        }
+		dto.setAvgStayMinutesPerDay(avgStayPerDay);
 
-        return dto;
-    }
+		if (daysCount > 0) {
+			dto.setMonthlyAvgStay(monthlySum / daysCount);
+			dto.setMaxAvgDay(maxDay);
+			dto.setMaxAvgMinutes(maxAvg);
+			dto.setMinAvgDay(minDay);
+			dto.setMinAvgMinutes(minAvg);
+		}
+
+		return dto;
+	}
+
+	// =====================================================
+	// SUBSCRIBERS REPORT
+	// =====================================================
+
+	/**
+	 * Builds Subscribers Report for a given month.
+	 *
+	 * Subscribers are identified by: created_by_role = Subscriber
+	 */
+	public SubscribersReportDTO buildSubscribersReport(int year, int month) throws SQLException {
+
+		SubscribersReportDTO dto = new SubscribersReportDTO();
+		dto.setYear(year);
+		dto.setMonth(month);
+
+		// ================= TAB 1: Active / Inactive Subscribers =================
+
+		// TAB 1: Active / Inactive Subscribers (MONTHLY)
+		int activeSubscribers = userDB.countActiveSubscribersInMonth(year, month);
+
+		int inactiveSubscribers = userDB.countInactiveSubscribersInMonth(year, month);
+
+		dto.setActiveSubscribersCount(activeSubscribers);
+		dto.setInactiveSubscribersCount(inactiveSubscribers);
+
+		dto.setActiveSubscribersCount(activeSubscribers);
+		dto.setInactiveSubscribersCount(inactiveSubscribers);
+
+		// ================= TAB 2: Waiting List Activity =================
+
+		Map<Integer, Integer> waitingPerDay = waitingDB.getWaitingCountPerDayByRole(UserRole.Subscriber, year, month);
+
+		dto.setWaitingListPerDay(waitingPerDay);
+
+		// ================= TAB 3: Reservations Trend =================
+
+		Map<Integer, Integer> reservationsPerDay = reservationDB.getReservationsCountPerDayByRole(UserRole.Subscriber,
+				year, month);
+
+		dto.setReservationsPerDay(reservationsPerDay);
+
+		return dto;
+	}
 }

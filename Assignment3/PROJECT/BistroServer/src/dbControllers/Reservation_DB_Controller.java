@@ -3,6 +3,8 @@ package dbControllers;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import entities.Enums;
 import entities.Enums.ReservationStatus;
@@ -630,6 +632,45 @@ public class Reservation_DB_Controller {
         return null;
     }
 
+ // =====================================================
+ // REPORTS – SUBSCRIBERS
+ // =====================================================
+
+ /**
+  * Returns number of reservations per day for a given role.
+  * Used for reservations trend chart.
+  */
+ public Map<Integer, Integer> getReservationsCountPerDayByRole(
+         Enums.UserRole role, int year, int month) throws SQLException {
+
+     String sql = """
+         SELECT DAY(reservation_datetime) AS day, COUNT(*) AS cnt
+         FROM reservations
+         WHERE created_by_role = ?
+           AND YEAR(reservation_datetime) = ?
+           AND MONTH(reservation_datetime) = ?
+         GROUP BY DAY(reservation_datetime)
+         ORDER BY day;
+         """;
+
+     Map<Integer, Integer> map = new HashMap<>();
+
+     try (PreparedStatement ps = conn.prepareStatement(sql)) {
+         ps.setString(1, role.name());
+         ps.setInt(2, year);
+         ps.setInt(3, month);
+
+         try (ResultSet rs = ps.executeQuery()) {
+             while (rs.next()) {
+                 map.put(
+                         rs.getInt("day"),
+                         rs.getInt("cnt")
+                 );
+             }
+         }
+     }
+     return map;
+ }
 
 
 }

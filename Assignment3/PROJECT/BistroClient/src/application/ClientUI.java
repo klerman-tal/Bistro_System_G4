@@ -28,7 +28,7 @@ public class ClientUI extends Application implements ChatIF, ClientActions {
     @Override 
     public void start(Stage primaryStage) throws Exception {
         TextInputDialog dialog = new TextInputDialog("localhost");
-        dialog.setTitle("Server IP Required");10.
+        dialog.setTitle("Server IP Required");
         dialog.setHeaderText("Enter Bistro server IP");
         dialog.setContentText("Server IP:");
 

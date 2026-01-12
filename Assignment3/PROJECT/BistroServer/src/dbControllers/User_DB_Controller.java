@@ -453,4 +453,61 @@ public class User_DB_Controller {
             return false;
         }
     }
+    
+    /**
+     * Counts subscribers that made at least one reservation
+     * in the given year/month.
+     */
+    public int countActiveSubscribersInMonth(int year, int month)
+            throws SQLException {
+
+        String sql = """
+            SELECT COUNT(DISTINCT r.created_by)
+            FROM reservations r
+            WHERE r.created_by_role = 'Subscriber'
+              AND YEAR(r.reservation_datetime) = ?
+              AND MONTH(r.reservation_datetime) = ?;
+            """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, year);
+            ps.setInt(2, month);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Counts subscribers that did NOT make any reservation
+     * in the given year/month.
+     */
+    public int countInactiveSubscribersInMonth(int year, int month)
+            throws SQLException {
+
+        String sql = """
+            SELECT COUNT(*)
+            FROM subscribers s
+            WHERE s.subscriber_id NOT IN (
+                SELECT DISTINCT r.created_by
+                FROM reservations r
+                WHERE r.created_by_role = 'Subscriber'
+                  AND YEAR(r.reservation_datetime) = ?
+                  AND MONTH(r.reservation_datetime) = ?
+            );
+            """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, year);
+            ps.setInt(2, month);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        }
+        return 0;
+    }
+
 }
