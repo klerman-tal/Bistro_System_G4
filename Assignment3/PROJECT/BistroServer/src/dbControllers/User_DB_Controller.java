@@ -44,7 +44,7 @@ public class User_DB_Controller {
 
         String sql = "CREATE TABLE IF NOT EXISTS SUBSCRIBERS (" +
                      "subscriber_id INT PRIMARY KEY, " +
-                     "username VARCHAR(50) NOT NULL UNIQUE, " +
+                     "username VARCHAR(50) NOT NULL, " +
                      "first_name VARCHAR(50), " +
                      "last_name VARCHAR(50), " +
                      "phone VARCHAR(15), " +
@@ -509,5 +509,26 @@ public class User_DB_Controller {
         }
         return 0;
     }
+    
+    public int getMaxUserIdFromGuestsAndSubscribers() throws SQLException {
+        String sql = """
+            SELECT 
+                GREATEST(
+                    COALESCE((SELECT MAX(guest_id) FROM guests), 0),
+                    COALESCE((SELECT MAX(subscriber_id) FROM subscribers), 0)
+                ) AS max_id
+            """;
+
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            if (rs.next()) {
+                return rs.getInt("max_id");
+            }
+
+            return 0; // אם משום מה לא חזר כלום
+        }
+    }
+
 
 }

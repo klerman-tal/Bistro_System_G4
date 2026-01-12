@@ -18,22 +18,19 @@ public class RegisterSubscriberHandler implements RequestHandler {
     @Override
     public void handle(RequestDTO request, ConnectionToClient client) {
 
-        // 1️⃣ בדיקת DTO נכון
         Object dataObj = request.getData();
         if (!(dataObj instanceof RegisterSubscriberDTO dto)) {
             send(client, new ResponseDTO(false, "Invalid register data", null));
             return;
         }
 
-        // 2️⃣ מי מבצע את הפעולה (Agent / Manager)
         Object performerObj = client.getInfo("user");
         if (!(performerObj instanceof Subscriber performedBy)) {
             send(client, new ResponseDTO(false, "Unauthorized", null));
             return;
         }
 
-        // 3️⃣ קריאה נכונה ל־UserController
-        Subscriber created =
+        int createdId =
                 userController.registerSubscriber(
                         dto.getUsername(),
                         dto.getFirstName(),
@@ -44,21 +41,13 @@ public class RegisterSubscriberHandler implements RequestHandler {
                         performedBy
                 );
 
-        if (created == null) {
-            send(client, new ResponseDTO(
-                    false,
-                    "Permission denied or invalid data",
-                    null
-            ));
+        if (createdId == -1) {
+            send(client, new ResponseDTO(false, "Subscriber was not created: permission denied or invalid data", null));
             return;
         }
 
-        // 4️⃣ הצלחה
-        send(client, new ResponseDTO(
-                true,
-                "User created successfully",
-                created
-        ));
+        // ✅ מחזירים רק את ה-ID (Integer) כדי שמסך Manage יוכל להציג הודעה
+        send(client, new ResponseDTO(true, "Subscriber created successfully", createdId));
     }
 
     private void send(ConnectionToClient client, ResponseDTO res) {
