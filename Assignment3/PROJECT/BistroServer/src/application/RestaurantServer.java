@@ -8,12 +8,16 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import dbControllers.DBController;
+import dbControllers.Notification_DB_Controller;
 import dbControllers.Reservation_DB_Controller;
 import dbControllers.Restaurant_DB_Controller;
 import dbControllers.User_DB_Controller;
 import dbControllers.Waiting_DB_Controller;
 import dto.RequestDTO;
 import javafx.application.Platform;
+import logicControllers.NotificationDispatcher;
+import logicControllers.NotificationSchedulerService;
+import logicControllers.OnlineUsersRegistry;
 import logicControllers.ReservationController;
 import logicControllers.RestaurantController;
 import logicControllers.UserController;
@@ -30,17 +34,26 @@ public class RestaurantServer extends AbstractServer {
 
     private DBController conn;
 
+    // ===== DB Controllers =====
     private Restaurant_DB_Controller restaurantDB;
     private Reservation_DB_Controller reservationDB;
     private User_DB_Controller userDB;
     private Waiting_DB_Controller waitingDB;
+    private Notification_DB_Controller notificationDB;
 
+    // ===== Logic Controllers =====
     private RestaurantController restaurantController;
     private ReservationController reservationController;
     private UserController userController;
     private WaitingController waitingController;
     private ReportsController reportsController;
 
+    // ===== Notifications runtime =====
+    private OnlineUsersRegistry onlineUsersRegistry;
+    private NotificationDispatcher notificationDispatcher;
+    private NotificationSchedulerService notificationScheduler;
+
+    // ===== Schedulers =====
     private ScheduledExecutorService waitingScheduler;
     private final ScheduledExecutorService idleScheduler =
             Executors.newSingleThreadScheduledExecutor();
@@ -56,7 +69,9 @@ public class RestaurantServer extends AbstractServer {
     }
 
     public void log(String msg) {
+        // אם את רוצה בלי console בכלל - תמחקי את השורה הזו:
         System.out.println(msg);
+
         if (uiController != null) {
             Platform.runLater(() -> uiController.addLog(msg));
         }
@@ -99,6 +114,7 @@ public class RestaurantServer extends AbstractServer {
             reservationDB = new Reservation_DB_Controller(sqlConn);
             userDB = new User_DB_Controller(sqlConn);
             waitingDB = new Waiting_DB_Controller(sqlConn);
+            notificationDB = new Notification_DB_Controller(sqlConn);
 
             log("⚙️ Ensuring all database tables exist...");
             userDB.createSubscribersTable();
@@ -107,18 +123,21 @@ public class RestaurantServer extends AbstractServer {
             restaurantDB.createOpeningHoursTable();
             reservationDB.createReservationsTable();
             waitingDB.createWaitingListTable();
+            notificationDB.createNotificationsTable();
             log("✅ Database schema ensured.");
 
             // ===== Logic Controllers =====
             restaurantController = new RestaurantController(restaurantDB);
             userController = new UserController(userDB);
+
             reservationController =
-                    new ReservationController(reservationDB, this, restaurantController);
+                    new ReservationController(reservationDB, notificationDB, this, restaurantController);
 
             waitingController =
-                    new WaitingController(waitingDB, this, restaurantController, reservationController);
+                    new WaitingController(waitingDB, notificationDB, this, restaurantController, reservationController);
 
-            // ⭐ REPORTS CONTROLLER (Time + Subscribers)
+            reservationController.setWaitingController(waitingController);
+
             reportsController =
                     new ReportsController(reservationDB, waitingDB, userDB);
 
@@ -133,6 +152,12 @@ public class RestaurantServer extends AbstractServer {
                     log("Waiting scheduler error: " + e.getMessage());
                 }
             }, 10, 10, TimeUnit.SECONDS);
+
+            // ✅ Notifications runtime (ONLINE USERS + DISPATCHER + SCHEDULER)
+            onlineUsersRegistry = new OnlineUsersRegistry();
+            notificationDispatcher = new NotificationDispatcher(onlineUsersRegistry, this::log);
+            notificationScheduler = new NotificationSchedulerService(notificationDB, notificationDispatcher, this::log);
+            notificationScheduler.start();
 
             registerHandlers();
 
@@ -184,10 +209,10 @@ public class RestaurantServer extends AbstractServer {
 
         // ===== Users =====
         router.register(Commands.SUBSCRIBER_LOGIN,
-                new SubscriberLoginHandler(userController));
+        		new SubscriberLoginHandler(userController, onlineUsersRegistry));
 
         router.register(Commands.GUEST_LOGIN,
-                new GuestLoginHandler(userController));
+        		new GuestLoginHandler(userController, onlineUsersRegistry));
 
         router.register(Commands.REGISTER_SUBSCRIBER,
                 new RegisterSubscriberHandler(userController));
@@ -199,7 +224,12 @@ public class RestaurantServer extends AbstractServer {
                 new RecoverSubscriberCodeHandler(userController));
 
         router.register(Commands.RECOVER_GUEST_CONFIRMATION_CODE,
-                new RecoverGuestConfirmationCodeHandler(reservationController, userController));
+                new RecoverGuestConfirmationCodeHandler(
+                        reservationController,
+                        userController,
+                        notificationDB,
+                        this::log
+                ));
 
         // ===== Waiting List =====
         router.register(Commands.JOIN_WAITING_LIST,
@@ -214,7 +244,7 @@ public class RestaurantServer extends AbstractServer {
         router.register(Commands.CONFIRM_WAITING_ARRIVAL,
                 new ConfirmWaitingArrivalHandler(waitingController));
 
-        // ===== REPORTS =====
+        // ===== Reports =====
         router.register(Commands.GET_TIME_REPORT,
                 new GetTimeReportHandler(reportsController));
 
@@ -253,11 +283,17 @@ public class RestaurantServer extends AbstractServer {
     @Override
     protected void serverStopped() {
         idleScheduler.shutdownNow();
+
         if (waitingScheduler != null)
             waitingScheduler.shutdownNow();
+
+        if (notificationScheduler != null)
+            notificationScheduler.stop();
+
         log("Server stopped.");
     }
 
+    // ================= Clients =================
     @Override
     protected synchronized void clientConnected(ConnectionToClient client) {
         touchActivity();
@@ -265,6 +301,21 @@ public class RestaurantServer extends AbstractServer {
                 ? client.getInetAddress().getHostAddress()
                 : "UNKNOWN";
         log("Client connected | IP: " + ip);
+
+        // NOTE:
+        // כדי ש-SMS popup יעבוד, OnlineUsersRegistry חייב לדעת איזה userId מחובר על איזה client.
+        // את הרישום בפועל עושים בדרך כלל בזמן LOGIN (SubscriberLoginHandler / GuestLoginHandler)
+        // כי רק שם יודעים את ה-userId.
+    }
+
+    @Override
+    protected synchronized void clientDisconnected(ConnectionToClient client) {
+        touchActivity();
+        onlineUsersRegistry.removeClient(client);
+        log("Client disconnected.");
+
+        // Optional: אם ה-OnlineUsersRegistry שלך תומך בזה:
+        // onlineUsersRegistry.removeClient(client);
     }
 
     // ================= Idle Watchdog =================
@@ -298,6 +349,10 @@ public class RestaurantServer extends AbstractServer {
         try { stopListening(); } catch (Exception ignored) {}
         try { close(); } catch (Exception ignored) {}
         idleScheduler.shutdownNow();
+
+        if (notificationScheduler != null)
+            notificationScheduler.stop();
+
         if (onAutoShutdown != null) {
             try { onAutoShutdown.run(); } catch (Exception ignored) {}
         }

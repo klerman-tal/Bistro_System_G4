@@ -36,5 +36,16 @@ public class Enums {
 	    Cancelled
 	}
 
+	public enum Channel {
+        SMS,
+        EMAIL
+    }
+
+    public enum NotificationType {
+        RESERVATION_REMINDER_2H,
+        TABLE_AVAILABLE,
+        RESEND_CONFIRMATION_CODE,
+        BILL_AFTER_2H_FROM_CHECKIN
+    }
 
 }

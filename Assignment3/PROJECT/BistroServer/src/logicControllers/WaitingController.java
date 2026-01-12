@@ -4,16 +4,20 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 
 import application.RestaurantServer;
+import dbControllers.Notification_DB_Controller;
 import dbControllers.Waiting_DB_Controller;
+import entities.Enums;
 import entities.Enums.UserRole;
 import entities.Enums.WaitingStatus;
 import entities.Table;
 import entities.User;
 import entities.Waiting;
+import entities.Notification;
 
 public class WaitingController {
 
     private final Waiting_DB_Controller db;
+    private final Notification_DB_Controller notificationDB; // ✅ NEW
     private final RestaurantServer server;
 
     private final RestaurantController restaurantController;
@@ -21,11 +25,13 @@ public class WaitingController {
 
     public WaitingController(
             Waiting_DB_Controller db,
+            Notification_DB_Controller notificationDB,
             RestaurantServer server,
             RestaurantController restaurantController,
             ReservationController reservationController
     ) {
         this.db = db;
+        this.notificationDB = notificationDB;
         this.server = server;
         this.restaurantController = restaurantController;
         this.reservationController = reservationController;
@@ -114,15 +120,6 @@ public class WaitingController {
         }
     }
 
-    /**
-     * Confirm arrival (scenario 2C):
-     * - must be Waiting
-     * - must have table_freed_time + table_number
-     * - must be within 15 minutes
-     * - creates reservation NOW based on the freed time slot (rounded)
-     * - locks 2 hours (4 slots)
-     * - marks waiting as Seated
-     */
     public boolean confirmArrival(String confirmationCode) {
         if (confirmationCode == null || confirmationCode.isBlank()) return false;
 
@@ -142,10 +139,8 @@ public class WaitingController {
                 return false;
             }
 
-            // Use the freed time as the reservation start (rounded to slot)
             LocalDateTime start = restaurantController.roundUpToNextHalfHour(w.getTableFreedTime());
 
-            // Minimal user from waiting row
             User u = new User();
             u.setUserId(w.getCreatedByUserId());
             u.setUserRole(w.getCreatedByRole() == null ? UserRole.RandomClient : w.getCreatedByRole());
@@ -196,7 +191,12 @@ public class WaitingController {
      * handleTableFreed (scenario 2B):
      * - assigns table to next waiting (FIFO)
      * - updates waiting row with freed time + table number
+     * - schedules notifications (EMAIL + SMS) immediately (scheduled_for = NOW)
      * - DOES NOT create reservation here
+     *
+     * English texts:
+     * - Popup (safe, no code): "A table is now available. Please confirm your arrival within 15 minutes."
+     * - SMS/Email (includes code): "A table is now available. Your waiting code is: <CODE>. Please confirm your arrival within 15 minutes."
      */
     public boolean handleTableFreed(Table freedTable) {
         if (freedTable == null) return false;
@@ -205,18 +205,43 @@ public class WaitingController {
             Waiting next = db.getNextWaitingForSeats(freedTable.getSeatsAmount());
             if (next == null) return false;
 
+            LocalDateTime now = LocalDateTime.now();
+
             boolean updated = db.setTableFreedForWaiting(
                     next.getConfirmationCode(),
-                    LocalDateTime.now(),
+                    now,
                     freedTable.getTableNumber()
             );
 
-            if (updated) {
-                server.log("Assigned freed table to waiting. WaitingCode=" + next.getConfirmationCode() +
-                        ", Table=" + freedTable.getTableNumber());
+            if (!updated) return false;
+
+            // ✅ schedule SMS + EMAIL notifications (immediate)
+            if (notificationDB != null) {
+                String smsEmailBody =
+                        "A table is now available. Your waiting code is: " + next.getConfirmationCode() +
+                        ". Please confirm your arrival within 15 minutes.";
+
+                notificationDB.addNotification(new Notification(
+                        next.getCreatedByUserId(),
+                        Enums.Channel.SMS,
+                        Enums.NotificationType.TABLE_AVAILABLE,
+                        smsEmailBody,
+                        now
+                ));
+
+                notificationDB.addNotification(new Notification(
+                        next.getCreatedByUserId(),
+                        Enums.Channel.EMAIL,
+                        Enums.NotificationType.TABLE_AVAILABLE,
+                        smsEmailBody,
+                        now
+                ));
             }
 
-            return updated;
+            server.log("Assigned freed table to waiting. WaitingCode=" + next.getConfirmationCode() +
+                       ", Table=" + freedTable.getTableNumber());
+
+            return true;
 
         } catch (Exception e) {
             server.log("ERROR: handleTableFreed failed. " + e.getMessage());

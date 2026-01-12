@@ -4,15 +4,18 @@ import dto.SubscriberLoginDTO;
 import dto.RequestDTO;
 import dto.ResponseDTO;
 import entities.Subscriber;
+import logicControllers.OnlineUsersRegistry;
 import logicControllers.UserController;
 import ocsf.server.ConnectionToClient;
 
 public class SubscriberLoginHandler implements RequestHandler {
 
     private final UserController userController;
+    private final OnlineUsersRegistry onlineUsers;
 
-    public SubscriberLoginHandler(UserController userController) {
+    public SubscriberLoginHandler(UserController userController, OnlineUsersRegistry onlineUsers) {
         this.userController = userController;
+        this.onlineUsers = onlineUsers;
     }
 
     @Override
@@ -35,8 +38,13 @@ public class SubscriberLoginHandler implements RequestHandler {
             return;
         }
 
-        // 🔥🔥🔥 זה הקו שהיה חסר – וזה שובר לך את ה-REGISTER 🔥🔥🔥
+        // Session on connection
         client.setInfo("user", subscriber);
+
+        // ✅ Register online user for SMS popups
+        if (onlineUsers != null) {
+            onlineUsers.setOnline(subscriber.getUserId(), client);
+        }
 
         send(client, new ResponseDTO(true, "Login successful", subscriber));
     }
