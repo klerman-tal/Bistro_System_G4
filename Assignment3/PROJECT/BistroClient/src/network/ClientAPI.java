@@ -205,6 +205,13 @@ public class ClientAPI {
         RequestDTO req = new RequestDTO(Commands.CONFIRM_WAITING_ARRIVAL, data);
         client.sendToServer(req);
     } 
+    
+    public void getAllSubscribers() throws IOException {
+        RequestDTO request =
+                new RequestDTO(Commands.GET_ALL_SUBSCRIBERS, null);
+        client.sendToServer(request);
+    }
+
 
    
 
