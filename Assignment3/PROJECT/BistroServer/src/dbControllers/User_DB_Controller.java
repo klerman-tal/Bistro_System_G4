@@ -422,37 +422,38 @@ public class User_DB_Controller {
 
     public boolean updateSubscriberDetails(
             int subscriberId,
+            String username,
             String firstName,
             String lastName,
             String phone,
             String email
-    ) {
+    ) throws SQLException {
 
-        String sql = """
-            UPDATE SUBSCRIBERS
-            SET
-                first_name = COALESCE(?, first_name),
-                last_name  = COALESCE(?, last_name),
-                phone      = COALESCE(?, phone),
-                email      = COALESCE(?, email)
-            WHERE subscriber_id = ?
-            """;
+    	String sql = """
+    		    UPDATE SUBSCRIBERS
+    		    SET
+    		        username   = COALESCE(NULLIF(?, ''), username),
+    		        first_name = COALESCE(NULLIF(?, ''), first_name),
+    		        last_name  = COALESCE(NULLIF(?, ''), last_name),
+    		        phone      = COALESCE(NULLIF(?, ''), phone),
+    		        email      = COALESCE(NULLIF(?, ''), email)
+    		    WHERE subscriber_id = ?
+    		    """;
+
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, firstName);
-            stmt.setString(2, lastName);
-            stmt.setString(3, phone);
-            stmt.setString(4, email);
-            stmt.setInt(5, subscriberId);
+            stmt.setString(1, username);
+            stmt.setString(2, firstName);
+            stmt.setString(3, lastName);
+            stmt.setString(4, phone);
+            stmt.setString(5, email);
+            stmt.setInt(6, subscriberId);
 
             return stmt.executeUpdate() > 0;
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
         }
     }
+
     
     /**
      * Counts subscribers that made at least one reservation

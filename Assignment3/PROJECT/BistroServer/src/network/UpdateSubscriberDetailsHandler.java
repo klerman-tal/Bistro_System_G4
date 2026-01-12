@@ -23,6 +23,7 @@ public class UpdateSubscriberDetailsHandler implements RequestHandler {
         boolean success =
                 userController.updateSubscriberDetails(
                         dto.getSubscriberId(),
+                        dto.getUsername(),
                         dto.getFirstName(),
                         dto.getLastName(),
                         dto.getPhone(),
