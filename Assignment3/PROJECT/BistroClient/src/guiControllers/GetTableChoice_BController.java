@@ -39,7 +39,7 @@ public class GetTableChoice_BController {
 
     @FXML
     private void onBackClicked() {
-        openWindow("Menu_B.fxml", "Main Menu");
+        openWindow("MyVisitMenu_B.fxml", "Main Menu");
     }
 
     private void openWindow(String fxmlName, String title) {
