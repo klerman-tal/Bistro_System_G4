@@ -110,7 +110,7 @@ public class ReservationController {
 
         if (out == null) return;
         out.clear();
-
+ 
         try {
             Map<LocalDateTime, Table> map =
                     restaurantController.getOneAvailableTablePerSlot(date, guestsNumber);

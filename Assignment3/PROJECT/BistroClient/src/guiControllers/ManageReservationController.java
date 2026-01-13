@@ -12,7 +12,13 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.DatePicker;
+import javafx.scene.control.Label;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
@@ -20,24 +26,25 @@ public class ManageReservationController implements Initializable {
 
     @FXML private BorderPane rootPane;
 
+    // ===== TABLE =====
     @FXML private TableView<?> tblReservations;
 
     @FXML private TableColumn<?, ?> colReservationId;
-    @FXML private TableColumn<?, ?> colDate;
-    @FXML private TableColumn<?, ?> colTime;
+    @FXML private TableColumn<?, ?> colDateTime;
     @FXML private TableColumn<?, ?> colGuests;
     @FXML private TableColumn<?, ?> colCode;
     @FXML private TableColumn<?, ?> colCreatedBy;
-    @FXML private TableColumn<?, ?> colConfirmed;
+    @FXML private TableColumn<?, ?> colStatus;
     @FXML private TableColumn<?, ?> colTableNumber;
 
+    // ===== FORM =====
     @FXML private TextField txtReservationId;
     @FXML private TextField txtConfirmationCode;
     @FXML private DatePicker dpDate;
     @FXML private TextField txtTime;
     @FXML private TextField txtGuests;
     @FXML private TextField txtCreatedBy;
-    @FXML private CheckBox chkConfirmed;
+    @FXML private ComboBox<String> cmbReservationStatus; // ✅ תואם ל-FXML
     @FXML private TextField txtTableNumber;
 
     @FXML private Button btnAdd;
@@ -49,7 +56,7 @@ public class ManageReservationController implements Initializable {
 
     private ClientActions clientActions;
 
-    // ✅ session
+    // ===== SESSION =====
     private User user;
     private ChatClient chatClient;
 
@@ -57,7 +64,6 @@ public class ManageReservationController implements Initializable {
         this.clientActions = clientActions;
     }
 
-    // ✅ חדש
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
@@ -65,12 +71,18 @@ public class ManageReservationController implements Initializable {
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        hideStatus();
+        cmbReservationStatus.getItems().addAll(
+            "ACTIVE",
+            "CANCELED",
+            "FINISHED"
+        );
     }
+
 
     @FXML
     private void onAddClicked() {
-        showStatus("Add clicked (not wired yet)");
+        String status = cmbReservationStatus.getValue(); // ACTIVE / CANCELED / FINISHED
+        showStatus("Add clicked (status = " + status + ")");
     }
 
     @FXML
@@ -90,12 +102,12 @@ public class ManageReservationController implements Initializable {
 
     private void openWindow(String fxmlName, String title) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
             Parent root = loader.load();
 
             Object controller = loader.getController();
 
-            // להעביר clientActions אם יש
             if (controller != null && clientActions != null) {
                 try {
                     controller.getClass()
@@ -104,7 +116,6 @@ public class ManageReservationController implements Initializable {
                 } catch (Exception ignored) {}
             }
 
-            // ✅ להעביר session אם יש setClient
             if (controller != null && user != null && chatClient != null) {
                 try {
                     controller.getClass()
