@@ -3,8 +3,6 @@ package guiControllers;
 import java.io.IOException;
 
 import application.ChatClient;
-import dto.CancelReservationDTO;
-import dto.RequestDTO;
 import dto.ResponseDTO;
 import entities.User;
 import javafx.application.Platform;
@@ -12,82 +10,57 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
+import network.ClientAPI;
 import network.ClientResponseHandler;
-import protocol.Commands;
 
-public class CancelReservation_BController implements ClientResponseHandler {
+public class CancelWaiting_BController implements ClientResponseHandler {
 
     @FXML private BorderPane rootPane;
     @FXML private TextField txtConfirmationCode;
-    @FXML private ComboBox<String> cmbCancelReason;
-    @FXML private TextArea txtOtherReason;
     @FXML private Label lblMessage;
 
-    private ChatClient chatClient;
     private User user;
-
-    /* ================= INIT ================= */
-
-    @FXML
-    public void initialize() {
-        cmbCancelReason.getItems().addAll(
-                "Changed my plans",
-                "Found another restaurant",
-                "Running late",
-                "No longer needed",
-                "Other"
-        );
-    }
+    private ChatClient chatClient;
+    private ClientAPI api;
 
     /* ================= INJECTION ================= */
 
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
+        this.api = new ClientAPI(chatClient);
 
         if (chatClient != null) {
-            chatClient.setResponseHandler(this); // ✅ המסך הפעיל
+            chatClient.setResponseHandler(this);
         }
     }
 
     /* ================= ACTIONS ================= */
 
     @FXML
-    private void onCancelReservationClicked() {
+    private void onCancelWaitingClicked() {
 
         hideMessage();
 
         String code = txtConfirmationCode.getText();
         if (code == null || code.isBlank()) {
-            showError("Confirmation code is required");
+            showError("Confirmation code is required.");
             return;
         }
 
-        String reason = cmbCancelReason.getValue();
-        String other = txtOtherReason.getText();
-
-        String finalReason =
-                (reason != null ? reason : "") +
-                ((other != null && !other.isBlank()) ? " - " + other : "");
-
-        CancelReservationDTO data =
-                new CancelReservationDTO(code.trim(), finalReason);
-
-        RequestDTO request =
-                new RequestDTO(Commands.CANCEL_RESERVATION, data);
-
         try {
-			chatClient.sendToServer(request);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-    }
+            api.cancelWaiting(code.trim());
+            showInfo("Cancel request sent.");
 
-    /* ================= BACK ================= */
+        } catch (IOException e) {
+            showError("Failed to send cancel request.");
+            e.printStackTrace();
+        }
+    }
 
     @FXML
     private void onBackClicked() {
@@ -99,7 +72,6 @@ public class CancelReservation_BController implements ClientResponseHandler {
             ReservationMenu_BController controller =
                     loader.getController();
 
-            // העברת context
             if (controller != null) {
                 controller.setClient(user, chatClient);
             }
@@ -114,16 +86,21 @@ public class CancelReservation_BController implements ClientResponseHandler {
         }
     }
 
-
     /* ================= SERVER RESPONSE ================= */
 
     @Override
     public void handleResponse(ResponseDTO response) {
         Platform.runLater(() -> {
+            if (response == null) return;
+
             if (response.isSuccess()) {
-                showSuccess(response.getMessage());
+                showSuccess(response.getMessage() != null
+                        ? response.getMessage()
+                        : "Waiting list entry cancelled successfully.");
             } else {
-                showError(response.getMessage());
+                showError(response.getMessage() != null
+                        ? response.getMessage()
+                        : "Cancel request failed.");
             }
         });
     }
@@ -140,6 +117,13 @@ public class CancelReservation_BController implements ClientResponseHandler {
     private void showSuccess(String msg) {
         lblMessage.setText(msg);
         lblMessage.setStyle("-fx-text-fill: green;");
+        lblMessage.setVisible(true);
+        lblMessage.setManaged(true);
+    }
+
+    private void showInfo(String msg) {
+        lblMessage.setText(msg);
+        lblMessage.setStyle("-fx-text-fill: #2e7d32;");
         lblMessage.setVisible(true);
         lblMessage.setManaged(true);
     }
