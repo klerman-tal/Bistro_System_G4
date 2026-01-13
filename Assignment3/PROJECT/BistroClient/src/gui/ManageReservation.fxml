@@ -24,7 +24,6 @@
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="guiControllers.ManageReservationController">
 
-    <!-- ===== TOP HEADER ===== -->
     <top>
         <VBox spacing="6">
             <padding>
@@ -34,8 +33,7 @@
             <HBox alignment="CENTER_LEFT" spacing="12">
                 <VBox spacing="2">
                     <Label text="Manage Reservations" styleClass="title"/>
-                    <Label text="Add, update or delete reservations from the list"
-                           styleClass="subtitle"/>
+                    <Label text="Add, update or delete reservations from the list" styleClass="subtitle"/>
                 </VBox>
 
                 <Region HBox.hgrow="ALWAYS"/>
@@ -48,7 +46,6 @@
         </VBox>
     </top>
 
-    <!-- ===== CENTER TABLE ===== -->
     <center>
         <VBox spacing="12">
             <padding>
@@ -62,20 +59,19 @@
 
                 <TableView fx:id="tblReservations" prefHeight="420">
                     <columns>
-                        <TableColumn fx:id="colReservationId" prefWidth="110" text="reservation_id"/>
-                        <TableColumn fx:id="colDateTime" prefWidth="140" text="reservation_dateTime"/>
-                        <TableColumn fx:id="colGuests" prefWidth="140" text="number_of_guests"/>
-                        <TableColumn fx:id="colCode" prefWidth="150" text="confirmation_code"/>
-                        <TableColumn fx:id="colCreatedBy" prefWidth="160" text="created_by"/>
-                        <TableColumn fx:id="colStatus" prefWidth="120" text="reservation_status"/>
-                        <TableColumn fx:id="colTableNumber" prefWidth="120" text="table_number"/>
+                        <TableColumn fx:id="colReservationId" prefWidth="110" text="Reservation ID"/>
+                        <TableColumn fx:id="colDateTime" prefWidth="140" text="Date &amp; Time"/>
+                        <TableColumn fx:id="colGuests" prefWidth="140" text="Guests"/>
+                        <TableColumn fx:id="colCode" prefWidth="150" text="Conf. Code"/>
+                        <TableColumn fx:id="colCreatedBy" prefWidth="160" text="Created By"/>
+                        <TableColumn fx:id="colStatus" prefWidth="120" text="Status"/>
+                        <TableColumn fx:id="colTableNumber" prefWidth="120" text="Table No."/>
                     </columns>
                 </TableView>
             </VBox>
         </VBox>
     </center>
 
-    <!-- ===== BOTTOM FORM ===== -->
     <bottom>
         <VBox spacing="12">
             <padding>
@@ -89,7 +85,7 @@
                     <Insets top="16" right="16" bottom="16" left="16"/>
                 </padding>
 
-                <Label text="Reservation details" styleClass="field-label"/>
+                <Label text="Reservation Details" styleClass="field-label"/>
 
                 <GridPane hgap="12" vgap="12">
                     <columnConstraints>
@@ -99,63 +95,29 @@
                         <ColumnConstraints prefWidth="240"/>
                     </columnConstraints>
 
-                    <rowConstraints>
-                        <RowConstraints/>
-                        <RowConstraints/>
-                        <RowConstraints/>
-                        <RowConstraints/>
-                    </rowConstraints>
+                    <Label text="Reservation ID:" styleClass="subtitle" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                    <TextField fx:id="txtReservationId" editable="false" promptText="ID" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
 
-                    <!-- Row 0 -->
-                    <Label text="Reservation ID:" styleClass="subtitle"
-                           GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                    <TextField fx:id="txtReservationId"
-                               promptText="(for update/delete)"
-                               GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                    <Label text="Confirmation Code:" styleClass="subtitle" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                    <TextField fx:id="txtConfirmationCode" promptText="Code" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
 
-                    <Label text="Confirmation Code:" styleClass="subtitle"
-                           GridPane.columnIndex="2" GridPane.rowIndex="0"/>
-                    <TextField fx:id="txtConfirmationCode"
-                               promptText="required"
-                               GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+                    <Label text="Date:" styleClass="subtitle" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                    <DatePicker fx:id="dpDate" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
 
-                    <!-- Row 1 -->
-                    <Label text="Date:" styleClass="subtitle"
-                           GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-                    <DatePicker fx:id="dpDate"
-                                GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                    <Label text="Time (HH:mm):" styleClass="subtitle" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                    <TextField fx:id="txtTime" promptText="19:30" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
 
-                    <Label text="Time (HH:mm):" styleClass="subtitle"
-                           GridPane.columnIndex="2" GridPane.rowIndex="1"/>
-                    <TextField fx:id="txtTime"
-                               promptText="19:30"
-                               GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+                    <Label text="Guests:" styleClass="subtitle" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                    <TextField fx:id="txtGuests" promptText="e.g. 4" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
 
-                    <!-- Row 2 -->
-                    <Label text="Guests:" styleClass="subtitle"
-                           GridPane.columnIndex="0" GridPane.rowIndex="2"/>
-                    <TextField fx:id="txtGuests"
-                               promptText="e.g. 4"
-                               GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                    <Label text="Created By (User ID):" styleClass="subtitle" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                    <TextField fx:id="txtCreatedBy" promptText="User ID" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
 
-                    <Label text="Created By:" styleClass="subtitle"
-                           GridPane.columnIndex="2" GridPane.rowIndex="2"/>
-                    <TextField fx:id="txtCreatedBy"
-                               promptText="username/email"
-                               GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+                    <Label text="Status:" styleClass="subtitle" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                    <ComboBox fx:id="cmbReservationStatus" promptText="Select Status" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
 
-                    <!-- Row 3 -->
-                    <Label text="Reservation status" styleClass="subtitle"
-                           GridPane.columnIndex="0" GridPane.rowIndex="3"/>
-                    <ComboBox fx:id="cmbReservationStatus"
-                              promptText="Select status"
-                              GridPane.columnIndex="1" GridPane.rowIndex="3"/>
-
-                    <Label text="Table Number (optional):" styleClass="subtitle"
-                           GridPane.columnIndex="2" GridPane.rowIndex="3"/>
-                    <TextField fx:id="txtTableNumber"
-                               promptText="nullable"
-                               GridPane.columnIndex="3" GridPane.rowIndex="3"/>
+                    <Label text="Table Number:" styleClass="subtitle" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
+                    <TextField fx:id="txtTableNumber" promptText="Table No." GridPane.columnIndex="3" GridPane.rowIndex="3"/>
                 </GridPane>
 
                 <HBox alignment="CENTER_RIGHT" spacing="10">
@@ -166,14 +128,10 @@
                             text="Add Reservation"
                             styleClass="btnPrimary"/>
 
-                    <Button fx:id="btnUpdate"
-                            onAction="#onUpdateClicked"
-                            text="Update Reservation"
-                            styleClass="btnSecondary"/>
 
                     <Button fx:id="btnDelete"
                             onAction="#onDeleteClicked"
-                            text="Delete Reservation"
+                            text="Delete"
                             styleClass="btnDanger"/>
 
                     <Button fx:id="btnBack"
@@ -184,5 +142,4 @@
             </VBox>
         </VBox>
     </bottom>
-
 </BorderPane>
