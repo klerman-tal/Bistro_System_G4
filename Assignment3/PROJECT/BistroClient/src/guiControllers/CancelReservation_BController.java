@@ -41,6 +41,11 @@ public class CancelReservation_BController implements ClientResponseHandler {
                 "Other"
         );
     }
+    
+    public void setConfirmationCode(String code) {
+        txtConfirmationCode.setText(code);
+    }
+
 
     /* ================= INJECTION ================= */
 
@@ -49,7 +54,7 @@ public class CancelReservation_BController implements ClientResponseHandler {
         this.chatClient = chatClient;
 
         if (chatClient != null) {
-            chatClient.setResponseHandler(this); // ✅ המסך הפעיל
+            chatClient.setResponseHandler(this); 
         }
     }
 
@@ -82,7 +87,6 @@ public class CancelReservation_BController implements ClientResponseHandler {
         try {
 			chatClient.sendToServer(request);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
     }
@@ -92,16 +96,17 @@ public class CancelReservation_BController implements ClientResponseHandler {
     @FXML
     private void onBackClicked() {
         try {
-            FXMLLoader loader =
-                    new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
+            // שיניתי את הנתיב שיחזור למסך ניהול ההזמנות
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/ManageReservation.fxml"));
             Parent root = loader.load();
 
-            Menu_BController menu = loader.getController();
-            menu.setClient(user, chatClient); // ✅ שומר את המשתמש
+            ManageReservationController manageCtrl = loader.getController();
+            
+            // הזרקת המשתמש והחיבור מחדש - זה יגרום לטבלה להתרענן אוטומטית
+            manageCtrl.setClient(user, chatClient); 
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setScene(new Scene(root));
-            stage.centerOnScreen();
             stage.show();
 
         } catch (Exception e) {
@@ -115,7 +120,7 @@ public class CancelReservation_BController implements ClientResponseHandler {
     public void handleResponse(ResponseDTO response) {
         Platform.runLater(() -> {
             if (response.isSuccess()) {
-                showSuccess(response.getMessage());
+                showSuccess("Reservation cancelled and updated in database!");
             } else {
                 showError(response.getMessage());
             }

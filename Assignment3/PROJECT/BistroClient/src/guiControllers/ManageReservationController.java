@@ -79,7 +79,6 @@ public class ManageReservationController implements Initializable {
         if (chatClient != null) {
             this.clientAPI = new ClientAPI(chatClient);
 
-            // ✅ IMPORTANT: wire responses to THIS controller (same as ManageSubscriber)
             chatClient.setResponseHandler(new ClientResponseHandler() {
                 @Override
                 public void handleResponse(ResponseDTO response) {
@@ -163,7 +162,6 @@ public class ManageReservationController implements Initializable {
 
         try {
             clientAPI.getAllReservations();
-            showMessage("Loading reservations...");
         } catch (IOException e) {
             showMessage("Failed to load reservations");
             e.printStackTrace();
@@ -238,7 +236,37 @@ public class ManageReservationController implements Initializable {
 
     @FXML
     private void onDeleteClicked() {
-        showMessage("Delete not wired yet");
+        // משיכת השורה שנבחרה מהטבלה
+        Reservation selected = tblReservations.getSelectionModel().getSelectedItem();
+
+        if (selected == null) {
+            showMessage("Please select a reservation from the table to cancel.");
+            return;
+        }
+
+        // פתיחת מסך הביטול עם הנתונים
+        openCancelWindow(selected);
+    }
+
+    private void openCancelWindow(Reservation reservation) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/CancelReservation_B.fxml"));
+            Parent root = loader.load();
+
+            CancelReservation_BController controller = loader.getController();
+            
+            // העברת המשתמש והקליינט כדי לשמור על החיבור
+            controller.setClient(user, chatClient);
+            // העברת קוד האישור מהטבלה למסך הביטול
+            controller.setConfirmationCode(reservation.getConfirmationCode());
+
+            Stage stage = (Stage) rootPane.getScene().getWindow();
+            stage.setScene(new Scene(root));
+            stage.show();
+        } catch (Exception e) {
+            e.printStackTrace();
+            showMessage("Error opening cancel screen");
+        }
     }
 
     @FXML
@@ -264,7 +292,6 @@ public class ManageReservationController implements Initializable {
                         .invoke(controller, clientActions);
             }
 
-            // ✅ preserve logged-in user + session
             if (controller != null) {
                 controller.getClass()
                         .getMethod("setClient", User.class, ChatClient.class)
@@ -281,10 +308,6 @@ public class ManageReservationController implements Initializable {
             showMessage("Failed to open screen");
         }
     }
-
-    /* =======================
-       UI MESSAGES
-       ======================= */
 
     private void showMessage(String msg) {
         lblStatus.setText(msg);
