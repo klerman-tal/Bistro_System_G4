@@ -30,7 +30,6 @@ public class JoinWaiting_BController implements ClientResponseHandler {
     @FXML private TextField txtGuests;
     @FXML private Button btnJoin;
     @FXML private Button btnImHere;
-    @FXML private Button btnCancelWaiting;
     @FXML private Label lblInfo;
     @FXML private Label lblError;
 
@@ -45,18 +44,20 @@ public class JoinWaiting_BController implements ClientResponseHandler {
     // UI state helpers
     private boolean didShowJoinPopup = false;
 
+    /* ================= INJECTION ================= */
+
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
         this.api = new ClientAPI(chatClient);
-
-        // This screen handles server responses
         this.chatClient.setResponseHandler(this);
     }
 
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
     }
+
+    /* ================= ACTIONS ================= */
 
     @FXML
     private void onJoinClicked() {
@@ -82,31 +83,12 @@ public class JoinWaiting_BController implements ClientResponseHandler {
 
         try {
             api.joinWaitingList(guests, user);
-
             btnJoin.setDisable(true);
             showInfo("Request sent.");
 
         } catch (IOException e) {
             btnJoin.setDisable(false);
             showError("Failed to send request to server.");
-            e.printStackTrace();
-        }
-    }
-
-    @FXML
-    private void onCancelWaitingClicked() {
-        hideMessages();
-
-        if (confirmationCode == null || confirmationCode.isBlank()) {
-            showError("No active waiting to cancel.");
-            return;
-        }
-
-        try {
-            api.cancelWaiting(confirmationCode);
-            showInfo("Cancel request sent.");
-        } catch (IOException e) {
-            showError("Failed to send cancel request.");
             e.printStackTrace();
         }
     }
@@ -129,13 +111,10 @@ public class JoinWaiting_BController implements ClientResponseHandler {
         }
     }
 
-    // =========================
-    // Polling (every 10 seconds) - SILENT
-    // =========================
+    /* ================= POLLING ================= */
 
     private void startPollingEvery10Seconds() {
         stopPolling();
-
         pollingTimeline = new Timeline(
                 new KeyFrame(Duration.seconds(10), e -> pollWaitingStatus())
         );
@@ -149,9 +128,7 @@ public class JoinWaiting_BController implements ClientResponseHandler {
 
         try {
             api.getWaitingStatus(confirmationCode);
-        } catch (IOException ignored) {
-            // Silent: do not show "checking..." to user
-        }
+        } catch (IOException ignored) {}
     }
 
     private void stopPolling() {
@@ -161,70 +138,57 @@ public class JoinWaiting_BController implements ClientResponseHandler {
         }
     }
 
-    // =========================
-    // Server responses
-    // =========================
+    /* ================= SERVER RESPONSES ================= */
 
     @Override
     public void handleResponse(ResponseDTO response) {
         Platform.runLater(() -> {
             if (response == null) return;
 
-            if (response.isSuccess()) {
-
-                Object data = response.getData();
-
-                // Server returns Waiting entity (JOIN / STATUS)
-                if (data instanceof Waiting w) {
-
-                    // Save code once
-                    if (w.getConfirmationCode() != null && !w.getConfirmationCode().isBlank()) {
-                        this.confirmationCode = w.getConfirmationCode();
-                    }
-
-                    // After successful join, start polling (silent)
-                    if (this.confirmationCode != null && !this.confirmationCode.isBlank()) {
-                        startPollingEvery10Seconds();
-                    }
-
-                    // ✅ Show popup ONCE after join (not on every status response)
-                    if (!didShowJoinPopup && this.confirmationCode != null && !this.confirmationCode.isBlank()) {
-                        didShowJoinPopup = true;
-                        showSuccessAlert("Joined Waiting List",
-                                "Your confirmation code is: " + this.confirmationCode);
-                    }
-
-                    updateUIFromWaiting(w);
-                    btnJoin.setDisable(false);
-                    return;
-                }
-
-                // Fallback: server returns String code
-                if (data instanceof String code) {
-                    this.confirmationCode = code;
-                    btnJoin.setDisable(false);
-
-                    if (!didShowJoinPopup) {
-                        didShowJoinPopup = true;
-                        showSuccessAlert("Joined Waiting List",
-                                "Your confirmation code is: " + code);
-                    }
-
-                    startPollingEvery10Seconds();
-                    showActionButtons(true);
-                    showInfo("You are in the waiting list.");
-                    return;
-                }
-
+            if (!response.isSuccess()) {
                 btnJoin.setDisable(false);
-                showInfo(response.getMessage() != null ? response.getMessage() : "Success.");
+                showError(response.getMessage() != null
+                        ? response.getMessage()
+                        : "Request failed.");
                 return;
             }
 
-            // Failure
-            btnJoin.setDisable(false);
-            String msg = response.getMessage() != null ? response.getMessage() : "Request failed.";
-            showError(msg);
+            Object data = response.getData();
+
+            if (data instanceof Waiting w) {
+
+                if (w.getConfirmationCode() != null && !w.getConfirmationCode().isBlank()) {
+                    this.confirmationCode = w.getConfirmationCode();
+                }
+
+                if (this.confirmationCode != null && !this.confirmationCode.isBlank()) {
+                    startPollingEvery10Seconds();
+                }
+
+                if (!didShowJoinPopup) {
+                    didShowJoinPopup = true;
+                    showSuccessAlert("Joined Waiting List",
+                            "Your confirmation code is: " + this.confirmationCode);
+                }
+
+                updateUIFromWaiting(w);
+                btnJoin.setDisable(false);
+                return;
+            }
+
+            if (data instanceof String code) {
+                this.confirmationCode = code;
+                btnJoin.setDisable(false);
+
+                if (!didShowJoinPopup) {
+                    didShowJoinPopup = true;
+                    showSuccessAlert("Joined Waiting List",
+                            "Your confirmation code is: " + code);
+                }
+
+                startPollingEvery10Seconds();
+                showInfo("You are in the waiting list.");
+            }
         });
     }
 
@@ -234,100 +198,48 @@ public class JoinWaiting_BController implements ClientResponseHandler {
         WaitingStatus status = w.getWaitingStatus();
         Integer tableNum = w.getTableNumber();
 
-        // Seated
         if (status == WaitingStatus.Seated) {
             stopPolling();
-            showActionButtons(false);
-
-            if (tableNum != null) {
-                showSuccessAlert("Table Assigned",
-                        "You are seated at table " + tableNum +
-                        ".\nConfirmation Code: " + w.getConfirmationCode());
-            } else {
-                showSuccessAlert("Table Assigned",
-                        "You are seated.\nConfirmation Code: " + w.getConfirmationCode());
-            }
+            showSuccessAlert("Table Assigned",
+                    "You are seated at table " +
+                    (tableNum != null ? tableNum : "") +
+                    ".\nConfirmation Code: " + w.getConfirmationCode());
             showInfo("You are seated.");
             return;
         }
 
-        // Cancelled / expired
-        if (status == WaitingStatus.Cancelled) {
-            stopPolling();
-            showActionButtons(false);
-            showError("Waiting was cancelled (or expired).");
-            return;
-        }
-
-        // Waiting + table is ready (15 minutes)
         if (status == WaitingStatus.Waiting && tableNum != null && w.getTableFreedTime() != null) {
-            showActionButtons(true);
-            showInfo("A table is ready! Table " + tableNum +
-                     ". Please arrive within 15 minutes and press “I’m here”.");
+            showInfo("A table is ready! Please arrive within 15 minutes and press “I’m here”.");
             return;
         }
 
-        // Normal waiting
-        showActionButtons(true);
         showInfo("You are in the waiting list.");
     }
 
-    private void showActionButtons(boolean show) {
-        btnCancelWaiting.setVisible(show);
-        btnCancelWaiting.setManaged(show);
-
-        btnImHere.setVisible(show);
-        btnImHere.setManaged(show);
-    }
-
-    @Override
-    public void handleConnectionError(Exception e) {
-        Platform.runLater(() -> showError("Connection lost."));
-        stopPolling();
-    }
-
-    @Override
-    public void handleConnectionClosed() {
-        stopPolling();
-    }
-
-    // =========================
-    // Back navigation (preserve user + chatClient)
-    // =========================
+    /* ================= BACK ================= */
 
     @FXML
     private void onBackClicked() {
         stopPolling();
-        if (chatClient != null) chatClient.setResponseHandler(null);
-        openMenu();
-    }
+        if (chatClient != null) {
+            chatClient.setResponseHandler(null);
+        }
 
-    private void openMenu() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/ReservationMenu_B.fxml"));
             Parent root = loader.load();
 
-            Object controller = loader.getController();
+            ReservationMenu_BController controller =
+                    loader.getController();
 
-            if (controller != null && clientActions != null) {
-                try {
-                    controller.getClass()
-                            .getMethod("setClientActions", ClientActions.class)
-                            .invoke(controller, clientActions);
-                } catch (Exception ignored) {}
-            }
-
-            if (controller != null && user != null && chatClient != null) {
-                try {
-                    controller.getClass()
-                            .getMethod("setClient", User.class, ChatClient.class)
-                            .invoke(controller, user, chatClient);
-                } catch (Exception ignored) {}
+            if (controller != null) {
+                controller.setClient(user, chatClient);
             }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setTitle("Bistro - Main Menu");
             stage.setScene(new Scene(root));
+            stage.centerOnScreen();
             stage.show();
 
         } catch (Exception e) {
@@ -335,9 +247,7 @@ public class JoinWaiting_BController implements ClientResponseHandler {
         }
     }
 
-    // =========================
-    // UI helpers
-    // =========================
+    /* ================= UI HELPERS ================= */
 
     private void hideMessages() {
         lblError.setVisible(false);
@@ -365,5 +275,14 @@ public class JoinWaiting_BController implements ClientResponseHandler {
         alert.setHeaderText(null);
         alert.setContentText(content);
         alert.showAndWait();
+    }
+
+    @Override public void handleConnectionError(Exception e) {
+        stopPolling();
+        Platform.runLater(() -> showError("Connection lost."));
+    }
+
+    @Override public void handleConnectionClosed() {
+        stopPolling();
     }
 }

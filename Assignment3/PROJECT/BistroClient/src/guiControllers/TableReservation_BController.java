@@ -102,24 +102,34 @@ public class TableReservation_BController implements ClientResponseHandler {
      * Back must preserve session (user + chatClient)
      */
     @FXML
-    private void onBackToMenuClicked() {
-        if (chatClient != null) chatClient.setResponseHandler(null);
+    private void onBackClicked() {
+        if (chatClient != null) {
+            chatClient.setResponseHandler(null);
+        }
 
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/ReservationMenu_B.fxml"));
             Parent root = loader.load();
 
-            Menu_BController menuController = loader.getController();
-            menuController.setClient(user, chatClient);
+            ReservationMenu_BController controller =
+                    loader.getController();
+
+            if (controller != null) {
+                controller.setClient(user, chatClient);
+            }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setScene(new Scene(root));
+            stage.centerOnScreen();
             stage.show();
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
+
+
 
     @Override
     public void handleResponse(ResponseDTO response) {
