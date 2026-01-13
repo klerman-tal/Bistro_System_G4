@@ -225,6 +225,13 @@ public class ClientAPI {
                 new RequestDTO(Commands.GET_ALL_SUBSCRIBERS, null);
         client.sendToServer(request);
     }
+    
+    public void getAllReservations() throws IOException {
+        RequestDTO request =
+                new RequestDTO(Commands.GET_ALL_RESERVATIONS, null);
+        client.sendToServer(request);
+    }
+
 
 
    
