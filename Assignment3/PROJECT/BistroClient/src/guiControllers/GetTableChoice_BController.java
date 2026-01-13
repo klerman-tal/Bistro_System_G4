@@ -29,7 +29,7 @@ public class GetTableChoice_BController {
 
     @FXML
     private void onFromReservationClicked() {
-        openWindow("GetTable_B.fxml", "Get Table (Reservation)");
+        openWindow("GetTableFromReservation_B.fxml", "Get Table (Reservation)");
     }
 
     @FXML

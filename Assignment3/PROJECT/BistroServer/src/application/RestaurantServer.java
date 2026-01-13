@@ -259,6 +259,10 @@ public class RestaurantServer extends AbstractServer {
                 Commands.DELETE_SUBSCRIBER,
                 new DeleteSubscriberHandler(userController)
         );
+        
+        router.register(Commands.CHECKIN_RESERVATION,
+                new CheckinReservationHandler(reservationController));
+
 
 
     }

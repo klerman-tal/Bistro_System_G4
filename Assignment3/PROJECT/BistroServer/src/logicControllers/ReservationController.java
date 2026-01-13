@@ -22,6 +22,8 @@ import entities.User;
 import entities.Notification;
 import entities.Enums;
 import logicControllers.WaitingController;
+import dto.GetTableResultDTO;
+
 
 
 public class ReservationController {
@@ -382,6 +384,8 @@ public class ReservationController {
 
                 // ✅ NEW: after cancel -> try to notify waiting list
                 notifyWaitingTableFreed(tableNum);
+                notifyPendingReservationCheckins(tableNum);
+
 
                 return true;
             }
@@ -686,5 +690,129 @@ public class ReservationController {
         }
     }
     
+ // =====================================================
+ // CHECK-IN (GET TABLE) FROM RESERVATION
+ // Rule: allowed only from reservation time until +15 minutes
+ // =====================================================
+    public GetTableResultDTO checkinReservationByCode(String confirmationCode) {
+
+        if (confirmationCode == null || confirmationCode.isBlank()) {
+            return new GetTableResultDTO(false, false, null, "Confirmation code is required.");
+        }
+
+        String code = confirmationCode.trim();
+
+        try {
+            Reservation r = db.getReservationByConfirmationCode(code);
+
+            if (r == null) {
+                return new GetTableResultDTO(false, false, null, "Reservation not found.");
+            }
+            if (!r.isActive() || r.getReservationStatus() != ReservationStatus.Active) {
+                return new GetTableResultDTO(false, false, null, "Reservation is not active.");
+            }
+
+            // time window: reservation_time <= now <= reservation_time + 15 minutes
+            // ⚠️ if you suspect timezone issues, replace LocalDateTime.now() with db.getDbNow()
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime resTime = r.getReservationTime();
+
+            if (resTime == null) {
+                return new GetTableResultDTO(false, false, null, "Reservation time is missing.");
+            }
+
+            // TOO EARLY -> DO NOT EXPOSE TABLE NUMBER
+            if (now.isBefore(resTime)) {
+                return new GetTableResultDTO(
+                        false,
+                        false,
+                        null,
+                        "It is too early to check in. Please arrive at your reservation time."
+                );
+            }
+
+            // TOO LATE -> DO NOT EXPOSE TABLE NUMBER
+            if (now.isAfter(resTime.plusMinutes(15))) {
+                return new GetTableResultDTO(
+                        false,
+                        false,
+                        null,
+                        "Check-in time has expired (15 minutes after reservation time)."
+                );
+            }
+
+            // Inside valid window: now it's allowed to expose table number
+            Integer tableNumber = r.getTableNumber();
+            if (tableNumber == null) {
+                return new GetTableResultDTO(false, false, null, "No table has been assigned yet. Please contact the restaurant.");
+            }
+
+            // prevent double check-in
+            if (r.getCheckinTime() != null) {
+                return new GetTableResultDTO(true, false, tableNumber, "You are already checked-in. Your table number is: " + tableNumber);
+            }
+
+            boolean occupied = db.isTableOccupiedNow(tableNumber, r.getReservationId());
+            if (!occupied) {
+                db.updateCheckinTime(r.getReservationId(), now);
+                return new GetTableResultDTO(true, false, tableNumber, "Checked-in successfully. Your table number is: " + tableNumber);
+            }
+
+            pendingCheckins.put(tableNumber, new PendingReservationCheckin(
+                    r.getReservationId(),
+                    r.getCreatedByUserId(),
+                    r.getConfirmationCode(),
+                    tableNumber
+            ));
+
+            return new GetTableResultDTO(false, true, tableNumber, "Your table is not ready yet. Please wait for a notification.");
+
+        } catch (Exception e) {
+            server.log("ERROR: checkinReservationByCode failed. Code=" + code + ", Msg=" + e.getMessage());
+            return new GetTableResultDTO(false, false, null, "Server error. Please try again.");
+        }
+    }
+
+
+    private void notifyPendingReservationCheckins(Integer tableNumber) {
+        if (tableNumber == null) return;
+
+        PendingReservationCheckin pending = pendingCheckins.remove(tableNumber);
+        if (pending == null) return;
+
+        try {
+            LocalDateTime now = LocalDateTime.now();
+
+            if (notificationDB != null) {
+                String body =
+                        "Your reserved table is now available. Please check in with your confirmation code: " +
+                        pending.confirmationCode;
+
+                notificationDB.addNotification(new Notification(
+                        pending.userId,
+                        Enums.Channel.SMS,
+                        Enums.NotificationType.TABLE_AVAILABLE,
+                        body,
+                        now
+                ));
+
+                notificationDB.addNotification(new Notification(
+                        pending.userId,
+                        Enums.Channel.EMAIL,
+                        Enums.NotificationType.TABLE_AVAILABLE,
+                        body,
+                        now
+                ));
+            }
+
+            server.log("Pending reservation notified. Code=" + pending.confirmationCode +
+                       ", Table=" + tableNumber + ", UserId=" + pending.userId);
+
+        } catch (Exception e) {
+            server.log("ERROR: notifyPendingReservationCheckins failed. Table=" + tableNumber +
+                       ", Msg=" + e.getMessage());
+        }
+    }
+
     
 }

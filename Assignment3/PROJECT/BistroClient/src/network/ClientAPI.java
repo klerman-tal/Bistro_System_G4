@@ -225,6 +225,20 @@ public class ClientAPI {
                 new RequestDTO(Commands.GET_ALL_SUBSCRIBERS, null);
         client.sendToServer(request);
     }
+    
+    public void checkinReservation(String confirmationCode) throws IOException {
+        if (confirmationCode == null || confirmationCode.isBlank()) {
+            throw new IllegalArgumentException("Confirmation code is required");
+        }
+
+        dto.CheckinReservationDTO data =
+                new dto.CheckinReservationDTO(confirmationCode.trim());
+
+        RequestDTO request =
+                new RequestDTO(Commands.CHECKIN_RESERVATION, data);
+
+        client.sendToServer(request);
+    }
 
 
    
