@@ -23,12 +23,11 @@ public class ManageReservationController implements Initializable {
     @FXML private TableView<?> tblReservations;
 
     @FXML private TableColumn<?, ?> colReservationId;
-    @FXML private TableColumn<?, ?> colDate;
-    @FXML private TableColumn<?, ?> colTime;
+    @FXML private TableColumn<?, ?> colDateTime;
     @FXML private TableColumn<?, ?> colGuests;
     @FXML private TableColumn<?, ?> colCode;
     @FXML private TableColumn<?, ?> colCreatedBy;
-    @FXML private TableColumn<?, ?> colConfirmed;
+    @FXML private TableColumn<?, ?> colStatus;
     @FXML private TableColumn<?, ?> colTableNumber;
 
     @FXML private TextField txtReservationId;

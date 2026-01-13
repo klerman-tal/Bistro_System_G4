@@ -1,6 +1,8 @@
 package logicControllers;
 
 import java.sql.SQLException;
+import java.util.concurrent.ConcurrentHashMap;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -19,6 +21,8 @@ import entities.Table;
 import entities.User;
 import entities.Notification;
 import entities.Enums;
+import logicControllers.WaitingController;
+
 
 public class ReservationController {
 
@@ -30,6 +34,23 @@ public class ReservationController {
 
     // ✅ NEW: link to waiting logic for "table freed" scenario
     private WaitingController waitingController;
+ // Pending check-ins: tableNumber -> pending reservation info
+    private final Map<Integer, PendingReservationCheckin> pendingCheckins = new ConcurrentHashMap<>();
+
+    private static class PendingReservationCheckin {
+        final int reservationId;
+        final int userId;
+        final String confirmationCode;
+        final int tableNumber;
+
+        PendingReservationCheckin(int reservationId, int userId, String confirmationCode, int tableNumber) {
+            this.reservationId = reservationId;
+            this.userId = userId;
+            this.confirmationCode = confirmationCode;
+            this.tableNumber = tableNumber;
+        }
+    }
+
 
     /**
      * Constructor: connects controller to DB layer, server logger, and restaurant availability logic.
@@ -664,4 +685,6 @@ public class ReservationController {
             return null;
         }
     }
+    
+    
 }
