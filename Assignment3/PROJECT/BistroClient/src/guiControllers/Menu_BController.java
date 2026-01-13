@@ -9,25 +9,16 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
 public class Menu_BController {
 
-    @FXML private BorderPane rootPane;
+    @FXML
+    private BorderPane rootPane;
 
-    @FXML private Button btnReservation;
-    @FXML private Button btnCancelReservation;
-    @FXML private Button btnPayment;
-    @FXML private Button btnPersonalDetails;
-    @FXML private Button btnGetTable;
-    @FXML private Button btnJoinWaiting;
-    @FXML private Button btnRestaurantManagement;
-    @FXML private Button btnLogout;
-
-    @FXML private Label lblMessage;
+    @FXML
+    private javafx.scene.control.Label lblMessage;
 
     private User user;
     private ChatClient chatClient;
@@ -37,13 +28,13 @@ public class Menu_BController {
        SETTERS
        ======================= */
 
-    public void setClientActions(ClientActions clientActions) {
-        this.clientActions = clientActions;
-    }
-
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
+    }
+
+    public void setClientActions(ClientActions clientActions) {
+        this.clientActions = clientActions;
     }
 
     /* =======================
@@ -51,33 +42,18 @@ public class Menu_BController {
        ======================= */
 
     @FXML
-    private void onSelectReservationClicked() {
-        openWindow("TableReservation_B.fxml", "Table Reservation");
+    private void onSelectReservationsClicked() {
+        openWindow("ReservationMenu_B.fxml", "Reservations");
     }
 
     @FXML
-    private void onSelectCancelReservationClicked() {
-        openWindow("CancelReservation_B.fxml", "Cancel Reservation");
-    }
-
-    @FXML
-    private void onSelectPaymentClicked() {
-        openWindow("Payment_B.fxml", "Payment");
+    private void onSelectMyVisitClicked() {
+        openWindow("MyVisitMenu_B.fxml", "My Visit");
     }
 
     @FXML
     private void onSelectPersonalDetailsClicked() {
-        openWindow("ClientDetails_B.fxml", "Client Details");
-    }
-
-    @FXML
-    private void onSelectGetTableClicked() {
-        openWindow("GetTableChoice_B.fxml", "Get Table");
-    }
-
-    @FXML
-    private void onSelectJoinWaitingClicked() {
-        openWindow("JoinWaiting_B.fxml", "Join Waiting List");
+        openWindow("ClientDetails_B.fxml", "Personal Details");
     }
 
     @FXML
@@ -103,7 +79,7 @@ public class Menu_BController {
     }
 
     /* =======================
-       NAVIGATION
+       NAVIGATION (כמו שהיה)
        ======================= */
 
     private void openWindow(String fxmlName, String title) {
@@ -114,7 +90,6 @@ public class Menu_BController {
 
             Object controller = loader.getController();
 
-            // מסכים שעובדים עם ClientActions
             if (controller != null && clientActions != null) {
                 try {
                     controller.getClass()
@@ -123,7 +98,6 @@ public class Menu_BController {
                 } catch (Exception ignored) {}
             }
 
-            // מסכים שעובדים עם User + ChatClient
             if (controller != null && user != null && chatClient != null) {
                 try {
                     controller.getClass()

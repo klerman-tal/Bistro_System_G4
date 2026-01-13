@@ -38,7 +38,7 @@
         <HBox alignment="CENTER_RIGHT" spacing="12">
             <padding><Insets bottom="20" left="40" right="40" top="10" /></padding>
             <children>
-                <Button fx:id="btnBack" onAction="#onBackToMenuClicked" styleClass="btnSecondary" text="Back" />
+                <Button fx:id="btnBack" onAction="#onBackClicked" styleClass="btnSecondary" text="Back" />
                 <Button fx:id="btnCreate" onAction="#onCreateClicked" styleClass="btnPrimary" text="Create Reservation" />
             </children>
         </HBox>

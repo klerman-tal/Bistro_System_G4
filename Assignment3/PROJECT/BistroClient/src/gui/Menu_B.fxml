@@ -36,52 +36,29 @@
             <children>
                 <Label styleClass="section" text="Choose an action"/>
 
-                <!-- Table Reservation -->
-                <Button fx:id="btnReservation"
-                        maxWidth="300"
+                <!-- Reservations -->
+                <Button maxWidth="300"
                         prefWidth="260"
                         styleClass="btnSecondary"
-                        text="Table Reservation"
-                        onAction="#onSelectReservationClicked"/>
+                        text="Reservations"
+                        onAction="#onSelectReservationsClicked"/>
 
-                <!-- ✅ NEW: Cancel Reservation -->
-                <Button fx:id="btnCancelReservation"
-                        maxWidth="300"
+                <!-- My Visit -->
+                <Button maxWidth="300"
                         prefWidth="260"
                         styleClass="btnSecondary"
-                        text="Cancel Reservation"
-                        onAction="#onSelectCancelReservationClicked"/>
+                        text="My Visit"
+                        onAction="#onSelectMyVisitClicked"/>
 
-                <Button fx:id="btnPayment"
-                        maxWidth="300"
-                        prefWidth="260"
-                        styleClass="btnSecondary"
-                        text="Payment"
-                        onAction="#onSelectPaymentClicked"/>
-
-                <Button fx:id="btnPersonalDetails"
-                        maxWidth="300"
+                <!-- Personal Details -->
+                <Button maxWidth="300"
                         prefWidth="260"
                         styleClass="btnSecondary"
                         text="Personal Details"
                         onAction="#onSelectPersonalDetailsClicked"/>
 
-                <Button fx:id="btnGetTable"
-                        maxWidth="300"
-                        prefWidth="260"
-                        styleClass="btnSecondary"
-                        text="Get Table"
-                        onAction="#onSelectGetTableClicked"/>
-
-                <Button fx:id="btnJoinWaiting"
-                        maxWidth="300"
-                        prefWidth="260"
-                        styleClass="btnSecondary"
-                        text="Join Waiting List"
-                        onAction="#onSelectJoinWaitingClicked"/>
-
-                <Button fx:id="btnRestaurantManagement"
-                        maxWidth="300"
+                <!-- Restaurant Management -->
+                <Button maxWidth="300"
                         prefWidth="260"
                         styleClass="btnSecondary"
                         text="Restaurant Management"
@@ -93,8 +70,8 @@
                        styleClass="errorMsg"
                        text=""/>
 
-                <Button fx:id="btnLogout"
-                        text="Logout"
+                <!-- Logout -->
+                <Button text="Logout"
                         onAction="#onLogoutClicked"
                         style="-fx-background-color: #000000;
                                -fx-text-fill: white;

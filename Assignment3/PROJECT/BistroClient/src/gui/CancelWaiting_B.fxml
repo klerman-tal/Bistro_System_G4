@@ -8,23 +8,23 @@
             stylesheets="@Style.css"
             xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="guiControllers.JoinWaiting_BController">
+            fx:controller="guiControllers.CancelWaiting_BController">
 
-    <!-- ===== HEADER ===== -->
+    <!-- HEADER -->
     <top>
-        <HBox fx:id="header" alignment="CENTER_LEFT">
+        <HBox alignment="CENTER_LEFT">
             <padding>
                 <Insets top="18" right="25" bottom="18" left="25"/>
             </padding>
             <children>
-                <Label styleClass="title"
-                       text="Waiting List"
+                <Label text="Cancel Waiting List"
+                       styleClass="title"
                        textFill="WHITE"/>
             </children>
         </HBox>
     </top>
 
-    <!-- ===== CENTER ===== -->
+    <!-- CENTER -->
     <center>
         <VBox alignment="TOP_CENTER" spacing="25">
             <padding>
@@ -34,40 +34,33 @@
             <children>
 
                 <Label styleClass="section"
-                       text="Waiting List Details"/>
+                       text="Cancel Waiting List"/>
 
                 <GridPane hgap="15" vgap="15">
                     <children>
 
-                        <Label text="Guests:"
+                        <Label text="Confirmation Code:"
                                GridPane.columnIndex="0"
                                GridPane.rowIndex="0"/>
 
-                        <TextField fx:id="txtGuests"
-                                   promptText="Number of guests"
+                        <TextField fx:id="txtConfirmationCode"
+                                   promptText="Enter confirmation code"
                                    GridPane.columnIndex="1"
                                    GridPane.rowIndex="0"/>
 
                     </children>
                 </GridPane>
 
-                <Label fx:id="lblInfo"
+                <Label fx:id="lblMessage"
                        managed="false"
                        visible="false"
-                       style="-fx-text-fill: #2e7d32; -fx-font-size: 12px;"
-                       text=""/>
-
-                <Label fx:id="lblError"
-                       managed="false"
-                       visible="false"
-                       styleClass="errorMsg"
-                       text=""/>
+                       styleClass="errorMsg"/>
 
             </children>
         </VBox>
     </center>
 
-    <!-- ===== BOTTOM (ACTIONS) ===== -->
+    <!-- BOTTOM -->
     <bottom>
         <HBox alignment="CENTER_RIGHT" spacing="12">
             <padding>
@@ -75,19 +68,13 @@
             </padding>
 
             <children>
-
-                <!-- Back -->
-                <Button fx:id="btnBack"
-                        text="Back"
+                <Button text="Back"
                         styleClass="btnSecondary"
                         onAction="#onBackClicked"/>
 
-                <!-- Join -->
-                <Button fx:id="btnJoin"
-                        text="Join Waiting List"
+                <Button text="Cancel Waiting List"
                         styleClass="btnPrimary"
-                        onAction="#onJoinClicked"/>
-
+                        onAction="#onCancelWaitingClicked"/>
             </children>
         </HBox>
     </bottom>
