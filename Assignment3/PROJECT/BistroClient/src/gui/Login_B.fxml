@@ -2,82 +2,90 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Hyperlink?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.TextField?>
-<?import javafx.scene.layout.BorderPane?>
-<?import javafx.scene.layout.ColumnConstraints?>
-<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<BorderPane fx:id="rootPane" stylesheets="@Style.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="guiControllers.Login_BController">
+<StackPane id="rootPane"
+           stylesheets="@Style.css"
+           xmlns="http://javafx.com/javafx/21"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="guiControllers.Login_BController">
 
-    <!-- HEADER -->
-    <top>
-        <HBox fx:id="header" alignment="CENTER_LEFT">
-            <padding>
-                <Insets bottom="18" left="25" right="25" top="18" />
-            </padding>
-            <children>
-                <Label styleClass="title" text="Login" textFill="WHITE" />
-            </children>
-        </HBox>
-    </top>
-
-    <!-- CENTER CONTENT -->
-    <center>
-        <VBox alignment="TOP_CENTER" spacing="25">
-            <padding>
-                <Insets bottom="20" left="40" right="40" top="30" />
-            </padding>
+    <children>
+        <VBox alignment="CENTER" spacing="40.0" maxWidth="600.0">
 
             <children>
-                <Label styleClass="section" text="Enter your details" />
 
-                <GridPane hgap="15" vgap="15">
+                <!-- ===== LOGO + HEADER (הוספה בלבד) ===== -->
+                <VBox alignment="CENTER" spacing="15.0">
                     <children>
-                        <Label text="Username:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-                        <TextField fx:id="txtUserName" promptText="Username" GridPane.columnIndex="1" GridPane.rowIndex="0" />
 
-                        <Label text="Subscriber number:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                        <TextField fx:id="txtSubscriberNumber" promptText="e.g. 12345" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                        <!-- LOGO -->
+                        <ImageView fitHeight="140.0"
+                                   preserveRatio="true">
+                            <VBox.margin>	
+       							 <Insets top="25.0"/>
+   							</VBox.margin>
+                            <image>
+                                <Image url="@BistroLogo.png"/>
+                            </image>
+                        </ImageView>
 
-                        <Label text="Phone number:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-                        <TextField fx:id="txtPhoneNumber" promptText="e.g. 050-1234567" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                        <!-- ORIGINAL WELCOME TEXT -->
+                        <VBox alignment="CENTER" spacing="5.0">
+                            <children>
+                                <Label text="WELCOME" styleClass="welcomeTitle"/>
+                                <Label text="Bistro Restaurant Management System"
+                                       styleClass="subtitleItalic"/>
+                            </children>
+                        </VBox>
 
-                        <Label text="Email:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
-                        <TextField fx:id="txtEmail" promptText="example@mail.com" GridPane.columnIndex="1" GridPane.rowIndex="3" />
                     </children>
-               <columnConstraints>
-                  <ColumnConstraints />
-                  <ColumnConstraints />
-               </columnConstraints>
-               <rowConstraints>
-                  <RowConstraints />
-                  <RowConstraints />
-                  <RowConstraints />
-                  <RowConstraints />
-               </rowConstraints>
-                </GridPane>
+                </VBox>
 
-                <Label fx:id="lblMessage" managed="false" styleClass="errorMsg" text="" visible="false" />
+                <!-- ===== ORIGINAL CHOICE CARDS (לא נגעתי) ===== -->
+                <HBox alignment="CENTER" spacing="40.0">
+                    <children>
+
+                        <!-- Subscriber -->
+                        <VBox alignment="CENTER" spacing="20.0"
+                              prefHeight="260.0" prefWidth="240.0"
+                              styleClass="card30">
+                            <children>
+                                <Label text="👤" styleClass="emojiBig"/>
+                                <Label text="Subscriber" styleClass="cardTitle"/>
+                                <Label text="Login to your account" styleClass="cardHint"/>
+
+                                <Button text="LOGIN"
+                                        onAction="#handleSubscriberChoice"
+                                        styleClass="btnDanger"/>
+                            </children>
+                        </VBox>
+
+                        <!-- Guest -->
+                        <VBox alignment="CENTER" spacing="20.0"
+                              prefHeight="260.0" prefWidth="240.0"
+                              styleClass="card30">
+                            <children>
+                                <Label text="🔑" styleClass="emojiBig"/>
+                                <Label text="Guest" styleClass="cardTitle"/>
+                                <Label text="Quick access without ID" styleClass="cardHint"/>
+
+                                <Button text="CONTINUE"
+                                        onAction="#handleGuestChoice"
+                                        styleClass="btnWide25"/>
+                            </children>
+                        </VBox>
+
+                    </children>
+                </HBox>
+
             </children>
         </VBox>
-    </center>
-
-    <!-- FOOTER BUTTONS -->
-    <bottom>
-        <HBox alignment="CENTER_RIGHT" spacing="12">
-            <padding>
-                <Insets bottom="20" left="40" right="40" top="10" />
-            </padding>
-            <children>
-                <Button fx:id="btnCancel" onAction="#onCancelClicked" styleClass="btnSecondary" text="Exit" />
-
-                <Button fx:id="btnLogin" onAction="#onLoginClicked" styleClass="btnPrimary" text="Login" />
-            </children>
-        </HBox>
-    </bottom>
-
-</BorderPane>
+    </children>
+</StackPane>

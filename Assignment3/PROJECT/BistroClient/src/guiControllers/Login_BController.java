@@ -1,74 +1,54 @@
 package guiControllers;
 
-import java.io.IOException;
-
-import interfaces.ClientActions;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
-import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
+import java.io.IOException;
+import application.ClientUI; // הוספה חדשה לגישה ללקוח הסטטי
 
 public class Login_BController {
 
-    @FXML private BorderPane rootPane;
-
-    @FXML private TextField txtUserName;
-    @FXML private TextField txtSubscriberNumber;
-    @FXML private TextField txtPhoneNumber;
-    @FXML private TextField txtEmail;
-
-    @FXML private Button btnLogin;
-    @FXML private Button btnCancel;
-
-    @FXML private Label lblMessage;
-
-    // NEW: כדי להעביר ל-MENU (ואז לכל המסכים)
-    private ClientActions clientActions;
-
-    public void setClientActions(ClientActions clientActions) {
-        this.clientActions = clientActions;
-    }
-
     @FXML
-    private void onLoginClicked() {
-        // כרגע: תמיד לעבור ל-MENU בלי לוגיקה
-        openMenu();
-    }
-
-    @FXML
-    private void onCancelClicked() {
-        Stage stage = (Stage) rootPane.getScene().getWindow();
-        stage.close();
-    }
-
-    private void openMenu() {
+    private void handleSubscriberChoice(ActionEvent event) {
+        // navigateTo(event, "/gui/Menu_B.fxml"); // הקוד הישן שעבר ישר לתפריט
+        
+        // הקוד החדש שעובר למסך הזנת פרטי המנוי ומעביר את הלקוח:
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/SubscriberLogin.fxml"));
             Parent root = loader.load();
 
-            // NEW: להעביר clientActions ל-Menu_BController
-            Menu_BController menuController = loader.getController();
-            if (menuController != null) {
-                menuController.setClientActions(clientActions);
-            }
+            SubscriberLoginController nextController = loader.getController();
+            // הזרקת הלקוח הסטטי מה-ClientUI למסך הבא כדי שהחיבור לשרת יעבור הלאה
+            nextController.setClient(application.ClientUI.client); //
 
-            Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setTitle("Bistro - Main Menu");
+            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
             stage.setScene(new Scene(root));
             stage.show();
-
         } catch (IOException e) {
             e.printStackTrace();
-            if (lblMessage != null) {
-                lblMessage.setText("Failed to open menu.");
-                lblMessage.setVisible(true);
-                lblMessage.setManaged(true);
-            }
-        } 
+        }
     }
+
+    @FXML
+    private void handleGuestChoice(ActionEvent event) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/GuestLogin.fxml"));
+            Parent root = loader.load();
+
+            // ✨ הזרקת הלקוח למסך האורח כדי שיוכל לתקשר עם השרת
+            GuestLoginController nextController = loader.getController();
+            nextController.setClient(application.ClientUI.client); 
+
+            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+            stage.setScene(new Scene(root));
+            stage.show();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 }

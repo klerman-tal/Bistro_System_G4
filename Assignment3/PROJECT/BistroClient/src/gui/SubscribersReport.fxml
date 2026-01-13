@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.chart.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+<?import javafx.scene.text.TextFlow?>
+
+<BorderPane fx:id="rootPane" stylesheets="@Style.css"
+	xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+	fx:controller="guiControllers.SubscribersReportController">
+
+	<!-- ===== HEADER ===== -->
+	<top>
+		<HBox alignment="CENTER_LEFT">
+			<padding>
+				<Insets top="18" right="25" bottom="18" left="25" />
+			</padding>
+			<children>
+				<Label text="Subscribers Report" styleClass="title" />
+			</children>
+		</HBox>
+	</top>
+
+	<!-- ===== CONTENT ===== -->
+	<center>
+		<VBox alignment="TOP_CENTER" spacing="15">
+			<padding>
+				<Insets top="20" right="30" bottom="20" left="30" />
+			</padding>
+
+			<TabPane prefWidth="900" prefHeight="700">
+
+				<!-- ================= TAB 1 ================= -->
+				<Tab text="Active Subscribers" closable="false">
+					<VBox spacing="18" alignment="TOP_CENTER">
+						<padding>
+							<Insets top="25" />
+						</padding>
+
+						<!-- Summary -->
+						<VBox prefWidth="700" maxWidth="700" spacing="6"
+							styleClass="summary-box">
+							<Label fx:id="lblSubscribersSummaryTitle"
+								styleClass="summary-title" />
+							<TextFlow>
+								<Text fx:id="txtSubscribersSummaryText"
+									styleClass="summary-text" />
+							</TextFlow>
+						</VBox>
+
+						<PieChart fx:id="activeSubscribersPie" prefWidth="450"
+							prefHeight="350" />
+
+						<VBox spacing="6" alignment="TOP_LEFT">
+							<Label fx:id="lblActiveSubscribers"
+								styleClass="arrival-major-delay" />
+							<Label fx:id="lblInactiveSubscribers"
+								styleClass="arrival-minor-delay" />
+
+						</VBox>
+					</VBox>
+				</Tab>
+
+				<!-- ================= TAB 2 ================= -->
+				<Tab text="Waiting List Activity" closable="false">
+					<VBox spacing="18" alignment="TOP_CENTER">
+						<padding>
+							<Insets top="25" />
+						</padding>
+
+						<!-- Summary -->
+						<VBox prefWidth="700" maxWidth="700" spacing="6"
+							styleClass="summary-box">
+							<Label fx:id="lblWaitingSummaryTitle"
+								styleClass="summary-title" />
+							<TextFlow>
+								<Text fx:id="txtWaitingSummaryText"
+									styleClass="summary-text" />
+							</TextFlow>
+						</VBox>
+
+						<BarChart fx:id="waitingListChart" prefWidth="850"
+							prefHeight="420">
+							<xAxis>
+								<CategoryAxis label="Day of Month" />
+							</xAxis>
+							<yAxis>
+								<NumberAxis label="Entries" />
+							</yAxis>
+						</BarChart>
+
+						<VBox prefWidth="850" spacing="6">
+							<Label fx:id="lblWaitingTotal" />
+							<Label fx:id="lblWaitingAvg" />
+							<Label fx:id="lblWaitingPeak" />
+						</VBox>
+
+					</VBox>
+				</Tab>
+
+				<!-- ================= TAB 3 ================= -->
+				<Tab text="Reservations Trend" closable="false">
+					<VBox spacing="18" alignment="TOP_CENTER">
+						<padding>
+							<Insets top="25" />
+						</padding>
+
+						<!-- Summary -->
+						<VBox prefWidth="700" maxWidth="700" spacing="6"
+							styleClass="summary-box">
+							<Label fx:id="lblReservationsSummaryTitle"
+								styleClass="summary-title" />
+							<TextFlow>
+								<Text fx:id="txtReservationsSummaryText"
+									styleClass="summary-text" />
+							</TextFlow>
+						</VBox>
+
+						<LineChart fx:id="reservationsTrendChart"
+							prefWidth="850" prefHeight="420">
+							<xAxis>
+								<CategoryAxis label="Day of Month" />
+							</xAxis>
+							<yAxis>
+								<NumberAxis label="Reservations" />
+							</yAxis>
+						</LineChart>
+
+						<VBox prefWidth="850" spacing="6">
+							<Label fx:id="lblReservationsTotal" />
+							<Label fx:id="lblReservationsAvg" />
+							<Label fx:id="lblReservationsPeak" />
+						</VBox>
+
+					</VBox>
+				</Tab>
+
+			</TabPane>
+		</VBox>
+	</center>
+
+	<!-- ===== FOOTER ===== -->
+	<bottom>
+		<HBox alignment="CENTER_RIGHT">
+			<padding>
+				<Insets top="10" right="40" bottom="20" left="40" />
+			</padding>
+			<children>
+				<Button text="Back" styleClass="btnSecondary"
+					onAction="#onBackClicked" />
+			</children>
+		</HBox>
+	</bottom>
+
+</BorderPane>

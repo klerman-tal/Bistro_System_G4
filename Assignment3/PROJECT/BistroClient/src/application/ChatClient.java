@@ -1,95 +1,101 @@
-// This file contains material supporting section 3.7 of the textbook:
-// "Object Oriented Software Engineering" and is issued under the open-source
-// license found at www.lloseng.com 
 package application;
 
 import java.io.*;
 import java.util.ArrayList;
 
+import dto.NotificationDTO;
+import dto.ResponseDTO;
 import ocsf.client.AbstractClient;
 import interfaces.ChatIF;
+import javafx.application.Platform;
+import javafx.scene.control.Alert;
+import network.ClientResponseHandler;
 
-/**
- * This class overrides some of the methods defined in the abstract
- * superclass in order to give more functionality to the client.
- *
- * @author Dr Timothy C. Lethbridge
- * @author Dr Robert Lagani&egrave;
- * @author Fran&ccedil;ois B&eacute;langer
- * @version July 2000
- */
 public class ChatClient extends AbstractClient
 {
-  //Instance variables **********************************************
-  
-  /**
-   * The interface type variable.  It allows the implementation of 
-   * the display method in the client.
-   */
-  ChatIF clientUI; 
+  ChatIF clientUI;
+  private ClientResponseHandler responseHandler;
 
-  
-  //Constructors ****************************************************
-  
-  /**
-   * Constructs an instance of the chat client.
-   *
-   * @param host The server to connect to.
-   * @param port The port number to connect on.
-   * @param clientUI The interface type variable.
-   */
-  
-  public ChatClient(String host, int port, ChatIF clientUI) 
-    throws IOException 
+  public ChatClient(String host, int port, ChatIF clientUI) throws IOException 
   {
-    super(host, port); //Call the superclass constructor
+    super(host, port);
     this.clientUI = clientUI;
     openConnection();
   }
 
-  
-  //Instance methods ************************************************
-    
-  /**
-   * This method handles all data that comes in from the server.
-   *
-   * @param msg The message from the server.
-   */
-  public void handleMessageFromServer(Object msg) 
-  {
-    clientUI.display(msg.toString());
+  public void setResponseHandler(ClientResponseHandler handler) {
+      this.responseHandler = handler;
   }
 
-  /**
-   * This method handles all data coming from the UI            
-   *
-   * @param message The message from the UI.    
-   */
+  public void handleMessageFromServer(Object msg) 
+  {
+      // ✅ NotificationDTO (popup in app + simulated SMS text in logs)
+      if (msg instanceof NotificationDTO n) {
+          Platform.runLater(() -> showNotification(n));
+          return;
+      }
+
+      if (msg instanceof ResponseDTO response) {
+          if (responseHandler != null) {
+              Platform.runLater(() -> responseHandler.handleResponse(response));
+          } else {
+              clientUI.display("Response: " + response.getMessage());
+          }
+          return;
+      }
+
+      clientUI.display(msg.toString());
+  }
+
   public void handleMessageFromClientUI(ArrayList<String> message)  
   {
     try
     {
-   	sendToServer(message);
+      sendToServer(message);
     }
     catch(IOException e)
     {
-      clientUI.display
-        ("Could not send message to server.  Terminating client.");
+      clientUI.display("Could not send message to server.  Terminating client.");
       quit();
     }
   }
-  
-  /**
-   * This method terminates the client.
-   */
+
   public void quit()
   {
-    try
-    {
-      closeConnection();
-    }
-    catch(IOException e) {}
+    try { closeConnection(); } catch(IOException e) {}
     System.exit(0);
   }
+
+  private void showNotification(NotificationDTO n) {
+
+      // 1) Show ONLY safe text in app popup (no code)
+      Alert.AlertType alertType = switch (n.getType()) {
+          case SUCCESS, INFO -> Alert.AlertType.INFORMATION;
+          case WARNING -> Alert.AlertType.WARNING;
+          case ERROR -> Alert.AlertType.ERROR;
+      };
+
+      Alert alert = new Alert(alertType);
+      alert.setTitle("Bistro");
+      alert.setHeaderText(null);
+      alert.setContentText(n.getDisplayMessage());
+      alert.showAndWait();
+
+      // 2) Simulated SMS/Email content -> log area (contains code)
+      if (n.getChannel() != null && n.getChannelMessage() != null && !n.getChannelMessage().isBlank()) {
+          clientUI.display("[" + n.getChannel() + "-SIM] " + n.getChannelMessage());
+      }
+  }
+
+  @Override
+  protected void connectionException(Exception exception) {
+      if (responseHandler != null) {
+          Platform.runLater(() -> responseHandler.handleConnectionError(exception));
+      }
+      clientUI.display("Connection error: " + exception.getMessage());
+  }
+
+  public ClientResponseHandler getResponseHandler() {
+      return responseHandler;
+  }
 }
-//End of ChatClient class

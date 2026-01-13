@@ -5,244 +5,663 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Map;
 
 import application.RestaurantServer;
+import dbControllers.Notification_DB_Controller;
 import dbControllers.Reservation_DB_Controller;
-import dbControllers.Restaurant_DB_Controller;
+import dto.CreateReservationDTO;
 import entities.Enums.ReservationStatus;
-import entities.Enums.UserRole;
 import entities.Reservation;
 import entities.Restaurant;
+import entities.Table;
 import entities.User;
-import gui.ServerGUIController;
+import entities.Notification;
+import entities.Enums;
 
 public class ReservationController {
-	
-	private final Reservation_DB_Controller db;
-	private final Restaurant restaurant;
-	private RestaurantServer server;
-    
-    public ReservationController(Reservation_DB_Controller db, RestaurantServer server) {
-    	
-    	this.db = db;
-    	this.server = server;
-    	this.restaurant = Restaurant.getInstance();
-    	
+
+    private final Reservation_DB_Controller db;
+    private final Notification_DB_Controller notificationDB; // ✅ scheduled notifications
+    private final Restaurant restaurant;
+    private final RestaurantServer server;
+    private final RestaurantController restaurantController;
+
+    // ✅ NEW: link to waiting logic for "table freed" scenario
+    private WaitingController waitingController;
+
+    /**
+     * Constructor: connects controller to DB layer, server logger, and restaurant availability logic.
+     */
+    public ReservationController(Reservation_DB_Controller db,
+                                 Notification_DB_Controller notificationDB,
+                                 RestaurantServer server,
+                                 RestaurantController rc) {
+        this.db = db;
+        this.notificationDB = notificationDB;
+        this.server = server;
+        this.restaurant = Restaurant.getInstance();
+        this.restaurantController = rc;
     }
-    
-    
-	public Reservation CreateTableReservation(LocalDate date, LocalTime time, int guestsNumber, User user) {
-		
-		//לבדוק אם יש פנוי ?
-		//אם לא- תחזיר רשימת שעות פנויות
-		//אם כן-
-		
-		LocalDateTime now = LocalDateTime.now();
-	    LocalDateTime requested = LocalDateTime.of(date, time);
 
-	    if (requested.isBefore(now.plusHours(1)) || requested.isAfter(now.plusMonths(1))) {
-	        server.log("WARN: Invalid reservation time requested. UserId=" + user.getUserId() +
-	                   ", Requested=" + requested + ", Now=" + now);
-	        return null;
-	    }
-		
-		Reservation res = new Reservation();
-		
-		res.setCreatedByUserId(user.getUserId());
-		res.setGuestAmount(guestsNumber);
-		res.setReservationTime(LocalDateTime.of(date, time));
-		res.setConfirmed(true);
-		
-		 try {
-		        int reservationId = db.addReservation(
-		            res.getReservationTime(),
-		            guestsNumber,
-		            res.getConfirmationCode(),
-		            user.getUserId()
-		        );
+    /**
+     * ✅ NEW: connect waiting controller after construction (avoid circular constructor dependency).
+     */
+    public void setWaitingController(WaitingController waitingController) {
+        this.waitingController = waitingController;
+    }
 
-		        if (reservationId == -1) {
-		            server.log("ERROR: Reservation insert failed (no ID returned)");
-		            return null;
-		        }
+    // =====================================================
+    // NOTIFICATIONS (SCHEDULED)
+    // =====================================================
 
-		        res.setReservationId(reservationId);
-		        //לשנות בטבלה של השולחנות הפנויים לתפוס
-		        //לשלוח הודעה עם קוד אימות של ההזמנה
-		        //לשנות בהאשמאפ של השולחנות הפנויים (מרגע ההזמנה עד שעתיים אחר כך) 
-		        
-		    } catch (SQLException e) {
-		        server.log(
-		            "ERROR: Failed to insert reservation into DB. " +
-		            "UserId=" + user.getUserId() +
-		            ", Message=" + e.getMessage()
-		        );
-		        return null;
-		    }
+    /**
+     * Schedules reminder notifications 2 hours before reservation time (SMS + Email).
+     * English texts:
+     * - SMS/Email content: "Reminder: Your reservation is in 2 hours. Confirmation code: <CODE>"
+     */
+    private void scheduleReservationReminder2HoursBefore(int userId, LocalDateTime reservationDateTime, String confirmationCode) {
+        try {
+            if (notificationDB == null) return;
+            if (reservationDateTime == null) return;
+            if (confirmationCode == null || confirmationCode.isBlank()) return;
 
-		    server.log(
-		        "Table reservation created. " +
-		        "ReservationId=" + res.getReservationId() +
-		        ", ConfirmationCode=" + res.getConfirmationCode()
-		    );
+            LocalDateTime scheduledFor = reservationDateTime.minusHours(2);
 
-		    return res;
-		}
-	
-	public boolean CancelReservation(String confirmationCode) {
-		try {
-		    if (!db.isActiveReservationExists(confirmationCode)) {
-		        server.log("WARN: Cancel request with invalid or inactive confirmation code: " + confirmationCode);
-		        return false;
-		    }
+            // If it's already too late, skip scheduling
+            if (scheduledFor.isBefore(LocalDateTime.now())) {
+                return;
+            }
 
-		    boolean canceled =
-		    		db.deactivateReservationByConfirmationCode(confirmationCode);
+            String smsBody = "Reminder: Your reservation is in 2 hours. Confirmation code: " + confirmationCode;
+            String emailBody = "Reminder: Your reservation is in 2 hours. Confirmation code: " + confirmationCode;
 
-		    if (canceled) {
-		        server.log("Reservation canceled. ConfirmationCode=" + confirmationCode);
-		        return true;
-		    } else {
-		        server.log("WARN: Failed to cancel reservation (no row updated). Code=" + confirmationCode);
-		        return false;
-		    }
+            notificationDB.addNotification(new Notification(
+                    userId,
+                    Enums.Channel.SMS,
+                    Enums.NotificationType.RESERVATION_REMINDER_2H,
+                    smsBody,
+                    scheduledFor
+            ));
 
-		} catch (SQLException e) {
-		    server.log("ERROR: Failed to cancel reservation. Code=" + confirmationCode +
-		               ", Message=" + e.getMessage());
-		    return false;
-		}
+            notificationDB.addNotification(new Notification(
+                    userId,
+                    Enums.Channel.EMAIL,
+                    Enums.NotificationType.RESERVATION_REMINDER_2H,
+                    emailBody,
+                    scheduledFor
+            ));
 
-	}
-	
-	public ArrayList<Reservation> getReservationsForUser(User user) {
-	    try {
-	        return db.getReservationsByUser(user.getUserId());
-	    } catch (SQLException e) {
-	        server.log("ERROR: Failed to load reservations for user. UserId=" +
-	                   user.getUserId() + ", Message=" + e.getMessage());
-	        return null;
-	    }
-	}
-	
-	public ArrayList<Reservation> getAllActiveReservations() {
-	    try {
-	        return db.getActiveReservations();
-	    } catch (SQLException e) {
-	        server.log("ERROR: Failed to load active reservations. Message=" + e.getMessage());
-	        return null;
-	    }
-	}
-	
-	public ArrayList<Reservation> getAllReservationsHistory() {
-	    try {
-	        return db.getAllReservations();
-	    } catch (SQLException e) {
-	        server.log("ERROR: Failed to load reservations history. Message=" + e.getMessage());
-	        return null; 
-	    }
-	}
-	
-	public Reservation getReservationByConfirmationCode(String confirmationCode) {
-	    try {
-	        return db.getReservationByConfirmationCode(confirmationCode);
-	    } catch (SQLException e) {
-	        server.log(
-	            "ERROR: Failed to find reservation by confirmation code. " +
-	            "Code=" + confirmationCode +
-	            ", Message=" + e.getMessage()
-	        );
-	        return null;
-	    }
-	}
-	
-	public boolean updateReservationStatus(int reservationId, ReservationStatus status) {
-	    try {
-	        boolean updated = db.updateReservationStatus(reservationId, status);
+        } catch (Exception e) {
+            server.log("ERROR: Failed to schedule 2h reminder. UserId=" + userId + ", Msg=" + e.getMessage());
+        }
+    }
 
-	        if (!updated) {
-	            server.log("WARN: Reservation not found. Status not updated. ReservationId=" +
-	                       reservationId);
-	            return false;
-	        }
+    // =====================================================
+    // AVAILABILITY HELPERS
+    // =====================================================
 
-	        server.log("Reservation status updated. ReservationId=" +
-	                   reservationId + ", Status=" + status);
-	        return true;
+    private void fillAvailableTimesForDay(
+            LocalDate date,
+            int guestsNumber,
+            LocalTime fromTime,
+            ArrayList<LocalTime> out) {
 
-	    } catch (Exception e) {
-	        server.log("ERROR: Failed to update reservation status. ReservationId=" +
-	                   reservationId + ", Message=" + e.getMessage());
-	        return false;
-	    }
-	}
+        if (out == null) return;
+        out.clear();
 
+        try {
+            Map<LocalDateTime, Table> map =
+                    restaurantController.getOneAvailableTablePerSlot(date, guestsNumber);
 
-	public boolean updateReservationConfirmation(int reservationId, boolean isConfirmed) {
-	    try {
-	        boolean updated = db.updateIsConfirmed(reservationId, isConfirmed);
+            ArrayList<LocalDateTime> times = new ArrayList<>(map.keySet());
+            times.sort(Comparator.naturalOrder());
 
-	        if (!updated) {
-	            server.log("WARN: Reservation not found. is_confirmed not updated. ReservationId=" +
-	                       reservationId);
-	            return false;
-	        }
+            for (LocalDateTime dt : times) {
+                LocalTime t = dt.toLocalTime();
 
-	        server.log("Reservation confirmation updated. ReservationId=" +
-	                   reservationId + ", isConfirmed=" + isConfirmed);
-	        return true;
+                if (fromTime != null && t.isBefore(fromTime)) continue;
 
-	    } catch (Exception e) {
-	        server.log("ERROR: Failed to update reservation confirmation. ReservationId=" +
-	                   reservationId + ", Message=" + e.getMessage());
-	        return false;
-	    }
-	}
+                Table table = map.get(dt);
+                if (table == null) continue;
 
+                if (restaurantController.isTableFreeForTwoHours(dt, table.getTableNumber())) {
+                    out.add(t);
+                }
+            }
 
-	public boolean updateCheckinTime(int reservationId, LocalDateTime checkinTime) {
-	    try {
-	        boolean updated = db.updateCheckinTime(reservationId, checkinTime);
+        } catch (Exception e) {
+            server.log("ERROR: Failed to load available times. " + e.getMessage());
+        }
+    }
 
-	        if (!updated) {
-	            server.log("WARN: Reservation not found. Check-in not updated. ReservationId=" +
-	                       reservationId);
-	            return false;
-	        }
+    private boolean tryReserveForTwoHours(LocalDateTime start, int tableNumber) {
+        ArrayList<LocalDateTime> locked = new ArrayList<>();
+        LocalDateTime slot = start;
 
-	        server.log("Check-in time updated. ReservationId=" +
-	                   reservationId + ", Checkin=" + checkinTime);
-	        return true;
+        try {
+            for (int i = 0; i < 4; i++) {
+                boolean ok = restaurantController.tryReserveSlot(slot, tableNumber);
+                if (!ok) {
+                    for (LocalDateTime s : locked) {
+                        try { restaurantController.releaseSlot(s, tableNumber); }
+                        catch (Exception ignore) {}
+                    }
+                    return false;
+                }
 
-	    } catch (Exception e) {
-	        server.log("ERROR: Failed to update check-in time. ReservationId=" +
-	                   reservationId + ", Message=" + e.getMessage());
-	        return false;
-	    }
-	}
+                locked.add(slot);
+                slot = slot.plusMinutes(30);
+            }
 
+            return true;
 
-	public boolean updateCheckoutTime(int reservationId, LocalDateTime checkoutTime) {
-	    try {
-	        boolean updated = db.updateCheckoutTime(reservationId, checkoutTime);
+        } catch (Exception e) {
+            for (LocalDateTime s : locked) {
+                try { restaurantController.releaseSlot(s, tableNumber); }
+                catch (Exception ignore) {}
+            }
 
-	        if (!updated) {
-	            server.log("WARN: Reservation not found. Check-out not updated. ReservationId=" +
-	                       reservationId);
-	            return false;
-	        }
+            server.log("ERROR: Failed to reserve 2 hours slots. " + e.getMessage());
+            return false;
+        }
+    }
 
-	        server.log("Check-out time updated. ReservationId=" +
-	                   reservationId + ", Checkout=" + checkoutTime);
-	        return true;
+    // =====================================================
+    // TABLE FREED -> WAITING HOOK
+    // =====================================================
 
-	    } catch (Exception e) {
-	        server.log("ERROR: Failed to update check-out time. ReservationId=" +
-	                   reservationId + ", Message=" + e.getMessage());
-	        return false;
-	    }
-	}
+    /**
+     * ✅ NEW: after cancel/finish releases a table, notify waiting list (scenario 2B).
+     */
+    private void notifyWaitingTableFreed(Integer tableNumber) {
+        if (waitingController == null) return;
+        if (tableNumber == null) return;
 
+        try {
+            // Try to find the real table object from Restaurant cache (so we have correct seats_amount)
+            Table freed = null;
 
+            try {
+                // If your Restaurant singleton keeps tables in memory, use it
+                // (common in your project because you load tables into Restaurant cache).
+                for (Table t : restaurant.getTables()) {
+                    if (t != null && t.getTableNumber() == tableNumber) {
+                        freed = t;
+                        break;
+                    }
+                }
+            } catch (Exception ignore) {}
 
+            // Fallback: minimal table (won't crash, but seats may be missing if cache isn't loaded)
+            if (freed == null) {
+                freed = new Table();
+                freed.setTableNumber(tableNumber);
+                // IMPORTANT: if you reach here and seats_amount is needed, ensure Restaurant cache is loaded.
+                freed.setSeatsAmount(Integer.MAX_VALUE);
+            }
+
+            waitingController.handleTableFreed(freed);
+
+        } catch (Exception e) {
+            server.log("ERROR: notifyWaitingTableFreed failed. Table=" + tableNumber + ", Msg=" + e.getMessage());
+        }
+    }
+
+    // =====================================================
+    // CREATE / CANCEL RESERVATION
+    // =====================================================
+
+    public Reservation CreateTableReservation(
+            CreateReservationDTO dto,
+            ArrayList<LocalTime> availableTimesOut) {
+
+        if (availableTimesOut != null) availableTimesOut.clear();
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime requested = LocalDateTime.of(dto.getDate(), dto.getTime());
+
+        if (requested.isBefore(now.plusHours(1)) || requested.isAfter(now.plusMonths(1))) {
+            server.log("WARN: Invalid reservation time. UserId=" + dto.getUserId());
+            return null;
+        }
+
+        Table table;
+        try {
+            table = restaurantController.getOneAvailableTableAt(requested, dto.getGuests());
+        } catch (Exception e) {
+            server.log("ERROR: Failed to check availability. " + e.getMessage());
+            return null;
+        }
+
+        if (table == null) {
+            fillAvailableTimesForDay(dto.getDate(), dto.getGuests(), dto.getTime(), availableTimesOut);
+            return null;
+        }
+
+        boolean locked2h = tryReserveForTwoHours(requested, table.getTableNumber());
+        if (!locked2h) {
+            fillAvailableTimesForDay(dto.getDate(), dto.getGuests(), dto.getTime(), availableTimesOut);
+            return null;
+        }
+
+        Reservation res = new Reservation();
+        res.setCreatedByUserId(dto.getUserId());
+        res.setGuestAmount(dto.getGuests());
+        res.setReservationTime(requested);
+        res.setConfirmed(true);
+        res.setTableNumber(table.getTableNumber());
+        res.setActive(true);
+        res.setReservationStatus(ReservationStatus.Active);
+        res.setCreatedByRole(dto.getRole());
+        res.generateAndSetConfirmationCode();
+
+        try {
+            int reservationId = db.addReservation(
+                    res.getReservationTime(),
+                    dto.getGuests(),
+                    res.getConfirmationCode(),
+                    dto.getUserId(),
+                    dto.getRole(),
+                    table.getTableNumber()
+            );
+
+            if (reservationId == -1) {
+                rollbackReservation(requested, table.getTableNumber());
+                return null;
+            }
+            res.setReservationId(reservationId);
+
+            // ✅ schedule reminder 2 hours before
+            scheduleReservationReminder2HoursBefore(dto.getUserId(), requested, res.getConfirmationCode());
+
+        } catch (SQLException e) {
+            server.log("ERROR: DB Insert failed: " + e.getMessage());
+            rollbackReservation(requested, table.getTableNumber());
+            return null;
+        }
+
+        return res;
+    }
+
+    public boolean createReservationFromWaiting(
+            String confirmationCode,
+            LocalDateTime start,
+            int guests,
+            User user,
+            int tableNumber) {
+
+        if (confirmationCode == null || confirmationCode.isBlank()) return false;
+        if (start == null || user == null) return false;
+
+        boolean locked2h = tryReserveForTwoHours(start, tableNumber);
+        if (!locked2h) return false;
+
+        try {
+            int reservationId = db.addReservation(
+                    start,
+                    guests,
+                    confirmationCode.trim(),
+                    user.getUserId(),
+                    user.getUserRole(),
+                    tableNumber
+            );
+
+            if (reservationId == -1) {
+                rollbackReservation(start, tableNumber);
+                return false;
+            }
+
+            scheduleReservationReminder2HoursBefore(user.getUserId(), start, confirmationCode.trim());
+
+            server.log("Reservation created from waiting. Code=" + confirmationCode +
+                       ", Table=" + tableNumber + ", ReservationId=" + reservationId);
+            return true;
+
+        } catch (Exception e) {
+            rollbackReservation(start, tableNumber);
+            server.log("ERROR: createReservationFromWaiting failed. Code=" + confirmationCode +
+                       ", Msg=" + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean CancelReservation(String confirmationCode) {
+
+        try {
+            Reservation r = db.getReservationByConfirmationCode(confirmationCode);
+            if (r == null || !r.isActive() || r.getReservationStatus() != ReservationStatus.Active) {
+                server.log("WARN: Cancel request invalid/inactive. Code=" + confirmationCode);
+                return false;
+            }
+
+            Integer tableNum = r.getTableNumber();
+            LocalDateTime start = r.getReservationTime();
+
+            if (tableNum == null || start == null) {
+                server.log("ERROR: Cancel failed - missing table/reservation time. Code=" + confirmationCode);
+                return false;
+            }
+
+            // 1) release 2 hours (4 slots)
+            for (int i = 0; i < 4; i++) {
+                try { restaurantController.releaseSlot(start.plusMinutes(30L * i), tableNum); }
+                catch (Exception e) {
+                    server.log("ERROR: Failed releasing slot during cancel. Slot=" +
+                               start.plusMinutes(30L * i) + ", Table=" + tableNum + ", Msg=" + e.getMessage());
+                }
+            }
+
+            // 2) update DB
+            boolean cancelled = db.cancelReservationByConfirmationCode(confirmationCode);
+
+            if (cancelled) {
+                server.log("Reservation canceled. Code=" + confirmationCode);
+
+                // ✅ NEW: after cancel -> try to notify waiting list
+                notifyWaitingTableFreed(tableNum);
+
+                return true;
+            }
+
+            server.log("WARN: Cancel DB update did not affect row. Code=" + confirmationCode);
+            return false;
+
+        } catch (SQLException e) {
+            server.log("ERROR: Failed to cancel reservation. Code=" + confirmationCode + ", Message=" + e.getMessage());
+            return false;
+        }
+    }
+
+    private void rollbackReservation(LocalDateTime requested, int tableNumber) {
+        server.log("Rolling back: releasing 2 hours (4 slots) for table " + tableNumber);
+        for (int i = 0; i < 4; i++) {
+            try {
+                restaurantController.releaseSlot(requested.plusMinutes(30L * i), tableNumber);
+            } catch (Exception ignore) {}
+        }
+    }
+
+    // =====================================================
+    // READ (QUERIES)
+    // =====================================================
+
+    public ArrayList<Reservation> getReservationsForUser(int userId) {
+        try {
+            return db.getReservationsByUser(userId);
+        } catch (SQLException e) {
+            server.log("ERROR: Failed to load reservations for user. UserId=" +
+                       userId + ", Message=" + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    public ArrayList<Reservation> getAllActiveReservations() {
+        try {
+            return db.getActiveReservations();
+        } catch (SQLException e) {
+            server.log("ERROR: Failed to load active reservations. Message=" + e.getMessage());
+            return null;
+        }
+    }
+
+    public ArrayList<Reservation> getAllReservationsHistory() {
+        try {
+            return db.getAllReservations();
+        } catch (SQLException e) {
+            server.log("ERROR: Failed to load reservations history. Message=" + e.getMessage());
+            return null;
+        }
+    }
+
+    public Reservation getReservationByConfirmationCode(String confirmationCode) {
+        try {
+            return db.getReservationByConfirmationCode(confirmationCode);
+        } catch (SQLException e) {
+            server.log("ERROR: Failed to find reservation by confirmation code. Code=" + confirmationCode +
+                       ", Message=" + e.getMessage());
+            return null;
+        }
+    }
+
+    // =====================================================
+    // UPDATE
+    // =====================================================
+
+    public boolean updateReservationStatus(int reservationId, ReservationStatus status) {
+        try {
+            boolean updated = db.updateReservationStatus(reservationId, status);
+
+            if (!updated) {
+                server.log("WARN: Reservation not found. Status not updated. ReservationId=" + reservationId);
+                return false;
+            }
+
+            server.log("Reservation status updated. ReservationId=" + reservationId + ", Status=" + status);
+            return true;
+
+        } catch (Exception e) {
+            server.log("ERROR: Failed to update reservation status. ReservationId=" + reservationId +
+                       ", Message=" + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean updateReservationConfirmation(int reservationId, boolean isConfirmed) {
+        try {
+            boolean updated = db.updateIsConfirmed(reservationId, isConfirmed);
+
+            if (!updated) {
+                server.log("WARN: Reservation not found. is_confirmed not updated. ReservationId=" + reservationId);
+                return false;
+            }
+
+            server.log("Reservation confirmation updated. ReservationId=" + reservationId + ", isConfirmed=" + isConfirmed);
+            return true;
+
+        } catch (Exception e) {
+            server.log("ERROR: Failed to update reservation confirmation. ReservationId=" + reservationId +
+                       ", Message=" + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean updateCheckinTime(int reservationId, LocalDateTime checkinTime) {
+        try {
+            boolean updated = db.updateCheckinTime(reservationId, checkinTime);
+
+            if (!updated) {
+                server.log("WARN: Reservation not found. Check-in not updated. ReservationId=" + reservationId);
+                return false;
+            }
+
+            server.log("Check-in time updated. ReservationId=" + reservationId + ", Checkin=" + checkinTime);
+            return true;
+
+        } catch (Exception e) {
+            server.log("ERROR: Failed to update check-in time. ReservationId=" + reservationId +
+                       ", Message=" + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean updateCheckoutTime(int reservationId, LocalDateTime checkoutTime) {
+        try {
+            boolean updated = db.updateCheckoutTime(reservationId, checkoutTime);
+
+            if (!updated) {
+                server.log("WARN: Reservation not found. Check-out not updated. ReservationId=" + reservationId);
+                return false;
+            }
+
+            server.log("Check-out time updated. ReservationId=" + reservationId + ", Checkout=" + checkoutTime);
+            return true;
+
+        } catch (Exception e) {
+            server.log("ERROR: Failed to update check-out time. ReservationId=" + reservationId +
+                       ", Message=" + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean FinishReservation(String confirmationCode) {
+
+        try {
+            Reservation r = db.getReservationByConfirmationCode(confirmationCode);
+            if (r == null || !r.isActive() || r.getReservationStatus() != ReservationStatus.Active) {
+                server.log("WARN: Finish request invalid/inactive. Code=" + confirmationCode);
+                return false;
+            }
+
+            Integer tableNum = r.getTableNumber();
+            LocalDateTime start = r.getReservationTime();
+
+            if (tableNum == null || start == null) {
+                server.log("ERROR: Finish failed - missing table/reservation time. Code=" + confirmationCode);
+                return false;
+            }
+
+            // 1) Release 2 hours (4 slots)
+            for (int i = 0; i < 4; i++) {
+                LocalDateTime slot = start.plusMinutes(30L * i);
+                try {
+                    restaurantController.releaseSlot(slot, tableNum);
+                } catch (Exception e) {
+                    server.log("ERROR: Failed releasing slot during finish. Slot=" +
+                               slot + ", Table=" + tableNum + ", Msg=" + e.getMessage());
+                }
+            }
+
+            // 2) Update DB: Finished + checkout + inactive
+            LocalDateTime checkoutTime = LocalDateTime.now();
+            boolean finished = db.finishReservationByConfirmationCode(confirmationCode, checkoutTime);
+
+            if (finished) {
+                server.log("Reservation finished. Code=" + confirmationCode + ", Checkout=" + checkoutTime);
+
+                // ✅ NEW: after payment/finish -> try to notify waiting list
+                notifyWaitingTableFreed(tableNum);
+
+                return true;
+            }
+
+            server.log("WARN: Finish DB update did not affect row. Code=" + confirmationCode);
+            return false;
+
+        } catch (SQLException e) {
+            server.log("ERROR: Failed to finish reservation. Code=" + confirmationCode + ", Message=" + e.getMessage());
+            return false;
+        }
+    }
+
+    // ========= recovery helpers (kept as-is) =========
+
+    public Reservation findGuestReservationByContactAndTime(
+            String phone,
+            String email,
+            LocalDateTime dateTime) {
+
+        if (((phone == null || phone.isBlank()) &&
+             (email == null || email.isBlank())) ||
+             dateTime == null) {
+            return null;
+        }
+
+        try {
+            return db.findGuestReservationByContactAndTime(phone, email, dateTime);
+        } catch (Exception e) {
+            server.log("ERROR: Recover guest confirmation failed. " + e.getMessage());
+            return null;
+        }
+    }
+
+    public String recoverGuestConfirmationCode(
+            String phone,
+            String email,
+            java.time.LocalDateTime reservationDateTime) {
+
+        if ((phone == null || phone.isBlank()) && (email == null || email.isBlank())) {
+            return null;
+        }
+        if (reservationDateTime == null) {
+            return null;
+        }
+
+        try {
+            java.util.ArrayList<Integer> guestIds =
+                    db.getGuestIdsByContact(phone, email);
+
+            if (guestIds == null || guestIds.isEmpty()) {
+                return null;
+            }
+
+            return db.findGuestConfirmationCodeByDateTimeAndGuestIds(reservationDateTime, guestIds);
+
+        } catch (Exception e) {
+            server.log("ERROR: recoverGuestConfirmationCode failed: " + e.getMessage());
+            return null;
+        }
+    }
+
+    public Reservation createNowReservationFromWaiting(
+            LocalDateTime start,
+            int guests,
+            User user,
+            String confirmationCode
+    ) {
+        if (start == null || user == null || confirmationCode == null || confirmationCode.isBlank()) return null;
+
+        Table table;
+        try {
+            table = restaurantController.getOneAvailableTableAt(start, guests);
+        } catch (Exception e) {
+            server.log("ERROR: Waiting -> check availability failed. " + e.getMessage());
+            return null;
+        }
+
+        if (table == null) return null;
+
+        boolean locked2h = tryReserveForTwoHours(start, table.getTableNumber());
+        if (!locked2h) return null;
+
+        Reservation res = new Reservation();
+        res.setCreatedByUserId(user.getUserId());
+        res.setCreatedByRole(user.getUserRole());
+        res.setGuestAmount(guests);
+        res.setReservationTime(start);
+        res.setConfirmed(true);
+        res.setActive(true);
+        res.setTableNumber(table.getTableNumber());
+        res.setReservationStatus(ReservationStatus.Active);
+
+        res.setConfirmationCode(confirmationCode);
+
+        try {
+            int reservationId = db.addReservation(
+                    start,
+                    guests,
+                    confirmationCode,
+                    user.getUserId(),
+                    user.getUserRole(),
+                    table.getTableNumber()
+            );
+
+            if (reservationId == -1) {
+                rollbackReservation(start, table.getTableNumber());
+                return null;
+            }
+
+            res.setReservationId(reservationId);
+
+            scheduleReservationReminder2HoursBefore(user.getUserId(), start, confirmationCode);
+
+            return res;
+
+        } catch (SQLException e) {
+            server.log("ERROR: Waiting -> addReservation failed. " + e.getMessage());
+            rollbackReservation(start, table.getTableNumber());
+            return null;
+        }
+    }
 }

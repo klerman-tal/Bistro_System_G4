@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<StackPane id="rootPane"
+           prefWidth="650" prefHeight="470"
+           stylesheets="@Style.css"
+           xmlns="http://javafx.com/javafx/21"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="guiControllers.ForgotGuestConfirmationController">
+
+    <children>
+        <VBox alignment="CENTER" spacing="14" styleClass="card30" maxWidth="520">
+            <padding>
+                <Insets top="22" right="26" bottom="22" left="26"/>
+            </padding>
+
+            <children>
+                <Label text="Guest Confirmation Code Recovery" styleClass="title"/>
+                <Label text="Enter details to recover your confirmation code:" styleClass="subtitle"/>
+
+                <VBox spacing="10" maxWidth="420">
+                    <children>
+                        <Label text="PHONE" styleClass="field-label"/>
+                        <TextField fx:id="phoneField" promptText="Phone Number"/>
+
+                        <Label text="EMAIL" styleClass="field-label"/>
+                        <TextField fx:id="emailField" promptText="Email Address"/>
+
+                        <Label text="RESERVATION DATE" styleClass="field-label"/>
+                        <DatePicker fx:id="datePicker"/>
+
+                        <Label text="RESERVATION TIME" styleClass="field-label"/>
+                        <ComboBox fx:id="timeCombo" promptText="Select time"/>
+
+                        <Label fx:id="lblError"
+                               text=""
+                               visible="false" managed="false"
+                               styleClass="errorMsg"/>
+                    </children>
+                </VBox>
+
+                <HBox alignment="CENTER" spacing="12">
+                    <children>
+                        <Button text="RECOVER"
+                                prefWidth="140"
+                                onAction="#handleRecover"
+                                styleClass="btnPrimary"/>
+
+                        <Button text="CANCEL"
+                                prefWidth="140"
+                                onAction="#handleCancel"
+                                styleClass="btnSecondary"/>
+                    </children>
+                </HBox>
+            </children>
+        </VBox>
+    </children>
+
+</StackPane>

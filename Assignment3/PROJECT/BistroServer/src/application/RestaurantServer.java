@@ -3,25 +3,30 @@ package application;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.sql.Connection;
-import java.util.ArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import dbControllers.DBController;
+import dbControllers.Notification_DB_Controller;
 import dbControllers.Reservation_DB_Controller;
 import dbControllers.Restaurant_DB_Controller;
 import dbControllers.User_DB_Controller;
-
-import entities.OpeningHouers;
-import entities.Restaurant;
-import entities.Table;
-import entities.User;
-
+import dbControllers.Waiting_DB_Controller;
+import dto.RequestDTO;
 import javafx.application.Platform;
-
+import logicControllers.NotificationDispatcher;
+import logicControllers.NotificationSchedulerService;
+import logicControllers.OnlineUsersRegistry;
+import logicControllers.ReservationController;
 import logicControllers.RestaurantController;
 import logicControllers.UserController;
-
+import logicControllers.WaitingController;
+import logicControllers.ReportsController;
+import network.*;
 import ocsf.server.AbstractServer;
 import ocsf.server.ConnectionToClient;
+import protocol.Commands;
 
 public class RestaurantServer extends AbstractServer {
 
@@ -29,30 +34,55 @@ public class RestaurantServer extends AbstractServer {
 
     private DBController conn;
 
-    private RestaurantController restaurantController;
-    private User_DB_Controller userDB;
-    private UserController userController;
+    // ===== DB Controllers =====
+    private Restaurant_DB_Controller restaurantDB;
     private Reservation_DB_Controller reservationDB;
+    private User_DB_Controller userDB;
+    private Waiting_DB_Controller waitingDB;
+    private Notification_DB_Controller notificationDB;
+
+    // ===== Logic Controllers =====
+    private RestaurantController restaurantController;
+    private ReservationController reservationController;
+    private UserController userController;
+    private WaitingController waitingController;
+    private ReportsController reportsController;
+
+    // ===== Notifications runtime =====
+    private OnlineUsersRegistry onlineUsersRegistry;
+    private NotificationDispatcher notificationDispatcher;
+    private NotificationSchedulerService notificationScheduler;
+
+    // ===== Schedulers =====
+    private ScheduledExecutorService waitingScheduler;
+    private final ScheduledExecutorService idleScheduler =
+            Executors.newSingleThreadScheduledExecutor();
+
+    private RequestRouter router;
 
     private gui.ServerGUIController uiController;
     private String serverIp;
 
+    // ================= UI =================
     public void setUiController(gui.ServerGUIController controller) {
         this.uiController = controller;
     }
 
     public void log(String msg) {
+        // אם את רוצה בלי console בכלל - תמחקי את השורה הזו:
         System.out.println(msg);
+
         if (uiController != null) {
             Platform.runLater(() -> uiController.addLog(msg));
         }
     }
 
+    // ================= Constructor =================
     public RestaurantServer(int port) {
         super(port);
-
         conn = new DBController();
         conn.setServer(this);
+        router = new RequestRouter();
 
         try {
             serverIp = InetAddress.getLocalHost().getHostAddress();
@@ -61,8 +91,12 @@ public class RestaurantServer extends AbstractServer {
         }
     }
 
+    // ================= Server Start =================
     @Override
     protected void serverStarted() {
+        touchActivity();
+        startIdleWatchdog();
+
         log("Server started on IP: " + serverIp);
         log("Listening on port " + getPort());
 
@@ -71,227 +105,260 @@ public class RestaurantServer extends AbstractServer {
         try {
             Connection sqlConn = conn.getConnection();
             if (sqlConn == null) {
-                log("DB connection failed.");
+                log("❌ DB connection failed.");
                 return;
             }
 
-            Restaurant_DB_Controller rdb = new Restaurant_DB_Controller(sqlConn);
-            restaurantController = new RestaurantController(rdb);
-
+            // ===== DB Controllers =====
+            restaurantDB = new Restaurant_DB_Controller(sqlConn);
             reservationDB = new Reservation_DB_Controller(sqlConn);
-            reservationDB.createReservationsTable();
-
-
             userDB = new User_DB_Controller(sqlConn);
+            waitingDB = new Waiting_DB_Controller(sqlConn);
+            notificationDB = new Notification_DB_Controller(sqlConn);
+
+            log("⚙️ Ensuring all database tables exist...");
             userDB.createSubscribersTable();
             userDB.createGuestsTable();
+            restaurantDB.createRestaurantTablesTable();
+            restaurantDB.createOpeningHoursTable();
+            reservationDB.createReservationsTable();
+            waitingDB.createWaitingListTable();
+            notificationDB.createNotificationsTable();
+            log("✅ Database schema ensured.");
 
+            // ===== Logic Controllers =====
+            restaurantController = new RestaurantController(restaurantDB);
             userController = new UserController(userDB);
 
-            log("All controllers and database tables initialized.");
+            reservationController =
+                    new ReservationController(reservationDB, notificationDB, this, restaurantController);
 
-            // ✅ (3) Always keep next 30 days + cleanup + schema ensure
+            waitingController =
+                    new WaitingController(waitingDB, notificationDB, this, restaurantController, reservationController);
+
+            reservationController.setWaitingController(waitingController);
+
+            reportsController =
+                    new ReportsController(reservationDB, waitingDB, userDB);
+
+            // ===== Waiting auto-cancel scheduler =====
+            waitingScheduler = Executors.newSingleThreadScheduledExecutor();
+            waitingScheduler.scheduleAtFixedRate(() -> {
+                try {
+                    int c = waitingController.cancelExpiredWaitingsAndReservations();
+                    if (c > 0)
+                        log("⏳ Auto-cancelled expired waitings: " + c);
+                } catch (Exception e) {
+                    log("Waiting scheduler error: " + e.getMessage());
+                }
+            }, 10, 10, TimeUnit.SECONDS);
+
+            // ✅ Notifications runtime (ONLINE USERS + DISPATCHER + SCHEDULER)
+            onlineUsersRegistry = new OnlineUsersRegistry();
+            notificationDispatcher = new NotificationDispatcher(onlineUsersRegistry, this::log);
+            notificationScheduler = new NotificationSchedulerService(notificationDB, notificationDispatcher, this::log);
+            notificationScheduler.start();
+
+            registerHandlers();
+
             try {
                 restaurantController.initAvailabilityGridNext30Days();
-                log("Availability grid ensured and initialized for the next 30 days.");
+                log("📅 Availability grid ensured for the next 30 days.");
             } catch (Exception e) {
-                log("Grid init failed: " + e.getMessage());
+                log("⚠️ Grid init failed: " + e.getMessage());
             }
 
+            log("✅ Server fully initialized.");
+
         } catch (Exception e) {
-            log("Initialization error: " + e.getMessage());
+            log("❌ Initialization error: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
+    // ================= Router =================
+    private void registerHandlers() {
+        log("⚙️ Registering DTO handlers...");
+
+        // ===== Reservations =====
+        router.register(Commands.CREATE_RESERVATION,
+                new CreateReservationHandler(reservationController));
+
+        router.register(Commands.GET_RESERVATION_HISTORY,
+                new GetReservationHistoryHandler(reservationController));
+
+        router.register(Commands.CANCEL_RESERVATION,
+                new CancelReservationHandler(reservationController));
+
+        // ===== Opening Hours =====
+        router.register(Commands.GET_OPENING_HOURS,
+                new GetOpeningHoursHandler(restaurantController));
+
+        router.register(Commands.UPDATE_OPENING_HOURS,
+                new UpdateOpeningHoursHandler(restaurantController));
+
+        // ===== Tables =====
+        router.register(Commands.GET_TABLES,
+                new GetTablesHandler(restaurantController));
+
+        router.register(Commands.SAVE_TABLE,
+                new SaveTableHandler(restaurantController));
+
+        router.register(Commands.DELETE_TABLE,
+                new DeleteTableHandler(restaurantController));
+
+        // ===== Users =====
+        router.register(Commands.SUBSCRIBER_LOGIN,
+        		new SubscriberLoginHandler(userController, onlineUsersRegistry));
+
+        router.register(Commands.GUEST_LOGIN,
+        		new GuestLoginHandler(userController, onlineUsersRegistry));
+
+        router.register(Commands.REGISTER_SUBSCRIBER,
+                new RegisterSubscriberHandler(userController));
+
+        router.register(Commands.UPDATE_SUBSCRIBER_DETAILS,
+                new UpdateSubscriberDetailsHandler(userController));
+
+        router.register(Commands.RECOVER_SUBSCRIBER_CODE,
+                new RecoverSubscriberCodeHandler(userController));
+
+        router.register(Commands.RECOVER_GUEST_CONFIRMATION_CODE,
+                new RecoverGuestConfirmationCodeHandler(
+                        reservationController,
+                        userController,
+                        notificationDB,
+                        this::log
+                ));
+
+        // ===== Waiting List =====
+        router.register(Commands.JOIN_WAITING_LIST,
+                new JoinWaitingListHandler(waitingController));
+
+        router.register(Commands.GET_WAITING_STATUS,
+                new GetWaitingStatusHandler(waitingController));
+
+        router.register(Commands.CANCEL_WAITING,
+                new CancelWaitingHandler(waitingController));
+
+        router.register(Commands.CONFIRM_WAITING_ARRIVAL,
+                new ConfirmWaitingArrivalHandler(waitingController));
+
+        // ===== Reports =====
+        router.register(Commands.GET_TIME_REPORT,
+                new GetTimeReportHandler(reportsController));
+
+        router.register(Commands.GET_SUBSCRIBERS_REPORT,
+                new GetSubscribersReportHandler(reportsController));
+        
+        router.register(
+        	    Commands.GET_ALL_SUBSCRIBERS,
+        	    new GetAllSubscribersHandler(userController)
+        	);
+        router.register(
+                Commands.DELETE_SUBSCRIBER,
+                new DeleteSubscriberHandler(userController)
+        );
+
+
+    }
+
+    // ================= Messages =================
+    @Override
+    protected void handleMessageFromClient(Object msg, ConnectionToClient client) {
+        touchActivity();
+
+        try {
+            if (msg instanceof RequestDTO request) {
+                log("📨 Received DTO command: " + request.getCommand());
+                router.route(request, client);
+            }
+        } catch (Exception e) {
+            log("❌ Error handling message: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // ================= Shutdown =================
     @Override
     protected void serverStopped() {
+        idleScheduler.shutdownNow();
+
+        if (waitingScheduler != null)
+            waitingScheduler.shutdownNow();
+
+        if (notificationScheduler != null)
+            notificationScheduler.stop();
+
         log("Server stopped.");
     }
 
+    // ================= Clients =================
     @Override
     protected synchronized void clientConnected(ConnectionToClient client) {
+        touchActivity();
         String ip = client.getInetAddress() != null
                 ? client.getInetAddress().getHostAddress()
                 : "UNKNOWN";
         log("Client connected | IP: " + ip);
+
+        // NOTE:
+        // כדי ש-SMS popup יעבוד, OnlineUsersRegistry חייב לדעת איזה userId מחובר על איזה client.
+        // את הרישום בפועל עושים בדרך כלל בזמן LOGIN (SubscriberLoginHandler / GuestLoginHandler)
+        // כי רק שם יודעים את ה-userId.
     }
 
     @Override
-    protected void handleMessageFromClient(Object msg, ConnectionToClient client) {
+    protected synchronized void clientDisconnected(ConnectionToClient client) {
+        touchActivity();
+        onlineUsersRegistry.removeClient(client);
+        log("Client disconnected.");
 
-        try {
-            if (!(msg instanceof ArrayList<?>)) return;
+        // Optional: אם ה-OnlineUsersRegistry שלך תומך בזה:
+        // onlineUsersRegistry.removeClient(client);
+    }
 
-            ArrayList<?> arr = (ArrayList<?>) msg;
-            if (arr.isEmpty()) return;
+    // ================= Idle Watchdog =================
+    private static final long IDLE_TIMEOUT_MS = 30L * 60L * 1000L;
+    private volatile long lastActivityMs = System.currentTimeMillis();
+    private Runnable onAutoShutdown;
 
-            String command = arr.get(0).toString();
+    public void setOnAutoShutdown(Runnable r) {
+        this.onAutoShutdown = r;
+    }
 
-            switch (command) {
+    private void touchActivity() {
+        lastActivityMs = System.currentTimeMillis();
+    }
 
-                // =========================
-                // LOGIN / LOGOUT
-                // =========================
-
-
-
-                case "CLIENT_LOGOUT": {
-                    client.close();
-                    break;
-                }
-
-                // =========================
-                // TABLES CRUD
-                // =========================
-
-                case "RM_GET_TABLES": {
-                    restaurantController.loadTablesFromDb();
-
-                    StringBuilder sb = new StringBuilder("RM_TABLES|");
-                    for (Table t : Restaurant.getInstance().getTables()) {
-                        sb.append(t.getTableNumber()).append(",")
-                          .append(t.getSeatsAmount())
-                          .append(";");
-                    }
-                    client.sendToClient(sb.toString());
-                    break;
-                }
-
-                case "RM_SAVE_TABLE": {
-                    int num = Integer.parseInt(arr.get(1).toString());
-                    int seats = Integer.parseInt(arr.get(2).toString());
-
-                    Table t = new Table();
-                    t.setTableNumber(num);
-                    t.setSeatsAmount(seats);
-
-                    restaurantController.saveOrUpdateTable(t);
-
-                    // ✅ after adding a table, ensure grid schema & keep month ahead
-                    try {
-                        restaurantController.initAvailabilityGridNext30Days();
-                    } catch (Exception ignored) {}
-
-                    client.sendToClient("RM_OK|");
-                    break;
-                }
-
-                case "RM_DELETE_TABLE": {
-                    int num = Integer.parseInt(arr.get(1).toString());
-                    boolean ok = restaurantController.removeTable(num);
-
-                    client.sendToClient(ok ? "RM_OK|" : "RM_ERROR|Delete failed");
-                    break;
-                }
-
-                // =========================
-                // OPENING HOURS
-                // =========================
-
-                case "RM_GET_OPENING_HOURS": {
-                    restaurantController.loadOpeningHoursFromDb();
-
-                    StringBuilder sb = new StringBuilder("RM_OPENING_HOURS|");
-                    for (OpeningHouers oh : Restaurant.getInstance().getOpeningHours()) {
-                        String day = oh.getDayOfWeek();
-                        String open = safeHHMM(oh.getOpenTime());
-                        String close = safeHHMM(oh.getCloseTime());
-
-                        sb.append(day).append(",")
-                          .append(open).append(",")
-                          .append(close)
-                          .append(";");
-                    }
-
-                    client.sendToClient(sb.toString());
-                    break;
-                }
-
-                case "RM_UPDATE_OPENING_HOURS": {
-                    String day = arr.get(1).toString();
-                    String open = arr.get(2).toString();
-                    String close = arr.get(3).toString();
-
-                    OpeningHouers oh = new OpeningHouers();
-                    oh.setDayOfWeek(day);
-                    oh.setOpenTime(open);
-                    oh.setCloseTime(close);
-
-                    restaurantController.updateOpeningHours(oh);
-
-                    // ✅ hours changed -> rebuild month ahead for correct ranges
-                    try {
-                        restaurantController.initAvailabilityGridNext30Days();
-                    } catch (Exception ignored) {}
-
-                    client.sendToClient("RM_OK|");
-                    break;
-                }
-
-                // =========================
-                // AVAILABILITY GRID (DB) - WITH 4 ADDITIONS
-                // =========================
-
-                // Force init month ahead (manual)
-                case "RM_INIT_AVAILABILITY_MONTH": {
-                    restaurantController.initAvailabilityGridNext30Days();
-                    client.sendToClient("RM_OK|");
-                    break;
-                }
-
-                // ✅ (1) Get grid from DB for a date
-                // expected: ["RM_GET_GRID_FROM_DB", "YYYY-MM-DD"]
-                case "RM_GET_GRID_FROM_DB": {
-                    String dateStr = arr.get(1).toString();
-                    java.time.LocalDate date = java.time.LocalDate.parse(dateStr);
-
-                    String payload = restaurantController.getGridFromDbPayload(date);
-                    client.sendToClient("RM_GRID|" + payload);
-                    break;
-                }
-
-                // ✅ (4) Safe reserve (conditional update)
-                // expected: ["RM_TRY_RESERVE_SLOT", "YYYY-MM-DDTHH:MM", "<tableNumber>"]
-                case "RM_TRY_RESERVE_SLOT": {
-                    java.time.LocalDateTime slot = java.time.LocalDateTime.parse(arr.get(1).toString());
-                    int tableNum = Integer.parseInt(arr.get(2).toString());
-
-                    boolean success = restaurantController.tryReserveSlot(slot, tableNum);
-                    client.sendToClient(success ? "RM_OK|" : "RM_TAKEN|");
-                    break;
-                }
-
-                // Release slot (set free)
-                // expected: ["RM_RELEASE_SLOT", "YYYY-MM-DDTHH:MM", "<tableNumber>"]
-                case "RM_RELEASE_SLOT": {
-                    java.time.LocalDateTime slot = java.time.LocalDateTime.parse(arr.get(1).toString());
-                    int tableNum = Integer.parseInt(arr.get(2).toString());
-
-                    boolean ok = restaurantController.releaseSlot(slot, tableNum);
-                    client.sendToClient(ok ? "RM_OK|" : "RM_ERROR|Release failed");
-                    break;
-                }
-
-                default:
-                    log("Unknown command: " + command);
-            }
-
-        } catch (Exception e) {
-            log("Error handling message: " + e.getMessage());
+    private void startIdleWatchdog() {
+        idleScheduler.scheduleAtFixedRate(() -> {
             try {
-                client.sendToClient("RM_ERROR|" + e.getMessage());
-            } catch (Exception ignored) {}
+                long idle = System.currentTimeMillis() - lastActivityMs;
+                if (idle >= IDLE_TIMEOUT_MS && getNumberOfClients() == 0) {
+                    log("AUTO-SHUTDOWN: No activity for 30 minutes. Closing server...");
+                    shutdownServerNow();
+                }
+            } catch (Exception e) {
+                log("IdleWatchdog error: " + e.getMessage());
+            }
+        }, 1, 1, TimeUnit.MINUTES);
+    }
+
+    private void shutdownServerNow() {
+        try { stopListening(); } catch (Exception ignored) {}
+        try { close(); } catch (Exception ignored) {}
+        idleScheduler.shutdownNow();
+
+        if (notificationScheduler != null)
+            notificationScheduler.stop();
+
+        if (onAutoShutdown != null) {
+            try { onAutoShutdown.run(); } catch (Exception ignored) {}
         }
     }
 
-    private String safeHHMM(String t) {
-        if (t == null) return "";
-        t = t.trim();
-        if (t.matches("^\\d{2}:\\d{2}:\\d{2}$")) return t.substring(0, 5);
-        if (t.matches("^\\d{2}:\\d{2}$")) return t;
-        return t.length() >= 5 ? t.substring(0, 5) : t;
-    }
-
+    // ================= Main =================
     public static void main(String[] args) {
         int port;
         try {
@@ -301,7 +368,6 @@ public class RestaurantServer extends AbstractServer {
         }
 
         RestaurantServer server = new RestaurantServer(port);
-
         try {
             server.listen();
         } catch (Exception e) {

@@ -4,28 +4,22 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.ResourceBundle;
 
+import application.ChatClient;
+import entities.User;
 import interfaces.ClientActions;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.DatePicker;
-import javafx.scene.control.Label;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
 public class ManageReservationController implements Initializable {
 
-    // ===== Root =====
-    @FXML private BorderPane rootPane; // חייב להתאים ל-fx:id="rootPane" שהוספת
+    @FXML private BorderPane rootPane;
 
-    // ===== Table =====
     @FXML private TableView<?> tblReservations;
 
     @FXML private TableColumn<?, ?> colReservationId;
@@ -37,7 +31,6 @@ public class ManageReservationController implements Initializable {
     @FXML private TableColumn<?, ?> colConfirmed;
     @FXML private TableColumn<?, ?> colTableNumber;
 
-    // ===== Form =====
     @FXML private TextField txtReservationId;
     @FXML private TextField txtConfirmationCode;
     @FXML private DatePicker dpDate;
@@ -47,7 +40,6 @@ public class ManageReservationController implements Initializable {
     @FXML private CheckBox chkConfirmed;
     @FXML private TextField txtTableNumber;
 
-    // ===== Buttons / Status =====
     @FXML private Button btnAdd;
     @FXML private Button btnUpdate;
     @FXML private Button btnDelete;
@@ -57,19 +49,24 @@ public class ManageReservationController implements Initializable {
 
     private ClientActions clientActions;
 
+    // ✅ session
+    private User user;
+    private ChatClient chatClient;
+
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
+    }
+
+    // ✅ חדש
+    public void setClient(User user, ChatClient chatClient) {
+        this.user = user;
+        this.chatClient = chatClient;
     }
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         hideStatus();
-
-        // שלב 1: רק לוודא שהמסך עולה בלי LoadException.
-        // בשלב הבא נוסיף מודל לטבלה + cellValueFactory + טעינה מהשרת.
     }
-
-    // ===================== Actions =====================
 
     @FXML
     private void onAddClicked() {
@@ -91,9 +88,6 @@ public class ManageReservationController implements Initializable {
         openWindow("RestaurantManagement_B.fxml", "Restaurant Management");
     }
 
-
-    // ===================== Navigation helper =====================
-
     private void openWindow(String fxmlName, String title) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
@@ -101,13 +95,23 @@ public class ManageReservationController implements Initializable {
 
             Object controller = loader.getController();
 
-         // נסיון להעביר clientActions לכל Controller שיש לו setClientActions(ClientActions)
-         try {
-             controller.getClass()
-                       .getMethod("setClientActions", ClientActions.class)
-                       .invoke(controller, clientActions);
-         } catch (Exception ignored) {}
+            // להעביר clientActions אם יש
+            if (controller != null && clientActions != null) {
+                try {
+                    controller.getClass()
+                              .getMethod("setClientActions", ClientActions.class)
+                              .invoke(controller, clientActions);
+                } catch (Exception ignored) {}
+            }
 
+            // ✅ להעביר session אם יש setClient
+            if (controller != null && user != null && chatClient != null) {
+                try {
+                    controller.getClass()
+                              .getMethod("setClient", User.class, ChatClient.class)
+                              .invoke(controller, user, chatClient);
+                } catch (Exception ignored) {}
+            }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setTitle("Bistro - " + title);
@@ -119,8 +123,6 @@ public class ManageReservationController implements Initializable {
             showStatus("Failed to open: " + fxmlName);
         }
     }
-
-    // ===================== Status helpers =====================
 
     private void hideStatus() {
         if (lblStatus != null) {

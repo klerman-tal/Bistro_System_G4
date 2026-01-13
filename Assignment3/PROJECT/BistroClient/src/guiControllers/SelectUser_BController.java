@@ -1,75 +1,85 @@
 package guiControllers;
 
+import java.io.IOException;
+
+import application.ChatClient;
+import entities.User;
 import interfaces.ClientActions;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
 public class SelectUser_BController {
 
-    @FXML private BorderPane rootPane;
-    @FXML private Label lblMessage;
-
     private ClientActions clientActions;
+
+    // ✅ session
+    private User user;
+    private ChatClient chatClient;
 
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
     }
 
-    private void openWindow(String fxmlName, String title) {
+    // ✅ נקרא מ-RestaurantManagement_BController
+    public void setClient(User user, ChatClient chatClient) {
+        this.user = user;
+        this.chatClient = chatClient;
+    }
+
+    @FXML
+    private void onSubscribersClicked(ActionEvent event) {
+        navigateTo(event, "/gui/manageSubscriber.fxml");
+    }
+
+    @FXML
+    private void onGuestsClicked(ActionEvent event) {
+        navigateTo(event, "/gui/manegeGustsGui.fxml");
+    }
+
+    @FXML
+    private void onBackToMenuClicked(ActionEvent event) {
+        navigateTo(event, "/gui/RestaurantManagement_B.fxml");
+    }
+
+    private void navigateTo(ActionEvent event, String fxmlPath) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
             Parent root = loader.load();
 
             Object controller = loader.getController();
 
-            // להעביר clientActions הלאה למסכים הבאים/אחורה
-          /*  if (controller instanceof RestaurantManagement_BController) {
-                ((RestaurantManagement_BController) controller).setClientActions(clientActions);
-            } else if (controller instanceof SubscribersController) {
-                ((SubscribersController) controller).setClientActions(clientActions);
-            } else if (controller instanceof GuestsController) {
-                ((GuestsController) controller).setClientActions(clientActions);
-            }*/
+            // להעביר clientActions (כמו שהיה לך)
+            if (controller != null && clientActions != null) {
+                try {
+                    controller.getClass()
+                            .getMethod("setClientActions", ClientActions.class)
+                            .invoke(controller, clientActions);
+                } catch (Exception ignored) {}
+            }
 
-            Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setTitle("Bistro - " + title);
+            // ✅ להעביר user + chatClient למסך הבא (ManageSubscriber צריך את זה)
+            if (controller != null && user != null && chatClient != null) {
+                try {
+                    controller.getClass()
+                            .getMethod("setClient", User.class, ChatClient.class)
+                            .invoke(controller, user, chatClient);
+                } catch (Exception ignored) {}
+            }
+
+            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
             stage.setScene(new Scene(root));
+            stage.centerOnScreen();
             stage.show();
 
-        } catch (Exception e) {
+            System.out.println("Switched to: " + fxmlPath);
+
+        } catch (IOException e) {
             e.printStackTrace();
-            showMessage("Failed to open: " + fxmlName);
-        }
-    }
-
-    @FXML
-    private void onSubscribersClicked() {
-        // תחליפי לשם ה־FXML האמיתי שלך למסך ניהול מנויים
-        openWindow("Subscribers.fxml", "Subscribers");
-    }
-
-    @FXML
-    private void onGuestsClicked() {
-        // תחליפי לשם ה־FXML האמיתי שלך למסך ניהול אורחים
-        openWindow("Guests.fxml", "Guests");
-    }
-
-    @FXML
-    private void onBackToMenuClicked() {
-        // חזרה למסך הקודם
-        openWindow("RestaurantManagement.fxml", "Restaurant Management");
-    }
-
-    private void showMessage(String msg) {
-        if (lblMessage != null) {
-            lblMessage.setText(msg);
-            lblMessage.setVisible(true);
-            lblMessage.setManaged(true);
         }
     }
 }

@@ -1,103 +1,211 @@
-/* ===== ROOT WINDOW (ALL SCREEN ROUNDED) ===== */
-#rootPane {
-    -fx-background-color: #ffffff;    /* רקע חלון */
-    -fx-background-radius: 25;
-    -fx-border-radius: 25;
-    -fx-border-color: #d0d0d0;
-    -fx-border-width: 1.2;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 20, 0.3, 0, 4);
-}
+/* ===== GLOBAL ===== */
 
-/* כללית – פונט יפה */
 .root {
     -fx-font-family: "Poppins", "Segoe UI", "Roboto", "Arial";
 }
 
-
-/* ===== HEADER ===== */
-#header {
-    -fx-background-color: #000000;      /* שחור */
-    -fx-background-radius: 25 25 0 0;   /* עיגול רק למעלה */
-    -fx-padding: 20 30 20 30;
+#rootPane, .root {
+    -fx-background-color: linear-gradient(to bottom right, #fafafa, #ffffff);
 }
+
+
+/* ===== CARDS ===== */
+
+.card {
+    -fx-background-color: white;
+    -fx-background-radius: 25;
+    -fx-border-color: #f1f1f1;
+    -fx-border-radius: 25;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 15, 0, 0, 8);
+}
+
+.card30 {
+    -fx-background-color: white;
+    -fx-background-radius: 30;
+    -fx-border-color: #f1f1f1;
+    -fx-border-radius: 30;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 20, 0, 0, 10);
+}
+
+
+/* ===== TYPOGRAPHY ===== */
 
 .title {
-    -fx-font-size: 30px;
-    -fx-font-weight: 600;
-    -fx-text-fill: white;               /* טקסט לבן */
+    -fx-font-size: 32px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #76121a;
+}
+
+.subtitle {
+    -fx-font-size: 13px;
+    -fx-text-fill: #6e6e6e;
+}
+
+.field-label {
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #76121a;
+}
+
+.welcomeTitle {
+    -fx-font-size: 50px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #76121a;
+    -fx-letter-spacing: 8px;
+}
+
+.subtitleItalic {
+    -fx-font-size: 16px;
+    -fx-text-fill: #6e6e6e;
+    -fx-font-style: italic;
+}
+
+.cardTitle {
+    -fx-font-size: 22px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #76121a;
+}
+
+.cardHint {
+    -fx-font-size: 12px;
+    -fx-text-fill: #9e9e9e;
+}
+
+.emojiBig {
+    -fx-font-size: 45px;
 }
 
 
-/* ===== LABELS ===== */
-.section {
-    -fx-font-size: 17px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #333333;
-}
+/* ===== INPUTS ===== */
 
-.label {
-    -fx-text-fill: #333333;
-}
-
-
-/* ===== INPUT FIELDS ===== */
-.text-field, .password-field {
+.text-field,
+.password-field,
+.date-picker {
     -fx-background-color: #ffffff;
-    -fx-border-color: #cccccc;
-    -fx-background-radius: 8;
-    -fx-border-radius: 8;
-    -fx-padding: 6 12;
-    -fx-font-size: 14px;
+    -fx-border-color: #76121a;
+    -fx-border-width: 1;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-padding: 10 12;
+    -fx-font-size: 13.5px;
+    -fx-text-fill: #1c1c1c;
+    -fx-prompt-text-fill: #9e9e9e;
 }
 
-.text-field:focused, .password-field:focused {
-    -fx-border-color: #3a7afe;
-    -fx-effect: dropshadow(gaussian, rgba(58,122,254,0.25), 8, 0.3, 0, 0);
-}
-
-
-/* ===== RADIO BUTTON ===== */
-.radio-button {
-    -fx-text-fill: #333333;
-}
-
-
-/* ===== ERROR MESSAGE ===== */
-.errorMsg {
-    -fx-text-fill: #cc0000;
-    -fx-font-weight: bold;
+.text-field:focused,
+.password-field:focused,
+.date-picker:focused {
+    -fx-border-color: #8f1b25;
+    -fx-effect: dropshadow(three-pass-box, rgba(118,18,26,0.25), 10, 0, 0, 2);
 }
 
 
 /* ===== BUTTONS ===== */
 
-/* "Pay" button – מלא שחור */
-.btnPrimary {
-    -fx-background-color: #000000;
+.btnPrimary,
+.btnDanger,
+.btnWide25 {
+    -fx-background-color: #76121a;
     -fx-text-fill: white;
-    -fx-background-radius: 12;
-    -fx-padding: 10 24;
+    -fx-background-radius: 25;
+    -fx-padding: 12 45;
+    -fx-cursor: hand;
+    -fx-font-weight: 800;
     -fx-font-size: 14px;
-    -fx-font-weight: bold;
 }
 
-.btnPrimary:hover {
-    -fx-background-color: #333333;
+.btnPrimary {
+    -fx-background-radius: 20;
+    -fx-padding: 12 40;
 }
 
-/* "Cancel" – מסגרת שחורה */
+.btnPrimary:hover,
+.btnDanger:hover,
+.btnWide25:hover {
+    -fx-background-color: #8f1b25;
+}
+
+.btnPrimary:pressed,
+.btnDanger:pressed,
+.btnWide25:pressed {
+    -fx-background-color: #5e0f15;
+}
+
 .btnSecondary {
     -fx-background-color: transparent;
-    -fx-border-color: #000000;
+    -fx-border-color: #76121a;
     -fx-border-width: 2;
-    -fx-text-fill: #000000;
-    -fx-background-radius: 12;
-    -fx-border-radius: 12;
-    -fx-padding: 10 24;
+    -fx-text-fill: #76121a;
+    -fx-background-radius: 20;
+    -fx-border-radius: 20;
+    -fx-padding: 12 40;
+    -fx-cursor: hand;
+    -fx-font-weight: 800;
     -fx-font-size: 14px;
-    -fx-font-weight: bold;
 }
 
 .btnSecondary:hover {
-    -fx-background-color: #f2f2f2;
+    -fx-background-color: rgba(118,18,26,0.06);
+}
+
+
+/* ===== LINKS & MESSAGES ===== */
+
+.hyperlink {
+    -fx-text-fill: #76121a;
+    -fx-font-size: 12px;
+    -fx-underline: false;
+}
+
+.hyperlink:hover,
+.linkBlue:hover {
+    -fx-text-fill: #8f1b25;
+}
+
+.linkBlue {
+    -fx-text-fill: #76121a;
+    -fx-font-size: 15px;
+    -fx-font-weight: 800;
+    -fx-underline: false;
+}
+
+.errorMsg {
+    -fx-text-fill: #c62828;
+    -fx-font-size: 12px;
+    -fx-font-weight: 800;
+}
+
+
+/* ===== TIME REPORT ===== */
+
+.arrival-on-time {
+    -fx-text-fill: #53A953;
+    -fx-font-weight: 800;
+}
+
+.arrival-minor-delay {
+    -fx-text-fill: #F2AA37;
+    -fx-font-weight: 800;
+}
+
+.arrival-major-delay {
+    -fx-text-fill: #E86B3D;
+    -fx-font-weight: 800;
+}
+
+.summary-box {
+    -fx-padding: 6 0 12 0;
+}
+
+.summary-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #333333;
+}
+
+.summary-text {
+    -fx-font-size: 12px;
+    -fx-text-fill: #555555;
 }

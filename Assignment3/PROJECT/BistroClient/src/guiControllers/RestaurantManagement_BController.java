@@ -1,6 +1,7 @@
 package guiControllers;
 
-import interfaces.ClientActions;
+import application.ChatClient;
+import entities.User;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -14,25 +15,50 @@ public class RestaurantManagement_BController {
     @FXML private BorderPane rootPane;
     @FXML private Label lblMessage;
 
-    private ClientActions clientActions;
+    private User user;
+    private ChatClient chatClient;
 
-    public void setClientActions(ClientActions clientActions) {
-        this.clientActions = clientActions;
+    public void setClient(User user, ChatClient chatClient) {
+        this.user = user;
+        this.chatClient = chatClient;
     }
 
     private void openWindow(String fxmlName, String title) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
             Parent root = loader.load();
 
             Object controller = loader.getController();
 
-            if (controller instanceof UpdateTablesController) {
-                ((UpdateTablesController) controller).setClientActions(clientActions);
-            } else if (controller instanceof OpeningHoursController) {
-                ((OpeningHoursController) controller).setClientActions(clientActions);
-            } else if (controller instanceof Login_BController) {
-                ((Login_BController) controller).setClientActions(clientActions);
+            // ✅ Update Tables
+            if (controller instanceof UpdateTablesController utc) {
+                utc.setClient(user, chatClient); // ✅ היה רק chatClient
+            }
+
+            // ✅ Opening Hours
+            if (controller instanceof OpeningHoursController ohc) {
+                ohc.setClient(user, chatClient);
+            }
+
+            // ✅ Select user menu
+            if (controller instanceof SelectUser_BController suc) {
+                suc.setClient(user, chatClient);
+            }
+
+            // ✅ Manage reservations
+            if (controller instanceof ManageReservationController mrc) {
+                mrc.setClient(user, chatClient);
+            }
+            
+            // ✅ ⭐⭐ THIS WAS MISSING ⭐⭐
+            if (controller instanceof ReportsMenuController rmc) {
+                rmc.setClient(user, chatClient);
+            }
+            
+            // ✅ Back to Menu
+            if (controller instanceof Menu_BController menu) {
+                menu.setClient(user, chatClient);
             }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
@@ -58,8 +84,7 @@ public class RestaurantManagement_BController {
 
     @FXML
     private void onManageUsersClicked() {
-        openWindow("selectUser.fxml", "select User Menu");
-
+        openWindow("selectUser.fxml", "Select User Menu");
     }
 
     @FXML
@@ -67,6 +92,10 @@ public class RestaurantManagement_BController {
         openWindow("ManageReservation.fxml", "Manage Reservations");
     }
 
+    @FXML
+    private void onReportsClicked() {
+        openWindow("ReportsMenu.fxml", "Reports");
+    }
 
     @FXML
     private void onBackToMenuClicked() {
