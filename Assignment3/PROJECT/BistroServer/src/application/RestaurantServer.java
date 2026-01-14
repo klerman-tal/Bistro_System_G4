@@ -11,7 +11,6 @@ import dbControllers.DBController;
 import dbControllers.Notification_DB_Controller;
 import dbControllers.Reservation_DB_Controller;
 import dbControllers.Restaurant_DB_Controller;
-import dbControllers.SpecialOpeningHours_DB_Controller;
 import dbControllers.User_DB_Controller;
 import dbControllers.Waiting_DB_Controller;
 import dto.RequestDTO;
@@ -56,7 +55,6 @@ public class RestaurantServer extends AbstractServer {
 
     // ===== Schedulers =====
     private ScheduledExecutorService waitingScheduler;
-    SpecialOpeningHours_DB_Controller specialOpeningHoursDB;
     private final ScheduledExecutorService idleScheduler =
             Executors.newSingleThreadScheduledExecutor();
 
@@ -93,7 +91,7 @@ public class RestaurantServer extends AbstractServer {
         }
     }
 
- // ================= Server Start =================
+    // ================= Server Start =================
     @Override
     protected void serverStarted() {
         touchActivity();
@@ -117,27 +115,19 @@ public class RestaurantServer extends AbstractServer {
             userDB = new User_DB_Controller(sqlConn);
             waitingDB = new Waiting_DB_Controller(sqlConn);
             notificationDB = new Notification_DB_Controller(sqlConn);
-            
-            // ✨ הוספה: אתחול הקונטרולר החדש לשעות מיוחדות
-            specialOpeningHoursDB = new SpecialOpeningHours_DB_Controller(sqlConn);
 
             log("⚙️ Ensuring all database tables exist...");
             userDB.createSubscribersTable();
             userDB.createGuestsTable();
             restaurantDB.createRestaurantTablesTable();
             restaurantDB.createOpeningHoursTable();
-            
-            // ✨ הוספה: יצירת טבלת החרגות תאריכים
-            specialOpeningHoursDB.createSpecialOpeningHoursTable();
-            
             reservationDB.createReservationsTable();
             waitingDB.createWaitingListTable();
             notificationDB.createNotificationsTable();
             log("✅ Database schema ensured.");
 
             // ===== Logic Controllers =====
-            // מעדכנים את ה-RestaurantController שיכיר גם את ה-DB של השעות המיוחדות
-            restaurantController = new RestaurantController(restaurantDB, specialOpeningHoursDB);
+            restaurantController = new RestaurantController(restaurantDB);
             userController = new UserController(userDB);
 
             reservationController =
@@ -205,7 +195,7 @@ public class RestaurantServer extends AbstractServer {
                 new GetOpeningHoursHandler(restaurantController));
 
         router.register(Commands.UPDATE_OPENING_HOURS,
-                new UpdateSpecialOpeningHoursHandler(restaurantController));
+                new UpdateOpeningHoursHandler(restaurantController));
 
         // ===== Tables =====
         router.register(Commands.GET_TABLES,
@@ -271,8 +261,6 @@ public class RestaurantServer extends AbstractServer {
         router.register(
                 Commands.GET_ALL_RESERVATIONS,
                 new GetAllReservationsHandler(reservationController));
-        router.register(Commands.UPDATE_SPECIAL_OPENING_HOURS, 
-        	    new UpdateSpecialOpeningHoursHandler(restaurantController));
         
         
         

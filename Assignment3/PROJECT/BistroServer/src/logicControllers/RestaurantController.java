@@ -1,10 +1,8 @@
 package logicControllers;
 
 import dbControllers.Restaurant_DB_Controller;
-import dbControllers.SpecialOpeningHours_DB_Controller;
 import entities.OpeningHouers;
 import entities.Restaurant;
-import entities.SpecialOpeningHours;
 import entities.Table;
 
 import java.sql.SQLException;
@@ -16,7 +14,6 @@ public class RestaurantController {
 
     private final Restaurant_DB_Controller db;
     private final Restaurant restaurant;
-    private final SpecialOpeningHours_DB_Controller specialDB;
 
     /**
      * Constructor: gets DB controller and keeps Restaurant singleton reference (cache).
@@ -24,16 +21,7 @@ public class RestaurantController {
     public RestaurantController(Restaurant_DB_Controller db) {
         this.db = db;
         this.restaurant = Restaurant.getInstance();
-		this.specialDB = null;
     }
-    
-    public RestaurantController(Restaurant_DB_Controller db, SpecialOpeningHours_DB_Controller specialDB) {
-        this.db = db;
-        this.specialDB = specialDB;
-        this.restaurant = Restaurant.getInstance();
-    }
-    
-    
 
     // =========================
     // TABLES (cache + DB)
@@ -66,17 +54,6 @@ public class RestaurantController {
 
         List<Table> tables = getSortedTablesEnsured();
         db.ensureAvailabilityGridSchema(tables);
-    }
-    
-    
-    public void updateSpecialHours(SpecialOpeningHours special) throws SQLException {
-        if (special == null) return;
-        specialDB.updateSpecialHours(special);
-        try {
-            initAvailabilityGridNext30Days(); // רענון הגריד
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
     public boolean removeTable(int tableNumber) throws SQLException {
@@ -129,34 +106,18 @@ public class RestaurantController {
     }
 
     private OpeningHouers findOpeningHoursForDate(LocalDate date) {
-        // 1. בדיקת החרגה ב-DB
-        SpecialOpeningHours special = specialDB.getSpecialHoursByDate(date);
-        if (special != null) {
-            if (special.isClosed()) return null;
+        String fullEn = date.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH); // "Sunday"
 
-            // יצירת אובייקט ושימוש ב-Setters כדי למנוע שגיאת קונסטרקטור
-            OpeningHouers oh = new OpeningHouers();
-            oh.setDayOfWeek(date.getDayOfWeek().name());
-            oh.setOpenTime(special.getOpenTime() != null ? special.getOpenTime().toString().substring(0, 5) : null);
-            oh.setCloseTime(special.getCloseTime() != null ? special.getCloseTime().toString().substring(0, 5) : null);
-            return oh;
-        }
-
-        // 2. שעות רגילות (הקוד הקיים שלך)
-        String fullEn = date.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
         if (restaurant.getOpeningHours() == null) return null;
 
         for (OpeningHouers oh : restaurant.getOpeningHours()) {
-            if (oh != null && oh.getDayOfWeek().trim().equalsIgnoreCase(fullEn)) {
+            if (oh == null || oh.getDayOfWeek() == null) continue;
+            if (oh.getDayOfWeek().trim().equalsIgnoreCase(fullEn)) {
                 return oh;
             }
         }
         return null;
     }
-        
-        
-        
-    
 
     // =========================
     // AVAILABILITY GRID (DB is truth)
