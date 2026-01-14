@@ -111,9 +111,10 @@ public class Reservation_DB_Controller {
             """;
 
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            Timestamp ts = Timestamp.valueOf(reservationDateTime);
 
-            ps.setTimestamp(1, ts);
+            // ✅ IMPORTANT: use LocalDateTime directly (no timezone conversions like Timestamp may do)
+            ps.setObject(1, reservationDateTime);
+
             ps.setInt(2, guests);
             ps.setString(3, confirmationCode);
             ps.setInt(4, createdByUserId);
@@ -121,7 +122,7 @@ public class Reservation_DB_Controller {
             ps.setInt(6, tableNumber);
 
             // reminder_at derived from reservation_datetime
-            ps.setTimestamp(7, ts);
+            ps.setObject(7, reservationDateTime);
 
             ps.executeUpdate();
 
@@ -131,12 +132,11 @@ public class Reservation_DB_Controller {
         }
         return -1;
     }
-    
+
     // =====================================================
     // CANCEL
     // =====================================================
 
-    
     public boolean cancelReservationByConfirmationCode(String confirmationCode) throws SQLException {
         String sql = """
             UPDATE reservations
@@ -152,7 +152,6 @@ public class Reservation_DB_Controller {
             return ps.executeUpdate() > 0;
         }
     }
-
 
     // =====================================================
     // REMINDERS
@@ -202,8 +201,10 @@ public class Reservation_DB_Controller {
             while (rs.next()) {
                 int rid = rs.getInt("reservation_id");
                 int uid = rs.getInt("created_by");
-                Timestamp ts = rs.getTimestamp("reservation_datetime");
-                LocalDateTime rdt = (ts != null) ? ts.toLocalDateTime() : null;
+
+                // ✅ IMPORTANT: read LocalDateTime directly
+                LocalDateTime rdt = rs.getObject("reservation_datetime", LocalDateTime.class);
+
                 String code = rs.getString("confirmation_code");
 
                 list.add(new DueReminder(rid, uid, rdt, code));
@@ -321,7 +322,7 @@ public class Reservation_DB_Controller {
             }
         }
     }
-    
+
     /**
      * Returns reservations that were completed (have checkout)
      * for a specific year and month.
@@ -356,12 +357,9 @@ public class Reservation_DB_Controller {
         return list;
     }
 
-
-
     // =====================================================
     // UPDATE
     // =====================================================
-
 
     /**
      * Updates the check-in time for a reservation_id.
@@ -374,7 +372,10 @@ public class Reservation_DB_Controller {
             """;
 
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setTimestamp(1, Timestamp.valueOf(checkinTime));
+
+            // ✅ IMPORTANT: use LocalDateTime directly
+            pstmt.setObject(1, checkinTime);
+
             pstmt.setInt(2, reservationId);
             return pstmt.executeUpdate() > 0;
         }
@@ -391,7 +392,10 @@ public class Reservation_DB_Controller {
             """;
 
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setTimestamp(1, Timestamp.valueOf(checkoutTime));
+
+            // ✅ IMPORTANT: use LocalDateTime directly
+            pstmt.setObject(1, checkoutTime);
+
             pstmt.setInt(2, reservationId);
             return pstmt.executeUpdate() > 0;
         }
@@ -434,10 +438,7 @@ public class Reservation_DB_Controller {
     // =====================================================
     // MAPPING / HELPERS
     // =====================================================
-    
 
-
-    
     /**
      * Maps a ResultSet row to a Reservation entity (partial mapping for current project needs).
      */
@@ -449,9 +450,9 @@ public class Reservation_DB_Controller {
         r.setConfirmationCode(rs.getString("confirmation_code"));
         r.setGuestAmount(rs.getInt("number_of_guests"));
 
-        r.setReservationTime(
-                rs.getTimestamp("reservation_datetime").toLocalDateTime()
-        );
+        // ✅ IMPORTANT: read LocalDateTime directly (prevents timezone shifting)
+        LocalDateTime resTime = rs.getObject("reservation_datetime", LocalDateTime.class);
+        r.setReservationTime(resTime);
 
         r.setCreatedByUserId(rs.getInt("created_by"));
         r.setCreatedByRole(
@@ -471,21 +472,19 @@ public class Reservation_DB_Controller {
         int tableNum = rs.getInt("table_number");
         r.setTableNumber(rs.wasNull() ? null : tableNum);
 
-        // ===== ✅ CHECK-IN / CHECK-OUT MAPPING =====
-        Timestamp checkinTs = rs.getTimestamp("checkin");
-        if (checkinTs != null) {
-            r.setCheckinTime(checkinTs.toLocalDateTime());
+        // ===== CHECK-IN / CHECK-OUT MAPPING =====
+        LocalDateTime checkin = rs.getObject("checkin", LocalDateTime.class);
+        if (checkin != null) {
+            r.setCheckinTime(checkin);
         }
 
-        Timestamp checkoutTs = rs.getTimestamp("checkout");
-        if (checkoutTs != null) {
-            r.setCheckoutTime(checkoutTs.toLocalDateTime());
+        LocalDateTime checkout = rs.getObject("checkout", LocalDateTime.class);
+        if (checkout != null) {
+            r.setCheckoutTime(checkout);
         }
 
         return r;
     }
-
-
 
     /**
      * Executes a SELECT query that returns a list of reservations and maps each row.
@@ -500,7 +499,7 @@ public class Reservation_DB_Controller {
         }
         return list;
     }
-    
+
     public boolean finishReservationByConfirmationCode(String confirmationCode, LocalDateTime checkoutTime) throws SQLException {
         String sql = """
             UPDATE reservations
@@ -513,12 +512,14 @@ public class Reservation_DB_Controller {
             """;
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setTimestamp(1, Timestamp.valueOf(checkoutTime));
+
+            // ✅ IMPORTANT: use LocalDateTime directly
+            ps.setObject(1, checkoutTime);
+
             ps.setString(2, confirmationCode);
             return ps.executeUpdate() > 0;
         }
     }
-
 
     public String findGuestConfirmationCodeByDateTimeAndGuestIds(
             java.time.LocalDateTime reservationDateTime,
@@ -543,7 +544,9 @@ public class Reservation_DB_Controller {
             "LIMIT 1;";
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setTimestamp(1, java.sql.Timestamp.valueOf(reservationDateTime));
+
+            // ✅ IMPORTANT: use LocalDateTime directly
+            ps.setObject(1, reservationDateTime);
 
             int idx = 2;
             for (Integer id : guestIds) {
@@ -557,8 +560,6 @@ public class Reservation_DB_Controller {
 
         return null;
     }
-
-
 
     public java.util.ArrayList<Integer> getGuestIdsByContact(String phone, String email) throws SQLException {
 
@@ -585,8 +586,6 @@ public class Reservation_DB_Controller {
 
         return ids;
     }
-    
- // בתוך Reservation_DB_Controller
 
     public Reservation findGuestReservationByContactAndTime(
             String phone,
@@ -614,7 +613,9 @@ public class Reservation_DB_Controller {
             """;
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setTimestamp(1, Timestamp.valueOf(dateTime));
+
+            // ✅ IMPORTANT: use LocalDateTime directly
+            ps.setObject(1, dateTime);
 
             ps.setInt(2, hasPhone ? 1 : 0);
             ps.setString(3, hasPhone ? phone : "");
@@ -632,18 +633,10 @@ public class Reservation_DB_Controller {
         return null;
     }
 
- // =====================================================
- // REPORTS – SUBSCRIBERS
- // =====================================================
+    public Map<Integer, Integer> getReservationsCountPerDayByRole(
+            Enums.UserRole role, int year, int month) throws SQLException {
 
- /**
-  * Returns number of reservations per day for a given role.
-  * Used for reservations trend chart.
-  */
- public Map<Integer, Integer> getReservationsCountPerDayByRole(
-         Enums.UserRole role, int year, int month) throws SQLException {
-
-     String sql = """
+        String sql = """
          SELECT DAY(reservation_datetime) AS day, COUNT(*) AS cnt
          FROM reservations
          WHERE created_by_role = ?
@@ -653,24 +646,25 @@ public class Reservation_DB_Controller {
          ORDER BY day;
          """;
 
-     Map<Integer, Integer> map = new HashMap<>();
+        Map<Integer, Integer> map = new HashMap<>();
 
-     try (PreparedStatement ps = conn.prepareStatement(sql)) {
-         ps.setString(1, role.name());
-         ps.setInt(2, year);
-         ps.setInt(3, month);
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            // וודא שכאן אתה שולח את הערך המתאים למסד הנתונים (String או ID)
+            ps.setString(1, role.name()); 
+            ps.setInt(2, year);
+            ps.setInt(3, month);
 
-         try (ResultSet rs = ps.executeQuery()) {
-             while (rs.next()) {
-                 map.put(
-                         rs.getInt("day"),
-                         rs.getInt("cnt")
-                 );
-             }
-         }
-     }
-     return map;
- }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    map.put(
+                        rs.getInt("day"),
+                        rs.getInt("cnt")
+                    );
+                }
+            }
+        }
+        return map;
+    }
  
  
  /**
@@ -703,4 +697,35 @@ public class Reservation_DB_Controller {
  }
 
 
+    // =====================================================
+    // REAL-TIME OCCUPANCY (CHECKIN/CHECKOUT)
+    // =====================================================
+
+    /**
+     * Returns true if the table is currently occupied in REAL LIFE:
+     * there is an active reservation on this table with checkin != null and checkout == null.
+     * excludeReservationId allows ignoring the current reservation.
+     */
+    public boolean isTableOccupiedNow(int tableNumber, int excludeReservationId) throws SQLException {
+        String sql = """
+            SELECT 1
+            FROM reservations
+            WHERE table_number = ?
+              AND is_active = 1
+              AND reservation_status = 'Active'
+              AND checkin IS NOT NULL
+              AND checkout IS NULL
+              AND reservation_id <> ?
+            LIMIT 1;
+            """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, tableNumber);
+            ps.setInt(2, excludeReservationId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
 }
