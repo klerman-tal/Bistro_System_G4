@@ -1,43 +1,53 @@
 package guiControllers;
 
 import java.io.IOException;
-import java.net.URL;
-import java.util.ResourceBundle;
+import java.time.LocalDateTime;
+import java.util.List;
 
 import application.ChatClient;
+import dto.ResponseDTO;
+import entities.Reservation;
 import entities.User;
+import entities.Enums.ReservationStatus;
 import interfaces.ClientActions;
+import javafx.application.Platform;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
+import network.ClientAPI;
+import network.ClientResponseHandler;
 
 public class ManageReservationController implements Initializable {
 
     @FXML private BorderPane rootPane;
+    @FXML private Label lblStatus;
 
-    @FXML private TableView<?> tblReservations;
+    // ===== TABLE =====
+    @FXML private TableView<Reservation> tblReservations;
+    @FXML private TableColumn<Reservation, Integer> colReservationId;
+    @FXML private TableColumn<Reservation, LocalDateTime> colDateTime;
+    @FXML private TableColumn<Reservation, Integer> colGuests;
+    @FXML private TableColumn<Reservation, String> colCode;
+    @FXML private TableColumn<Reservation, Integer> colCreatedBy;
+    @FXML private TableColumn<Reservation, ReservationStatus> colStatus;
+    @FXML private TableColumn<Reservation, Integer> colTableNumber;
 
-    @FXML private TableColumn<?, ?> colReservationId;
-    @FXML private TableColumn<?, ?> colDate;
-    @FXML private TableColumn<?, ?> colTime;
-    @FXML private TableColumn<?, ?> colGuests;
-    @FXML private TableColumn<?, ?> colCode;
-    @FXML private TableColumn<?, ?> colCreatedBy;
-    @FXML private TableColumn<?, ?> colConfirmed;
-    @FXML private TableColumn<?, ?> colTableNumber;
-
+    // ===== FORM =====
     @FXML private TextField txtReservationId;
     @FXML private TextField txtConfirmationCode;
     @FXML private DatePicker dpDate;
     @FXML private TextField txtTime;
     @FXML private TextField txtGuests;
     @FXML private TextField txtCreatedBy;
-    @FXML private CheckBox chkConfirmed;
+    @FXML private ComboBox<String> cmbReservationStatus;
     @FXML private TextField txtTableNumber;
 
     @FXML private Button btnAdd;
@@ -45,71 +55,190 @@ public class ManageReservationController implements Initializable {
     @FXML private Button btnDelete;
     @FXML private Button btnBack;
 
-    @FXML private Label lblStatus;
-
+    // ===== SESSION =====
     private ClientActions clientActions;
-
-    // ✅ session
     private User user;
     private ChatClient chatClient;
+    private ClientAPI clientAPI;
+
+    private final ObservableList<Reservation> reservationsList =
+            FXCollections.observableArrayList();
 
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
     }
 
-    // ✅ חדש
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
+
+        if (chatClient != null) {
+            this.clientAPI = new ClientAPI(chatClient);
+            chatClient.setResponseHandler(new ClientResponseHandler() {
+                @Override
+                public void handleResponse(ResponseDTO response) {
+                    Platform.runLater(() -> handleServerResponse(response));
+                }
+
+                @Override
+                public void handleConnectionError(Exception exception) {
+                    Platform.runLater(() ->
+                            showMessage("Connection error: " + exception.getMessage()));
+                }
+
+                @Override
+                public void handleConnectionClosed() {}
+            });
+        }
+
+        initializeTableBehavior();
+        loadReservationsOnEnter();
     }
 
     @Override
-    public void initialize(URL location, ResourceBundle resources) {
-        hideStatus();
+    public void initialize(java.net.URL location, java.util.ResourceBundle resources) {
+        cmbReservationStatus.getItems().clear();
+        cmbReservationStatus.getItems().addAll("Active", "Cancelled", "Finished");
+    }
+
+    private void initializeTableBehavior() {
+        colReservationId.setCellValueFactory(new PropertyValueFactory<>("reservationId"));
+        colDateTime.setCellValueFactory(new PropertyValueFactory<>("reservationTime"));
+        colGuests.setCellValueFactory(new PropertyValueFactory<>("guestAmount"));
+        colCode.setCellValueFactory(new PropertyValueFactory<>("confirmationCode"));
+        colCreatedBy.setCellValueFactory(new PropertyValueFactory<>("createdByUserId"));
+        colStatus.setCellValueFactory(new PropertyValueFactory<>("reservationStatus"));
+        colTableNumber.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
+
+        tblReservations.setItems(reservationsList);
+        tblReservations.getSelectionModel()
+                .selectedItemProperty()
+                .addListener((obs, oldVal, selected) -> {
+                    if (selected != null) fillForm(selected);
+                });
+    }
+
+    private void loadReservationsOnEnter() {
+        hideMessage();
+        if (clientAPI == null) return;
+
+        try {
+            clientAPI.getAllReservations();
+        } catch (IOException e) {
+            showMessage("Failed to load reservations");
+        }
+    }
+
+    public void handleServerResponse(ResponseDTO response) {
+        if (response == null) return;
+
+        if (response.isSuccess() && response.getData() instanceof List<?>) {
+            @SuppressWarnings("unchecked")
+            List<Reservation> list = (List<Reservation>) response.getData();
+            reservationsList.setAll(list);
+            hideMessage();
+        }
+        else if (response.isSuccess()) {
+            showMessage("Success: " + response.getMessage());
+            loadReservationsOnEnter();
+        }
+        else {
+            showMessage("Error: " + response.getMessage());
+        }
+    }
+
+    private void fillForm(Reservation r) {
+        txtReservationId.setText(String.valueOf(r.getReservationId()));
+        txtConfirmationCode.setText(r.getConfirmationCode());
+
+        if (r.getReservationTime() != null) {
+            dpDate.setValue(r.getReservationTime().toLocalDate());
+            txtTime.setText(r.getReservationTime().toLocalTime().toString());
+        }
+
+        txtGuests.setText(String.valueOf(r.getGuestAmount()));
+        txtCreatedBy.setText(String.valueOf(r.getCreatedByUserId()));
+
+        if (r.getReservationStatus() != null) {
+            cmbReservationStatus.setValue(r.getReservationStatus().name());
+        }
+
+        txtTableNumber.setText(
+                r.getTableNumber() != null ? String.valueOf(r.getTableNumber()) : ""
+        );
     }
 
     @FXML
     private void onAddClicked() {
-        showStatus("Add clicked (not wired yet)");
-    }
+        try {
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/TableReservation_B.fxml"));
+            Parent root = loader.load();
 
-    @FXML
-    private void onUpdateClicked() {
-        showStatus("Update clicked (not wired yet)");
+            TableReservation_BController controller = loader.getController();
+            if (controller != null) {
+                controller.setClient(user, chatClient);
+                controller.setBackFxml("/gui/ManageReservation.fxml");
+            }
+
+            Stage stage = (Stage) rootPane.getScene().getWindow();
+            stage.setScene(new Scene(root));
+            stage.show();
+
+        } catch (Exception e) {
+            showMessage("Error opening Add screen");
+        }
     }
 
     @FXML
     private void onDeleteClicked() {
-        showStatus("Delete clicked (not wired yet)");
+        Reservation selected = tblReservations.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showMessage("Please select a reservation to cancel.");
+            return;
+        }
+        openCancelWindow(selected);
+    }
+
+    private void openCancelWindow(Reservation reservation) {
+        try {
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/CancelReservation_B.fxml"));
+            Parent root = loader.load();
+
+            CancelReservation_BController controller = loader.getController();
+            controller.setClient(user, chatClient);
+            controller.setConfirmationCode(reservation.getConfirmationCode());
+
+            // ✅ התאמה ל-CANCEL (הדבר היחיד שנוסף)
+            controller.setBackFxml("/gui/ManageReservation.fxml");
+
+            Stage stage = (Stage) rootPane.getScene().getWindow();
+            stage.setScene(new Scene(root));
+            stage.show();
+
+        } catch (Exception e) {
+            showMessage("Error opening cancel screen");
+        }
     }
 
     @FXML
     private void onBackClicked() {
-        openWindow("RestaurantManagement_B.fxml", "Restaurant Management");
+        openWindow("RestaurantManagement_B.fxml", "Management");
     }
 
     private void openWindow(String fxmlName, String title) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
             Parent root = loader.load();
 
             Object controller = loader.getController();
-
-            // להעביר clientActions אם יש
-            if (controller != null && clientActions != null) {
+            if (controller != null) {
                 try {
                     controller.getClass()
-                              .getMethod("setClientActions", ClientActions.class)
-                              .invoke(controller, clientActions);
-                } catch (Exception ignored) {}
-            }
-
-            // ✅ להעביר session אם יש setClient
-            if (controller != null && user != null && chatClient != null) {
-                try {
-                    controller.getClass()
-                              .getMethod("setClient", User.class, ChatClient.class)
-                              .invoke(controller, user, chatClient);
+                            .getMethod("setClient", User.class, ChatClient.class)
+                            .invoke(controller, user, chatClient);
                 } catch (Exception ignored) {}
             }
 
@@ -118,25 +247,19 @@ public class ManageReservationController implements Initializable {
             stage.setScene(new Scene(root));
             stage.show();
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
-            showStatus("Failed to open: " + fxmlName);
         }
     }
 
-    private void hideStatus() {
-        if (lblStatus != null) {
-            lblStatus.setText("");
-            lblStatus.setVisible(false);
-            lblStatus.setManaged(false);
-        }
+    private void showMessage(String msg) {
+        lblStatus.setText(msg);
+        lblStatus.setVisible(true);
+        lblStatus.setManaged(true);
     }
 
-    private void showStatus(String msg) {
-        if (lblStatus != null) {
-            lblStatus.setText(msg);
-            lblStatus.setVisible(true);
-            lblStatus.setManaged(true);
-        }
+    private void hideMessage() {
+        lblStatus.setVisible(false);
+        lblStatus.setManaged(false);
     }
 }
