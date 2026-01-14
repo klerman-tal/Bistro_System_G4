@@ -42,6 +42,10 @@ public class CancelReservation_BController implements ClientResponseHandler {
         );
     }
 
+    public void setConfirmationCode(String code) {
+        txtConfirmationCode.setText(code);
+    }
+
     /* ================= INJECTION ================= */
 
     public void setClient(User user, ChatClient chatClient) {
@@ -49,7 +53,7 @@ public class CancelReservation_BController implements ClientResponseHandler {
         this.chatClient = chatClient;
 
         if (chatClient != null) {
-            chatClient.setResponseHandler(this); // ✅ המסך הפעיל
+            chatClient.setResponseHandler(this);
         }
     }
 
@@ -80,11 +84,10 @@ public class CancelReservation_BController implements ClientResponseHandler {
                 new RequestDTO(Commands.CANCEL_RESERVATION, data);
 
         try {
-			chatClient.sendToServer(request);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+            chatClient.sendToServer(request);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /* ================= BACK ================= */
@@ -93,27 +96,22 @@ public class CancelReservation_BController implements ClientResponseHandler {
     private void onBackClicked() {
         try {
             FXMLLoader loader =
-                    new FXMLLoader(getClass().getResource("/gui/ReservationMenu_B.fxml"));
+                    new FXMLLoader(getClass().getResource("/gui/ManageReservation.fxml"));
             Parent root = loader.load();
 
-            ReservationMenu_BController controller =
-                    loader.getController();
-
-            // העברת context
-            if (controller != null) {
-                controller.setClient(user, chatClient);
+            ManageReservationController manageCtrl = loader.getController();
+            if (manageCtrl != null) {
+                manageCtrl.setClient(user, chatClient);
             }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setScene(new Scene(root));
-            stage.centerOnScreen();
             stage.show();
 
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-
 
     /* ================= SERVER RESPONSE ================= */
 

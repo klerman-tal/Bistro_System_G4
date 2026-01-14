@@ -32,11 +32,18 @@ public class TableReservation_BController implements ClientResponseHandler {
     private ClientAPI api;
     private ArrayList<OpeningHouers> cachedOpeningHours;
 
+    // ברירת מחדל – חזרה לתפריט
+    private String sourceScreen = "/gui/Menu_B.fxml";
+
     @FXML private BorderPane rootPane;
     @FXML private DatePicker datePicker;
     @FXML private ComboBox<String> cmbHour;
     @FXML private TextField txtGuests;
     @FXML private Label lblMessage;
+
+    public void setSourceScreen(String fxmlPath) {
+        this.sourceScreen = fxmlPath;
+    }
 
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
@@ -44,7 +51,6 @@ public class TableReservation_BController implements ClientResponseHandler {
         this.api = new ClientAPI(chatClient);
         this.chatClient.setResponseHandler(this);
 
-        // ✨ DatePicker: block past + block beyond 1 month
         datePicker.setDayCellFactory(picker -> new DateCell() {
             @Override
             public void updateItem(LocalDate date, boolean empty) {
@@ -65,9 +71,6 @@ public class TableReservation_BController implements ClientResponseHandler {
         }
     }
 
-    /**
-     * Fix: Error resolving onAction='#onDateSelected'
-     */
     @FXML
     private void onDateSelected() {
         if (datePicker.getValue() != null && cachedOpeningHours != null) {
@@ -84,7 +87,6 @@ public class TableReservation_BController implements ClientResponseHandler {
             LocalDate date = datePicker.getValue();
             LocalTime time = LocalTime.parse(cmbHour.getValue());
 
-            // UI check: at least 1 hour in advance for today
             if (date.equals(LocalDate.now()) && time.isBefore(LocalTime.now().plusHours(1))) {
                 showMessage("Reservations must be at least 1 hour in advance.", "red");
                 return;
@@ -98,25 +100,19 @@ public class TableReservation_BController implements ClientResponseHandler {
         }
     }
 
-    /**
-     * Back must preserve session (user + chatClient)
-     */
     @FXML
     private void onBackClicked() {
-        if (chatClient != null) {
-            chatClient.setResponseHandler(null);
-        }
+        if (chatClient != null) chatClient.setResponseHandler(null);
 
         try {
-            FXMLLoader loader =
-                    new FXMLLoader(getClass().getResource("/gui/ReservationMenu_B.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(sourceScreen));
             Parent root = loader.load();
 
-            ReservationMenu_BController controller =
-                    loader.getController();
-
-            if (controller != null) {
-                controller.setClient(user, chatClient);
+            Object controller = loader.getController();
+            if (controller instanceof ManageReservationController) {
+                ((ManageReservationController) controller).setClient(user, chatClient);
+            } else if (controller instanceof Menu_BController) {
+                ((Menu_BController) controller).setClient(user, chatClient);
             }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
@@ -129,16 +125,12 @@ public class TableReservation_BController implements ClientResponseHandler {
         }
     }
 
-
-
     @Override
     public void handleResponse(ResponseDTO response) {
-
         Platform.runLater(() -> {
 
             if (response == null) return;
 
-            // GET_OPENING_HOURS
             if (response.isSuccess() && response.getData() instanceof ArrayList) {
                 @SuppressWarnings("unchecked")
                 ArrayList<OpeningHouers> list = (ArrayList<OpeningHouers>) response.getData();
@@ -150,48 +142,29 @@ public class TableReservation_BController implements ClientResponseHandler {
                 return;
             }
 
-            // CREATE_RESERVATION – success
             if (response.isSuccess()) {
-
+                String msg = "Reservation Confirmed";
                 if (response.getData() instanceof String) {
-                    String confirmationCode = (String) response.getData();
-                    showSuccessAlert(
-                            "Reservation Confirmed",
-                            "Your reservation was successfully created.\n\nConfirmation Code: " + confirmationCode
-                    );
-                } else {
-                    showSuccessAlert("Reservation Confirmed", "Reservation created successfully.");
+                    msg += "\nConfirmation Code: " + response.getData();
                 }
-
+                showSuccessAlert("Reservation Confirmed", msg);
                 return;
             }
 
-            // CREATE_RESERVATION – failure
-            // If server sent available times -> update ComboBox and show clear message
             if (response.getData() instanceof ArrayList) {
                 @SuppressWarnings("unchecked")
                 ArrayList<LocalTime> times = (ArrayList<LocalTime>) response.getData();
-
                 ArrayList<String> suggested = new ArrayList<>();
-                for (LocalTime t : times) {
-                    if (t != null) suggested.add(t.toString());
-                }
+                for (LocalTime t : times) if (t != null) suggested.add(t.toString());
 
                 if (!suggested.isEmpty()) {
                     cmbHour.getItems().setAll(suggested);
                     cmbHour.getSelectionModel().selectFirst();
-
-                    // ✅ NEW: clear message that hours were updated
-                    showMessage(
-                            "No table is available at the selected time.\n"
-                                    + "The available hours below were updated to times with free tables for 2 hours.",
-                            "red"
-                    );
+                    showMessage("No table available. Suggested times updated.", "red");
                     return;
                 }
             }
 
-            // fallback: show server message
             showMessage(response.getMessage(), "red");
         });
     }
@@ -219,11 +192,7 @@ public class TableReservation_BController implements ClientResponseHandler {
         LocalTime nowPlusOneHour = LocalTime.now().plusHours(1);
 
         while (!startTime.isAfter(endTime)) {
-            if (selectedDate.equals(LocalDate.now())) {
-                if (startTime.isAfter(nowPlusOneHour)) {
-                    cmbHour.getItems().add(startTime.toString());
-                }
-            } else {
+            if (!selectedDate.equals(LocalDate.now()) || startTime.isAfter(nowPlusOneHour)) {
                 cmbHour.getItems().add(startTime.toString());
             }
             startTime = startTime.plusMinutes(30);
@@ -264,7 +233,6 @@ public class TableReservation_BController implements ClientResponseHandler {
         alert.showAndWait();
     }
 
-    // ✅ Removed: Join Waiting List button handler (not relevant for this screen)
     @Override public void handleConnectionError(Exception e) {
         Platform.runLater(() -> showMessage("Connection lost.", "red"));
     }

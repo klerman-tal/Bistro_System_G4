@@ -671,6 +671,36 @@ public class Reservation_DB_Controller {
      }
      return map;
  }
+ 
+ 
+ /**
+  * Updates core reservation details in the database.
+  */
+ public boolean updateFullReservationDetails(Reservation res) throws SQLException {
+     String sql = """
+         UPDATE reservations 
+         SET reservation_datetime = ?, 
+             number_of_guests = ?, 
+             table_number = ?, 
+             reservation_status = ?,
+             confirmation_code = ?
+         WHERE reservation_id = ?
+         """;
+
+     try (PreparedStatement ps = conn.prepareStatement(sql)) {
+         ps.setTimestamp(1, Timestamp.valueOf(res.getReservationTime()));
+         ps.setInt(2, res.getGuestAmount());
+         
+         if (res.getTableNumber() != null) ps.setInt(3, res.getTableNumber());
+         else ps.setNull(3, Types.INTEGER);
+         
+         ps.setString(4, res.getReservationStatus().name());
+         ps.setString(5, res.getConfirmationCode());
+         ps.setInt(6, res.getReservationId());
+
+         return ps.executeUpdate() > 0;
+     }
+ }
 
 
 }
