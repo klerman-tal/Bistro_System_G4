@@ -40,7 +40,10 @@ public class ManageReservationController implements Initializable {
     @FXML private TableColumn<Reservation, ReservationStatus> colStatus;
     @FXML private TableColumn<Reservation, Integer> colTableNumber;
 
+
+
     // ===== FORM =====
+
     @FXML private TextField txtReservationId;
     @FXML private TextField txtConfirmationCode;
     @FXML private DatePicker dpDate;

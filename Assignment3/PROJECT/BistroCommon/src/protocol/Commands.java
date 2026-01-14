@@ -6,7 +6,13 @@ public enum Commands {
     GET_RESERVATION_HISTORY,
     CANCEL_RESERVATION,
     UPDATE_SPECIAL_OPENING_HOURS,
+
+
+    CHECKIN_RESERVATION,
+    
+
     GET_ALL_RESERVATIONS,
+
 
 
     // Waiting List
