@@ -1,14 +1,15 @@
 package guiControllers;
 
 import java.io.IOException;
-
 import application.ChatClient;
 import entities.User;
+import entities.Enums; // ✨ זה הייבוא שהיה חסר וגרם לשגיאה בתמונה האחרונה
 import interfaces.ClientActions;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
@@ -19,6 +20,9 @@ public class Menu_BController {
 
     @FXML
     private javafx.scene.control.Label lblMessage;
+
+    @FXML
+    private Button btnRestaurantManagement;
 
     private User user;
     private ChatClient chatClient;
@@ -31,6 +35,13 @@ public class Menu_BController {
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
+
+        // בדיקה: אם המשתמש הוא אורח, נסתיר את כפתור הניהול
+        // עכשיו כשיש import ל-Enums, השורה הזו תעבוד בלי שגיאה
+        if (user != null && user.getUserRole() == Enums.UserRole.RandomClient) {
+            btnRestaurantManagement.setVisible(false);
+            btnRestaurantManagement.setManaged(false);
+        }
     }
 
     public void setClientActions(ClientActions clientActions) {
@@ -79,7 +90,7 @@ public class Menu_BController {
     }
 
     /* =======================
-       NAVIGATION (כמו שהיה)
+       NAVIGATION
        ======================= */
 
     private void openWindow(String fxmlName, String title) {

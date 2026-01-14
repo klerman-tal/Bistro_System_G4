@@ -230,6 +230,21 @@ public class ClientAPI {
 		RequestDTO request = new RequestDTO(Commands.GET_ALL_RESERVATIONS, null);
 		client.sendToServer(request);
 	}
+	
+	public void updateSpecialOpeningHours(LocalDate date, java.sql.Time openTime, java.sql.Time closeTime, boolean isClosed) throws IOException {
+        if (date == null) {
+            throw new IllegalArgumentException("Date must be provided for special opening hours.");
+        }
+
+        // יצירת ה-DTO החדש עם הנתונים מהמסך
+        dto.SpecialOpeningHoursDTO data = new dto.SpecialOpeningHoursDTO(date, openTime, closeTime, isClosed);
+        
+        // עטיפה בתוך RequestDTO עם הפקודה שהגדרנו ב-Common
+        RequestDTO request = new RequestDTO(protocol.Commands.UPDATE_SPECIAL_OPENING_HOURS, data);
+        
+        // שליחה לשרת דרך ה-ChatClient
+        client.sendToServer(request);
+    }
 
 
 
