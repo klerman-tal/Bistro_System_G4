@@ -194,6 +194,21 @@ public class ClientAPI {
 		client.sendToServer(req);
 	}
 
+    
+    public void checkinReservation(String confirmationCode) throws IOException {
+        if (confirmationCode == null || confirmationCode.isBlank()) {
+            throw new IllegalArgumentException("Confirmation code is required");
+        }
+
+        dto.CheckinReservationDTO data =
+                new dto.CheckinReservationDTO(confirmationCode.trim());
+
+        RequestDTO request =
+                new RequestDTO(Commands.CHECKIN_RESERVATION, data);
+
+        client.sendToServer(request);
+    }
+
 	public void cancelWaiting(String confirmationCode) throws IOException {
 		WaitingCodeDTO data = new WaitingCodeDTO(confirmationCode);
 		RequestDTO req = new RequestDTO(Commands.CANCEL_WAITING, data);
