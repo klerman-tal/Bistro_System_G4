@@ -19,7 +19,6 @@ public class SpecialOpeningHours implements Serializable {
         this.isClosed = isClosed;
     }
 
-    // Getters and Setters
     public LocalDate getSpecialDate() { return specialDate; }
     public Time getOpenTime() { return openTime; }
     public Time getCloseTime() { return closeTime; }
