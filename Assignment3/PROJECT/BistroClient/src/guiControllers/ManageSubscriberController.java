@@ -215,6 +215,13 @@ public class ManageSubscriberController {
             return;
         }
 
+        // ===== CREATE SUCCESS =====
+        if (response.isSuccess() && response.getData() instanceof Subscriber) {
+            showMessage("Subscriber created successfully ✅");
+            loadSubscribersOnEnter();
+            return;
+        }
+
         // UPDATE SUCCESS
         if (response.isSuccess()
                 && "Details updated successfully".equals(response.getMessage())) {
@@ -236,6 +243,8 @@ public class ManageSubscriberController {
             showMessage(response.getMessage());
         }
     }
+
+
 
     /* =======================
        BUTTONS
