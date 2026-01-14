@@ -2,7 +2,6 @@ package guiControllers;
 
 import application.ChatClient;
 import entities.User;
-import interfaces.ClientActions;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -10,55 +9,40 @@ import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
-public class GetTableChoice_BController {
+public class MyVisitMenu_BController {
 
     @FXML private BorderPane rootPane;
 
     private User user;
     private ChatClient chatClient;
-    private ClientActions clientActions;
 
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
     }
 
-    public void setClientActions(ClientActions clientActions) {
-        this.clientActions = clientActions;
+    @FXML
+    private void onGetTable() {
+        openWindow("GetTableChoice_B.fxml", "Get Table");
     }
 
     @FXML
-    private void onFromReservationClicked() {
-        openWindow("GetTable_B.fxml", "Get Table (Reservation)");
+    private void onPayment() {
+        openWindow("Payment_B.fxml", "Payment");
     }
 
     @FXML
-    private void onFromWaitingClicked() {
-        openWindow("GetTableFromWaiting_B.fxml", "Get Table (Waiting)");
+    private void onBack() {
+        openWindow("Menu_B.fxml", "Main Menu");
     }
 
-    @FXML
-    private void onBackClicked() {
-        openWindow("MyVisitMenu_B.fxml", "Main Menu");
-    }
-
-    private void openWindow(String fxmlName, String title) {
+    private void openWindow(String fxml, String title) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/" + fxml));
             Parent root = loader.load();
 
             Object controller = loader.getController();
-
-            // Pass clientActions if exists
-            if (controller != null && clientActions != null) {
-                try {
-                    controller.getClass()
-                            .getMethod("setClientActions", ClientActions.class)
-                            .invoke(controller, clientActions);
-                } catch (Exception ignored) {}
-            }
-
-            // Pass user + chatClient to preserve session
             if (controller != null && user != null && chatClient != null) {
                 try {
                     controller.getClass()
@@ -70,6 +54,7 @@ public class GetTableChoice_BController {
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setTitle("Bistro - " + title);
             stage.setScene(new Scene(root));
+            stage.centerOnScreen();
             stage.show();
 
         } catch (Exception e) {

@@ -61,7 +61,8 @@ public class ManageReservationController implements Initializable {
     private ChatClient chatClient;
     private ClientAPI clientAPI;
 
-    private final ObservableList<Reservation> reservationsList = FXCollections.observableArrayList();
+    private final ObservableList<Reservation> reservationsList =
+            FXCollections.observableArrayList();
 
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
@@ -78,21 +79,24 @@ public class ManageReservationController implements Initializable {
                 public void handleResponse(ResponseDTO response) {
                     Platform.runLater(() -> handleServerResponse(response));
                 }
+
                 @Override
                 public void handleConnectionError(Exception exception) {
-                    Platform.runLater(() -> showMessage("Connection error: " + exception.getMessage()));
+                    Platform.runLater(() ->
+                            showMessage("Connection error: " + exception.getMessage()));
                 }
+
                 @Override
                 public void handleConnectionClosed() {}
             });
         }
+
         initializeTableBehavior();
         loadReservationsOnEnter();
     }
 
     @Override
     public void initialize(java.net.URL location, java.util.ResourceBundle resources) {
-        // מילוי ה-ComboBox לפי ה-Enum המדויק שלך
         cmbReservationStatus.getItems().clear();
         cmbReservationStatus.getItems().addAll("Active", "Cancelled", "Finished");
     }
@@ -107,14 +111,17 @@ public class ManageReservationController implements Initializable {
         colTableNumber.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
 
         tblReservations.setItems(reservationsList);
-        tblReservations.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, selected) -> {
-            if (selected != null) fillForm(selected);
-        });
+        tblReservations.getSelectionModel()
+                .selectedItemProperty()
+                .addListener((obs, oldVal, selected) -> {
+                    if (selected != null) fillForm(selected);
+                });
     }
 
     private void loadReservationsOnEnter() {
         hideMessage();
         if (clientAPI == null) return;
+
         try {
             clientAPI.getAllReservations();
         } catch (IOException e) {
@@ -124,19 +131,17 @@ public class ManageReservationController implements Initializable {
 
     public void handleServerResponse(ResponseDTO response) {
         if (response == null) return;
-        
-        // טעינת רשימה ראשונית
+
         if (response.isSuccess() && response.getData() instanceof List<?>) {
             @SuppressWarnings("unchecked")
             List<Reservation> list = (List<Reservation>) response.getData();
             reservationsList.setAll(list);
             hideMessage();
-        } 
-        // טיפול בהצלחת עדכון
+        }
         else if (response.isSuccess()) {
             showMessage("Success: " + response.getMessage());
-            loadReservationsOnEnter(); // רענון הטבלה
-        } 
+            loadReservationsOnEnter();
+        }
         else {
             showMessage("Error: " + response.getMessage());
         }
@@ -145,35 +150,41 @@ public class ManageReservationController implements Initializable {
     private void fillForm(Reservation r) {
         txtReservationId.setText(String.valueOf(r.getReservationId()));
         txtConfirmationCode.setText(r.getConfirmationCode());
+
         if (r.getReservationTime() != null) {
             dpDate.setValue(r.getReservationTime().toLocalDate());
             txtTime.setText(r.getReservationTime().toLocalTime().toString());
         }
+
         txtGuests.setText(String.valueOf(r.getGuestAmount()));
         txtCreatedBy.setText(String.valueOf(r.getCreatedByUserId()));
-        
+
         if (r.getReservationStatus() != null) {
             cmbReservationStatus.setValue(r.getReservationStatus().name());
         }
-        
-        txtTableNumber.setText(r.getTableNumber() != null ? String.valueOf(r.getTableNumber()) : "");
-    }
 
-    
+        txtTableNumber.setText(
+                r.getTableNumber() != null ? String.valueOf(r.getTableNumber()) : ""
+        );
+    }
 
     @FXML
     private void onAddClicked() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/TableReservation_B.fxml"));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/TableReservation_B.fxml"));
             Parent root = loader.load();
+
             TableReservation_BController controller = loader.getController();
             if (controller != null) {
                 controller.setClient(user, chatClient);
-                controller.setSourceScreen("/gui/ManageReservation.fxml"); 
-                Stage stage = (Stage) rootPane.getScene().getWindow();
-                stage.setScene(new Scene(root));
-                stage.show();
+                controller.setBackFxml("/gui/ManageReservation.fxml");
             }
+
+            Stage stage = (Stage) rootPane.getScene().getWindow();
+            stage.setScene(new Scene(root));
+            stage.show();
+
         } catch (Exception e) {
             showMessage("Error opening Add screen");
         }
@@ -191,47 +202,64 @@ public class ManageReservationController implements Initializable {
 
     private void openCancelWindow(Reservation reservation) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/CancelReservation_B.fxml"));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/CancelReservation_B.fxml"));
             Parent root = loader.load();
+
             CancelReservation_BController controller = loader.getController();
             controller.setClient(user, chatClient);
             controller.setConfirmationCode(reservation.getConfirmationCode());
+
+            // ✅ התאמה ל-CANCEL (הדבר היחיד שנוסף)
+            controller.setBackFxml("/gui/ManageReservation.fxml");
+
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setScene(new Scene(root));
             stage.show();
+
         } catch (Exception e) {
             showMessage("Error opening cancel screen");
         }
     }
 
-    @FXML 
-    private void onBackClicked() { 
-        openWindow("RestaurantManagement_B.fxml", "Management"); 
+    @FXML
+    private void onBackClicked() {
+        openWindow("RestaurantManagement_B.fxml", "Management");
     }
 
     private void openWindow(String fxmlName, String title) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
             Parent root = loader.load();
+
             Object controller = loader.getController();
             if (controller != null) {
-                try { controller.getClass().getMethod("setClient", User.class, ChatClient.class).invoke(controller, user, chatClient); } catch (Exception e) {}
+                try {
+                    controller.getClass()
+                            .getMethod("setClient", User.class, ChatClient.class)
+                            .invoke(controller, user, chatClient);
+                } catch (Exception ignored) {}
             }
+
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setTitle("Bistro - " + title);
             stage.setScene(new Scene(root));
             stage.show();
-        } catch (Exception e) { e.printStackTrace(); }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
-    private void showMessage(String msg) { 
-        lblStatus.setText(msg); 
-        lblStatus.setVisible(true); 
-        lblStatus.setManaged(true); 
+    private void showMessage(String msg) {
+        lblStatus.setText(msg);
+        lblStatus.setVisible(true);
+        lblStatus.setManaged(true);
     }
-    
-    private void hideMessage() { 
-        lblStatus.setVisible(false); 
-        lblStatus.setManaged(false); 
+
+    private void hideMessage() {
+        lblStatus.setVisible(false);
+        lblStatus.setManaged(false);
     }
 }
