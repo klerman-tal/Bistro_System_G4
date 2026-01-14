@@ -133,7 +133,7 @@ public class ReservationController {
 
         if (out == null) return;
         out.clear();
-
+ 
         try {
             Map<LocalDateTime, Table> map =
                     restaurantController.getOneAvailableTablePerSlot(date, guestsNumber);
@@ -690,6 +690,7 @@ public class ReservationController {
         }
     }
     
+
  // =====================================================
  // CHECK-IN (GET TABLE) FROM RESERVATION
  // Rule: allowed only from reservation time until +15 minutes
@@ -815,4 +816,24 @@ public class ReservationController {
     }
 
     
+
+    
+    /**
+     * ✅ NEW: Updates the full reservation details based on manager input.
+     */
+    public boolean updateReservationFromManager(Reservation res) {
+        if (res == null || res.getReservationId() <= 0) return false;
+        
+        try {
+            boolean success = db.updateFullReservationDetails(res);
+            if (success) {
+                server.log("Reservation updated by manager. ID=" + res.getReservationId());
+            }
+            return success;
+        } catch (SQLException e) {
+            server.log("ERROR: Failed to update reservation. ID=" + res.getReservationId() + ", Msg=" + e.getMessage());
+            return false;
+        }
+    }
+
 }

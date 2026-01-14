@@ -649,21 +649,53 @@ public class Reservation_DB_Controller {
         Map<Integer, Integer> map = new HashMap<>();
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, role.name());
+            // וודא שכאן אתה שולח את הערך המתאים למסד הנתונים (String או ID)
+            ps.setString(1, role.name()); 
             ps.setInt(2, year);
             ps.setInt(3, month);
 
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     map.put(
-                            rs.getInt("day"),
-                            rs.getInt("cnt")
+                        rs.getInt("day"),
+                        rs.getInt("cnt")
                     );
                 }
             }
         }
         return map;
     }
+ 
+ 
+ /**
+  * Updates core reservation details in the database.
+  */
+ public boolean updateFullReservationDetails(Reservation res) throws SQLException {
+     String sql = """
+         UPDATE reservations 
+         SET reservation_datetime = ?, 
+             number_of_guests = ?, 
+             table_number = ?, 
+             reservation_status = ?,
+             confirmation_code = ?
+         WHERE reservation_id = ?
+         """;
+
+     try (PreparedStatement ps = conn.prepareStatement(sql)) {
+         ps.setTimestamp(1, Timestamp.valueOf(res.getReservationTime()));
+         ps.setInt(2, res.getGuestAmount());
+         
+         if (res.getTableNumber() != null) ps.setInt(3, res.getTableNumber());
+         else ps.setNull(3, Types.INTEGER);
+         
+         ps.setString(4, res.getReservationStatus().name());
+         ps.setString(5, res.getConfirmationCode());
+         ps.setInt(6, res.getReservationId());
+
+         return ps.executeUpdate() > 0;
+     }
+ }
+
 
     // =====================================================
     // REAL-TIME OCCUPANCY (CHECKIN/CHECKOUT)
