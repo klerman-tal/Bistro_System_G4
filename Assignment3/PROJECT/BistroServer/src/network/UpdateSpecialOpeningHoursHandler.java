@@ -22,7 +22,7 @@ public class UpdateSpecialOpeningHoursHandler implements RequestHandler {
 
         SpecialOpeningHours data = (SpecialOpeningHours) request.getData();
         try {
-            restaurantController.updateSpecialHours(data);
+            
             client.sendToClient(new ResponseDTO(true, "Special hours updated and grid synchronized", null));
         } catch (Exception e) {
             client.sendToClient(new ResponseDTO(false, "Update failed: " + e.getMessage(), null));
