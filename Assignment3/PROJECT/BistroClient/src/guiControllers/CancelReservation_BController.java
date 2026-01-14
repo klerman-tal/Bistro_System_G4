@@ -29,6 +29,9 @@ public class CancelReservation_BController implements ClientResponseHandler {
     private ChatClient chatClient;
     private User user;
 
+    // ⬅️ FXML לחזרה
+    private String backFxml;
+
     /* ================= INIT ================= */
 
     @FXML
@@ -46,15 +49,18 @@ public class CancelReservation_BController implements ClientResponseHandler {
         txtConfirmationCode.setText(code);
     }
 
-    /* ================= INJECTION ================= */
+    /* ================= CONTEXT ================= */
 
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
-
         if (chatClient != null) {
             chatClient.setResponseHandler(this);
         }
+    }
+
+    public void setBackFxml(String backFxml) {
+        this.backFxml = backFxml;
     }
 
     /* ================= ACTIONS ================= */
@@ -63,6 +69,11 @@ public class CancelReservation_BController implements ClientResponseHandler {
     private void onCancelReservationClicked() {
 
         hideMessage();
+
+        if (chatClient == null) {
+            showError("Session error. Please reopen the screen.");
+            return;
+        }
 
         String code = txtConfirmationCode.getText();
         if (code == null || code.isBlank()) {
@@ -86,7 +97,7 @@ public class CancelReservation_BController implements ClientResponseHandler {
         try {
             chatClient.sendToServer(request);
         } catch (IOException e) {
-            e.printStackTrace();
+            showError("Failed to send request");
         }
     }
 
@@ -94,14 +105,19 @@ public class CancelReservation_BController implements ClientResponseHandler {
 
     @FXML
     private void onBackClicked() {
+        if (backFxml == null) return;
+
         try {
-            FXMLLoader loader =
-                    new FXMLLoader(getClass().getResource("/gui/ManageReservation.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(backFxml));
             Parent root = loader.load();
 
-            ManageReservationController manageCtrl = loader.getController();
-            if (manageCtrl != null) {
-                manageCtrl.setClient(user, chatClient);
+            Object controller = loader.getController();
+            if (controller != null && user != null && chatClient != null) {
+                try {
+                    controller.getClass()
+                            .getMethod("setClient", User.class, ChatClient.class)
+                            .invoke(controller, user, chatClient);
+                } catch (Exception ignored) {}
             }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();

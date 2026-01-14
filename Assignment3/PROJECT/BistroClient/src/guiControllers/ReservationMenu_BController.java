@@ -19,9 +19,7 @@ public class ReservationMenu_BController {
     private ChatClient chatClient;
     private ClientActions clientActions;
 
-    /* =======================
-       SETTERS (חשוב!)
-       ======================= */
+    /* ================= SETTERS ================= */
 
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
@@ -32,9 +30,7 @@ public class ReservationMenu_BController {
         this.clientActions = clientActions;
     }
 
-    /* =======================
-       BUTTON ACTIONS
-       ======================= */
+    /* ================= BUTTON ACTIONS ================= */
 
     @FXML
     private void onCreateReservation() {
@@ -43,28 +39,44 @@ public class ReservationMenu_BController {
 
     @FXML
     private void onCancelReservation() {
-        openWindow("CancelReservation_B.fxml", "Cancel Reservation");
+        try {
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/CancelReservation_B.fxml"));
+            Parent root = loader.load();
+
+            CancelReservation_BController controller = loader.getController();
+            if (controller != null) {
+                controller.setClient(user, chatClient);
+
+                // ⬅️ חזרה לפה
+                controller.setBackFxml("/gui/ReservationMenu_B.fxml");
+            }
+
+            Stage stage = (Stage) rootPane.getScene().getWindow();
+            stage.setScene(new Scene(root));
+            stage.show();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @FXML
     private void onJoinWaiting() {
         openWindow("JoinWaiting_B.fxml", "Join Waiting List");
     }
-    
+
     @FXML
     private void onCancelWaiting() {
         openWindow("CancelWaiting_B.fxml", "Cancel Waiting List");
     }
-
 
     @FXML
     private void onBack() {
         openWindow("Menu_B.fxml", "Main Menu");
     }
 
-    /* =======================
-       NAVIGATION (אחיד)
-       ======================= */
+    /* ================= NAVIGATION ================= */
 
     private void openWindow(String fxmlName, String title) {
         try {
@@ -74,7 +86,6 @@ public class ReservationMenu_BController {
 
             Object controller = loader.getController();
 
-            // העברת ClientActions
             if (controller != null && clientActions != null) {
                 try {
                     controller.getClass()
@@ -83,7 +94,6 @@ public class ReservationMenu_BController {
                 } catch (Exception ignored) {}
             }
 
-            // העברת User + ChatClient
             if (controller != null && user != null && chatClient != null) {
                 try {
                     controller.getClass()
