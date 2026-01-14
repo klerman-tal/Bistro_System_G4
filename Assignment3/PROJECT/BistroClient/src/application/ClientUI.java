@@ -14,6 +14,9 @@ import javafx.scene.Scene;
 import javafx.scene.control.TextInputDialog;
 import javafx.stage.Stage;
 
+import javafx.scene.image.Image;
+
+
 public class ClientUI extends Application implements ChatIF, ClientActions {
 
     public static final int DEFAULT_PORT = 5556;
@@ -54,6 +57,10 @@ public class ClientUI extends Application implements ChatIF, ClientActions {
             Parent root = loader.load();
             primaryStage.setTitle("Bistro Management System");
             primaryStage.setScene(new Scene(root));
+            
+            primaryStage.getIcons().add(
+                    new Image(getClass().getResourceAsStream("/gui/BistroLogo.PNG"))
+            );
             primaryStage.centerOnScreen();
             primaryStage.show();
         } catch (Exception e) {
