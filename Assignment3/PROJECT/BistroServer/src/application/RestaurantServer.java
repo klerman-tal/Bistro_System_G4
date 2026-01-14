@@ -205,7 +205,7 @@ public class RestaurantServer extends AbstractServer {
                 new GetOpeningHoursHandler(restaurantController));
 
         router.register(Commands.UPDATE_OPENING_HOURS,
-                new UpdateOpeningHoursHandler(restaurantController));
+                new UpdateSpecialOpeningHoursHandler(restaurantController));
 
         // ===== Tables =====
         router.register(Commands.GET_TABLES,
@@ -271,8 +271,8 @@ public class RestaurantServer extends AbstractServer {
         router.register(
                 Commands.GET_ALL_RESERVATIONS,
                 new GetAllReservationsHandler(reservationController));
-		router.register(Commands.UPDATE_SPECIAL_OPENING_HOURS, 
-                new UpdateSpecialOpeningHoursHandler(specialOpeningHoursDB));
+        router.register(Commands.UPDATE_SPECIAL_OPENING_HOURS, 
+        	    new UpdateSpecialOpeningHoursHandler(restaurantController));
         
         
         

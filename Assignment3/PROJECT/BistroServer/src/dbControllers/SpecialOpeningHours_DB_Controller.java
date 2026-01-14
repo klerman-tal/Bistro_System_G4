@@ -11,7 +11,6 @@ public class SpecialOpeningHours_DB_Controller {
         this.conn = conn;
     }
 
-    // יצירת הטבלה אם היא לא קיימת (כמו שאר הטבלאות בשרת שלך)
     public void createSpecialOpeningHoursTable() throws SQLException {
         String sql = "CREATE TABLE IF NOT EXISTS special_opening_hours (" +
                      "special_date DATE PRIMARY KEY, " +
@@ -38,5 +37,26 @@ public class SpecialOpeningHours_DB_Controller {
             e.printStackTrace();
             return false;
         }
+    }
+
+    // ✨ פתרון לשגיאה בצילום מסך 2
+    public SpecialOpeningHours getSpecialHoursByDate(LocalDate date) {
+        String sql = "SELECT * FROM special_opening_hours WHERE special_date = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setDate(1, Date.valueOf(date));
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return new SpecialOpeningHours(
+                        rs.getDate("special_date").toLocalDate(),
+                        rs.getTime("open_time"),
+                        rs.getTime("close_time"),
+                        rs.getBoolean("is_closed")
+                    );
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }
