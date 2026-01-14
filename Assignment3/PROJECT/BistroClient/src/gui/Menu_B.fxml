@@ -13,7 +13,6 @@
     xmlns:fx="http://javafx.com/fxml/1"
     fx:controller="guiControllers.Menu_BController">
 
-    <!-- HEADER -->
     <top>
         <HBox fx:id="header" alignment="CENTER_LEFT">
             <padding>
@@ -26,7 +25,6 @@
         </HBox>
     </top>
 
-    <!-- CENTER CONTENT -->
     <center>
         <VBox alignment="TOP_CENTER" spacing="18">
             <padding>
@@ -36,29 +34,26 @@
             <children>
                 <Label styleClass="section" text="Choose an action"/>
 
-                <!-- Reservations -->
                 <Button maxWidth="300"
                         prefWidth="260"
                         styleClass="btnSecondary"
                         text="Reservations"
                         onAction="#onSelectReservationsClicked"/>
 
-                <!-- My Visit -->
                 <Button maxWidth="300"
                         prefWidth="260"
                         styleClass="btnSecondary"
                         text="My Visit"
                         onAction="#onSelectMyVisitClicked"/>
 
-                <!-- Personal Details -->
                 <Button maxWidth="300"
                         prefWidth="260"
                         styleClass="btnSecondary"
                         text="Personal Details"
                         onAction="#onSelectPersonalDetailsClicked"/>
 
-                <!-- Restaurant Management -->
-                <Button maxWidth="300"
+                <Button fx:id="btnRestaurantManagement"
+                        maxWidth="300"
                         prefWidth="260"
                         styleClass="btnSecondary"
                         text="Restaurant Management"
@@ -70,7 +65,6 @@
                        styleClass="errorMsg"
                        text=""/>
 
-                <!-- Logout -->
                 <Button text="Logout"
                         onAction="#onLogoutClicked"
                         style="-fx-background-color: #000000;

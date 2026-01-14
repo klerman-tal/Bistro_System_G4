@@ -91,16 +91,14 @@ public class SubscriberLoginController implements ClientResponseHandler {
     @Override
     public void handleResponse(ResponseDTO response) {
         Platform.runLater(() -> {
-
-            // ✅ מסך זה מטפל רק בתשובת LOGIN שמחזירה Subscriber
-            if (!(response.getData() instanceof Subscriber)) {
-                return;
-            }
-
+            // אם התגובה הצליחה, עוברים לתפריט
             if (response.isSuccess()) {
-                Subscriber subscriber = (Subscriber) response.getData();
-                goToMenu(subscriber);
+                if (response.getData() instanceof Subscriber) {
+                    Subscriber subscriber = (Subscriber) response.getData();
+                    goToMenu(subscriber);
+                }
             } else {
+                // אם התגובה נכשלה (למשל פרטים לא נכונים), מציגים את הודעת השגיאה מהשרת
                 showError(response.getMessage());
             }
         });
@@ -190,7 +188,7 @@ public class SubscriberLoginController implements ClientResponseHandler {
     private void showError(String msg) {
         if (lblMessage == null) return;
         lblMessage.setText(msg);
-        lblMessage.setStyle("-fx-text-fill: red;");
+        lblMessage.setStyle("-fx-text-fill: #ff0000; -fx-font-weight: bold;"); // צבע אדום מודגש
         lblMessage.setVisible(true);
         lblMessage.setManaged(true);
     }
