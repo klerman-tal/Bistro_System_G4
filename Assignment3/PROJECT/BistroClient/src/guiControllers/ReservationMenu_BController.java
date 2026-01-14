@@ -34,8 +34,28 @@ public class ReservationMenu_BController {
 
     @FXML
     private void onCreateReservation() {
-        openWindow("TableReservation_B.fxml", "Create Reservation");
+        try {
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/TableReservation_B.fxml"));
+            Parent root = loader.load();
+
+            TableReservation_BController controller = loader.getController();
+            if (controller != null) {
+                controller.setClient(user, chatClient);
+
+                // ⬅️ זה כל הקסם
+                controller.setBackFxml("/gui/ReservationMenu_B.fxml");
+            }
+
+            Stage stage = (Stage) rootPane.getScene().getWindow();
+            stage.setScene(new Scene(root));
+            stage.show();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
+
 
     @FXML
     private void onCancelReservation() {

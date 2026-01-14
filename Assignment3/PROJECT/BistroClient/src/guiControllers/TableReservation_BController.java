@@ -14,12 +14,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
-import javafx.scene.control.DateCell;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.DatePicker;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import network.ClientAPI;
@@ -31,9 +26,7 @@ public class TableReservation_BController implements ClientResponseHandler {
     private ChatClient chatClient;
     private ClientAPI api;
     private ArrayList<OpeningHouers> cachedOpeningHours;
-
-    // ברירת מחדל – חזרה לתפריט
-    private String sourceScreen = "/gui/Menu_B.fxml";
+    private String backFxml;
 
     @FXML private BorderPane rootPane;
     @FXML private DatePicker datePicker;
@@ -41,8 +34,10 @@ public class TableReservation_BController implements ClientResponseHandler {
     @FXML private TextField txtGuests;
     @FXML private Label lblMessage;
 
-    public void setSourceScreen(String fxmlPath) {
-        this.sourceScreen = fxmlPath;
+    /* ================= CONTEXT ================= */
+
+    public void setBackFxml(String backFxml) {
+        this.backFxml = backFxml;
     }
 
     public void setClient(User user, ChatClient chatClient) {
@@ -67,9 +62,11 @@ public class TableReservation_BController implements ClientResponseHandler {
         try {
             api.getOpeningHours();
         } catch (IOException e) {
-            e.printStackTrace();
+            showMessage("Failed to load opening hours", "red");
         }
     }
+
+    /* ================= ACTIONS ================= */
 
     @FXML
     private void onDateSelected() {
@@ -80,19 +77,27 @@ public class TableReservation_BController implements ClientResponseHandler {
 
     @FXML
     private void onCreateClicked() {
-        lblMessage.setVisible(false);
+        hideMessage();
+
         if (!validateInputs()) return;
 
         try {
             LocalDate date = datePicker.getValue();
             LocalTime time = LocalTime.parse(cmbHour.getValue());
 
-            if (date.equals(LocalDate.now()) && time.isBefore(LocalTime.now().plusHours(1))) {
+            if (date.equals(LocalDate.now())
+                    && time.isBefore(LocalTime.now().plusHours(1))) {
                 showMessage("Reservations must be at least 1 hour in advance.", "red");
                 return;
             }
 
-            api.createReservation(date, time, Integer.parseInt(txtGuests.getText().trim()), user);
+            api.createReservation(
+                    date,
+                    time,
+                    Integer.parseInt(txtGuests.getText().trim()),
+                    user
+            );
+
             showMessage("Sending request...", "blue");
 
         } catch (Exception e) {
@@ -100,30 +105,39 @@ public class TableReservation_BController implements ClientResponseHandler {
         }
     }
 
+    /* ================= BACK ================= */
+
     @FXML
     private void onBackClicked() {
-        if (chatClient != null) chatClient.setResponseHandler(null);
+        if (backFxml == null) return;
+
+        if (chatClient != null) {
+            chatClient.setResponseHandler(null);
+        }
 
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource(sourceScreen));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(backFxml));
             Parent root = loader.load();
 
             Object controller = loader.getController();
-            if (controller instanceof ManageReservationController) {
-                ((ManageReservationController) controller).setClient(user, chatClient);
-            } else if (controller instanceof Menu_BController) {
-                ((Menu_BController) controller).setClient(user, chatClient);
+            if (controller != null && user != null && chatClient != null) {
+                try {
+                    controller.getClass()
+                            .getMethod("setClient", User.class, ChatClient.class)
+                            .invoke(controller, user, chatClient);
+                } catch (Exception ignored) {}
             }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setScene(new Scene(root));
-            stage.centerOnScreen();
             stage.show();
 
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
+
+    /* ================= SERVER RESPONSE ================= */
 
     @Override
     public void handleResponse(ResponseDTO response) {
@@ -133,8 +147,9 @@ public class TableReservation_BController implements ClientResponseHandler {
 
             if (response.isSuccess() && response.getData() instanceof ArrayList) {
                 @SuppressWarnings("unchecked")
-                ArrayList<OpeningHouers> list = (ArrayList<OpeningHouers>) response.getData();
-                this.cachedOpeningHours = list;
+                ArrayList<OpeningHouers> list =
+                        (ArrayList<OpeningHouers>) response.getData();
+                cachedOpeningHours = list;
 
                 if (datePicker.getValue() != null) {
                     updateComboBoxForDate(datePicker.getValue(), cachedOpeningHours);
@@ -151,30 +166,16 @@ public class TableReservation_BController implements ClientResponseHandler {
                 return;
             }
 
-            if (response.getData() instanceof ArrayList) {
-                @SuppressWarnings("unchecked")
-                ArrayList<LocalTime> times = (ArrayList<LocalTime>) response.getData();
-                ArrayList<String> suggested = new ArrayList<>();
-                for (LocalTime t : times) if (t != null) suggested.add(t.toString());
-
-                if (!suggested.isEmpty()) {
-                    cmbHour.getItems().setAll(suggested);
-                    cmbHour.getSelectionModel().selectFirst();
-                    showMessage("No table available. Suggested times updated.", "red");
-                    return;
-                }
-            }
-
             showMessage(response.getMessage(), "red");
         });
     }
 
-    private void updateComboBoxForDate(LocalDate date, ArrayList<OpeningHouers> allHours) {
-        if (date == null || allHours == null) return;
-        cmbHour.getItems().clear();
+    /* ================= HELPERS ================= */
 
-        String dayName = date.getDayOfWeek().name();
-        String formattedDay = dayName.substring(0, 1) + dayName.substring(1).toLowerCase();
+    private void updateComboBoxForDate(LocalDate date, ArrayList<OpeningHouers> allHours) {
+        cmbHour.getItems().clear();
+        String day = date.getDayOfWeek().name();
+        String formattedDay = day.substring(0,1) + day.substring(1).toLowerCase();
 
         for (OpeningHouers oh : allHours) {
             if (oh.getDayOfWeek().equals(formattedDay)) {
@@ -185,17 +186,16 @@ public class TableReservation_BController implements ClientResponseHandler {
     }
 
     private void fillTimeSlots(String open, String close, LocalDate selectedDate) {
-        if (open == null || close == null) return;
+        LocalTime start = LocalTime.parse(open.substring(0,5));
+        LocalTime end = LocalTime.parse(close.substring(0,5));
+        LocalTime nowPlusHour = LocalTime.now().plusHours(1);
 
-        LocalTime startTime = LocalTime.parse(open.substring(0, 5));
-        LocalTime endTime = LocalTime.parse(close.substring(0, 5));
-        LocalTime nowPlusOneHour = LocalTime.now().plusHours(1);
-
-        while (!startTime.isAfter(endTime)) {
-            if (!selectedDate.equals(LocalDate.now()) || startTime.isAfter(nowPlusOneHour)) {
-                cmbHour.getItems().add(startTime.toString());
+        while (!start.isAfter(end)) {
+            if (!selectedDate.equals(LocalDate.now())
+                    || start.isAfter(nowPlusHour)) {
+                cmbHour.getItems().add(start.toString());
             }
-            startTime = startTime.plusMinutes(30);
+            start = start.plusMinutes(30);
         }
     }
 
@@ -220,9 +220,14 @@ public class TableReservation_BController implements ClientResponseHandler {
 
     private void showMessage(String msg, String color) {
         lblMessage.setText(msg);
-        lblMessage.setStyle("-fx-text-fill: " + color + ";");
+        lblMessage.setStyle("-fx-text-fill: " + color);
         lblMessage.setVisible(true);
         lblMessage.setManaged(true);
+    }
+
+    private void hideMessage() {
+        lblMessage.setVisible(false);
+        lblMessage.setManaged(false);
     }
 
     private void showSuccessAlert(String title, String content) {

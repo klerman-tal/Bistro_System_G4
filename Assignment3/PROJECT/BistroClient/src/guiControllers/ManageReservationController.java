@@ -178,7 +178,7 @@ public class ManageReservationController implements Initializable {
             TableReservation_BController controller = loader.getController();
             if (controller != null) {
                 controller.setClient(user, chatClient);
-                controller.setSourceScreen("/gui/ManageReservation.fxml");
+                controller.setBackFxml("/gui/ManageReservation.fxml");
             }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
