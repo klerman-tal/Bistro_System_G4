@@ -123,28 +123,40 @@ public class RestaurantController {
     }
 
     // ✅ NEW: effective opening hours = special override if exists
-    private OpeningHouers getEffectiveOpeningHoursForDate(LocalDate date) {
-        // special override
+    public OpeningHouers getEffectiveOpeningHoursForDate(LocalDate date) {
+
+        if (date == null) return null;
+
+        // 1️⃣ Special override
         if (specialDB != null) {
             try {
                 SpecialOpeningHours sp = specialDB.getSpecialHoursByDate(date);
                 if (sp != null) {
                     OpeningHouers oh = new OpeningHouers();
-                    oh.setDayOfWeek(date.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH));
+                    oh.setDayOfWeek(
+                            date.getDayOfWeek()
+                                .getDisplayName(TextStyle.FULL, Locale.ENGLISH)
+                    );
 
                     if (sp.isClosed()) {
                         oh.setOpenTime(null);
                         oh.setCloseTime(null);
                     } else {
-                        oh.setOpenTime(sp.getOpenTime() == null ? null : sp.getOpenTime().toString());
-                        oh.setCloseTime(sp.getCloseTime() == null ? null : sp.getCloseTime().toString());
+                        oh.setOpenTime(
+                                sp.getOpenTime() == null ? null : sp.getOpenTime().toString()
+                        );
+                        oh.setCloseTime(
+                                sp.getCloseTime() == null ? null : sp.getCloseTime().toString()
+                        );
                     }
                     return oh;
                 }
-            } catch (Exception ignore) {}
+            } catch (Exception e) {
+                // safe fallback
+            }
         }
 
-        // fallback regular weekly
+        // 2️⃣ Weekly fallback
         return findOpeningHoursForDate(date);
     }
 

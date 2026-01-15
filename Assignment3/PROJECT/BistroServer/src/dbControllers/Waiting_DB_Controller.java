@@ -1,6 +1,7 @@
 package dbControllers;
 
 import java.sql.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -320,6 +321,27 @@ public class Waiting_DB_Controller {
      }
      return map;
  }
+
+ public ArrayList<Waiting> getActiveWaitingsForToday(LocalDate today) throws SQLException {
+
+	    String sql = """
+	        SELECT *
+	        FROM waiting_list
+	        WHERE waiting_status = 'Waiting'
+	          AND DATE(table_freed_time) IS NULL
+	        """;
+
+	    ArrayList<Waiting> list = new ArrayList<>();
+
+	    try (PreparedStatement ps = conn.prepareStatement(sql);
+	         ResultSet rs = ps.executeQuery()) {
+
+	        while (rs.next()) {
+	            list.add(mapRowToWaiting(rs));
+	        }
+	    }
+	    return list;
+	}
 
 
 }

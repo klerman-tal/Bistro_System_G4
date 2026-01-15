@@ -3,6 +3,8 @@ package application;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.sql.Connection;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -16,6 +18,7 @@ import dbControllers.SpecialOpeningHours_DB_Controller;
 import dbControllers.User_DB_Controller;
 import dbControllers.Waiting_DB_Controller;
 import dto.RequestDTO;
+import entities.OpeningHouers;
 import javafx.application.Platform;
 import logicControllers.NotificationDispatcher;
 import logicControllers.NotificationSchedulerService;
@@ -65,6 +68,9 @@ public class RestaurantServer extends AbstractServer {
     private ScheduledExecutorService waitingScheduler;
     private final ScheduledExecutorService idleScheduler =
             Executors.newSingleThreadScheduledExecutor();
+    private ScheduledExecutorService closingScheduler;
+    private LocalDate lastClosingHandledDate = null;
+
 
     private RequestRouter router;
 
@@ -172,6 +178,34 @@ public class RestaurantServer extends AbstractServer {
                     log("Waiting scheduler error: " + e.getMessage());
                 }
             }, 10, 10, TimeUnit.SECONDS);
+            closingScheduler = Executors.newSingleThreadScheduledExecutor();
+
+            closingScheduler.scheduleAtFixedRate(() -> {
+                try {
+                    LocalDate today = LocalDate.now();
+
+                    // אל תרוץ פעמיים באותו יום
+                    if (today.equals(lastClosingHandledDate)) return;
+
+                    OpeningHouers oh =
+                            restaurantController.getEffectiveOpeningHoursForDate(today);
+
+                    if (oh == null || oh.getCloseTime() == null) return;
+
+                    LocalTime closeTime = LocalTime.parse(
+                            oh.getCloseTime().substring(0, 5)
+                    );
+
+                    if (LocalTime.now().isAfter(closeTime)) {
+                        waitingController.cancelAllWaitingDueToClosing(today);
+                        lastClosingHandledDate = today;
+                    }
+
+                } catch (Exception e) {
+                    log("❌ Closing scheduler error: " + e.getMessage());
+                }
+            }, 10, 60, TimeUnit.SECONDS);
+
 
             // ✅ Notifications runtime (ONLINE USERS + DISPATCHER + SCHEDULER)
             onlineUsersRegistry = new OnlineUsersRegistry();

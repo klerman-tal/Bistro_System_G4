@@ -1,5 +1,6 @@
 package logicControllers;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 
@@ -270,4 +271,53 @@ public class WaitingController {
             return null;
         }
     }
+    
+    public int cancelAllWaitingDueToClosing(LocalDate today) {
+
+        int count = 0;
+
+        try {
+            ArrayList<Waiting> waitings = db.getActiveWaitingsForToday(today);
+
+            for (Waiting w : waitings) {
+
+                db.cancelWaiting(w.getConfirmationCode());
+                count++;
+
+                if (notificationDB != null) {
+
+                    LocalDateTime now = LocalDateTime.now();
+
+                    String msg =
+                        "The restaurant is now closed. Your waiting request was cancelled.";
+
+                    notificationDB.addNotification(new Notification(
+                            w.getCreatedByUserId(),
+                            Enums.Channel.SMS,
+                            Enums.NotificationType.TABLE_AVAILABLE, // או להוסיף enum חדש אם תרצי
+                            msg,
+                            now
+                    ));
+
+                    notificationDB.addNotification(new Notification(
+                            w.getCreatedByUserId(),
+                            Enums.Channel.EMAIL,
+                            Enums.NotificationType.TABLE_AVAILABLE,
+                            msg,
+                            now
+                    ));
+                }
+            }
+
+            if (count > 0) {
+                server.log("🌙 Waiting cancelled due to closing hour. Count=" + count);
+            }
+
+        } catch (Exception e) {
+            server.log("❌ cancelAllWaitingDueToClosing failed: " + e.getMessage());
+        }
+
+        return count;
+    }
+
 }
