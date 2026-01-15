@@ -47,4 +47,7 @@ public enum Commands {
     DELETE_SUBSCRIBER,
     UPDATE_SUBSCRIBER,
     GET_WAITING_LIST,
+    FIND_USER_BY_ID,
+    CREATE_GUEST_BY_PHONE
+
 }
