@@ -245,6 +245,12 @@ public class ClientAPI {
         // שליחה לשרת דרך ה-ChatClient
         client.sendToServer(request);
     }
+	
+	public void getWaitingList() throws IOException {
+	    // שליחת בקשה לשרת לקבלת כל רשימת ההמתנה עבור המנהל
+	    RequestDTO request = new RequestDTO(Commands.GET_WAITING_LIST, null);
+	    client.sendToServer(request);
+	}
 
 
 

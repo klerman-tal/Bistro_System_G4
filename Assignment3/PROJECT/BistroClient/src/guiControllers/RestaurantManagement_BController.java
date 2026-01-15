@@ -56,15 +56,24 @@ public class RestaurantManagement_BController {
                 rmc.setClient(user, chatClient);
             }
             
+         // ✅ Manage Waiting List (התוספת היחידה כאן)
+            if (controller instanceof ManageWaitingListController mwlc) {
+                mwlc.setClient(user, chatClient);
+            }
+            
             // ✅ Back to Menu
             if (controller instanceof Menu_BController menu) {
                 menu.setClient(user, chatClient);
             }
             
+            
+            
          // ✅ Direct to Manage Subscribers
             if (controller instanceof ManageSubscriberController msc) {
                 msc.setClient(user, chatClient);
             }
+            
+            
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setTitle("Bistro - " + title);
@@ -80,6 +89,11 @@ public class RestaurantManagement_BController {
     @FXML
     private void onUpdateTablesClicked() {
         openWindow("UpdateTables.fxml", "Update Tables");
+    }
+    
+    @FXML
+    private void onWaitingListClicked() {
+        openWindow("ManageWaitingList.fxml", "Waiting List");
     }
 
     @FXML

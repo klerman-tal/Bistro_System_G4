@@ -94,6 +94,18 @@ public class WaitingController {
         w.setWaitingStatus(WaitingStatus.Waiting);
         return w;
     }
+    
+    public ArrayList<Waiting> getActiveWaitingList() {
+        try { 
+            return db.getAllWaitings();
+        } catch (Exception e) {
+            server.log("ERROR: Failed to fetch waiting list: " + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+    
+    
+    
 
     public boolean leaveWaitingList(String confirmationCode) {
         if (confirmationCode == null || confirmationCode.isBlank()) return false;
