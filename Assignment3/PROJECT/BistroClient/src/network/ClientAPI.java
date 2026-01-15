@@ -261,6 +261,20 @@ public class ClientAPI {
 	    client.sendToServer(request);
 	}
 
+	public void getReceiptByCode(String confirmationCode) throws IOException {
+	    if (confirmationCode == null || confirmationCode.isBlank())
+	        throw new IllegalArgumentException("Confirmation code is required");
+
+	    dto.GetReceiptByCodeDTO data = new dto.GetReceiptByCodeDTO(confirmationCode.trim());
+	    RequestDTO request = new RequestDTO(Commands.GET_RECEIPT_BY_CODE, data);
+	    client.sendToServer(request);
+	}
+
+	public void payReceipt(dto.PayReceiptDTO data) throws IOException {
+	    if (data == null) throw new IllegalArgumentException("Payment data is required");
+	    RequestDTO request = new RequestDTO(Commands.PAY_RECEIPT, data);
+	    client.sendToServer(request);
+	}
 
 
 }
