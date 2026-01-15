@@ -60,6 +60,11 @@ public class RestaurantManagement_BController {
             if (controller instanceof Menu_BController menu) {
                 menu.setClient(user, chatClient);
             }
+            
+         // ✅ Direct to Manage Subscribers
+            if (controller instanceof ManageSubscriberController msc) {
+                msc.setClient(user, chatClient);
+            }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setTitle("Bistro - " + title);
@@ -84,7 +89,8 @@ public class RestaurantManagement_BController {
 
     @FXML
     private void onManageUsersClicked() {
-        openWindow("selectUser.fxml", "Select User Menu");
+        // דילוג על מסך הבחירה ומעבר ישיר למסך המנויים
+        openWindow("manageSubscriber.fxml", "Manage Subscribers");
     }
 
     @FXML
