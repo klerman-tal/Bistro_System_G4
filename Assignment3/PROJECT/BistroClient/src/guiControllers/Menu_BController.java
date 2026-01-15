@@ -56,7 +56,12 @@ public class Menu_BController implements ClientResponseHandler {
         // keep session
         ClientSession.setLoggedInUser(user);
         ClientSession.setChatClient(chatClient);
-        ClientSession.resetActingUser();
+
+        // ✅ לא לאפס אם כבר יש acting user (כדי שישאר עד Reset)
+        if (ClientSession.getActingUser() == null) {
+            ClientSession.resetActingUser();
+        }
+
 
         // menu can receive OK responses
         if (this.chatClient != null) {
@@ -214,6 +219,20 @@ public class Menu_BController implements ClientResponseHandler {
     private void onSelectRestaurantManagementClicked() {
         openWindow("RestaurantManagement_B.fxml", "Restaurant Management", true);
     }
+    
+    @FXML
+    private void onResetToMyselfClicked() {
+        hideMessage();
+
+        User me = ClientSession.getLoggedInUser();
+        ClientSession.setActingUser(me);   // ✅ השמה מפורשת
+
+        clearOkFields();
+        updateActingUserLabel();
+        showMessage("Back to logged-in user.", "blue");
+    }
+
+
 
     @FXML
     private void onLogoutClicked() {

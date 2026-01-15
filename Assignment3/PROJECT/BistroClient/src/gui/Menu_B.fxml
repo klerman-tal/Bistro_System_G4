@@ -78,10 +78,11 @@
                                            prefWidth="200"/>
                             </HBox>
 
-                            <HBox spacing="10" alignment="CENTER_LEFT">
-                                <!-- must match controller: btnOk + onOkClicked -->
-                                <Button fx:id="btnOk" text="OK" onAction="#onOkClicked"/>
-                            </HBox>
+                           <HBox spacing="10" alignment="CENTER_LEFT">
+    							<Button fx:id="btnOk" text="OK" onAction="#onOkClicked"/>
+   								 <Button text="Reset to myself" onAction="#onResetToMyselfClicked"/>
+							</HBox>
+
                         </VBox>
                     </center>
                 </BorderPane>
