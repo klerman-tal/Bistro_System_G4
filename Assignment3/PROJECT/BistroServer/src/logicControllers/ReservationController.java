@@ -836,4 +836,21 @@ public class ReservationController {
         }
     }
 
+    public ArrayList<LocalTime> getAvailableTimesForDay(LocalDate date, int guests) {
+        ArrayList<LocalTime> out = new ArrayList<>();
+        if (date == null || guests <= 0) return out;
+
+        LocalTime fromTime = null;
+
+        // אם זה היום - רק משעה+1 קדימה, מעוגל לחצי שעה
+        if (date.equals(LocalDate.now())) {
+            LocalDateTime rounded =
+                    restaurantController.roundUpToNextHalfHour(LocalDateTime.now().plusHours(1));
+            fromTime = rounded.toLocalTime();
+        }
+
+        fillAvailableTimesForDay(date, guests, fromTime, out);
+        return out;
+    }
+
 }

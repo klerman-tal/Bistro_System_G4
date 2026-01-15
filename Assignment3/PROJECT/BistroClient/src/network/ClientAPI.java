@@ -252,6 +252,15 @@ public class ClientAPI {
 	    client.sendToServer(request);
 	}
 
+	public void getAvailableTimesForDate(LocalDate date, int guests) throws IOException {
+	    if (date == null) throw new IllegalArgumentException("Date is required");
+	    if (guests <= 0) guests = 1;
+
+	    dto.GetAvailableTimesDTO data = new dto.GetAvailableTimesDTO(date, guests);
+	    RequestDTO request = new RequestDTO(Commands.GET_AVAILABLE_TIMES_FOR_DATE, data);
+	    client.sendToServer(request);
+	}
+
 
 
 }

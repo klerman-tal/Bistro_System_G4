@@ -264,7 +264,11 @@ public class RestaurantServer extends AbstractServer {
         router.register(Commands.GET_WAITING_LIST, 
                 new GetWaitingListHandler(waitingController)); 
         
-        
+        router.register(
+                Commands.GET_AVAILABLE_TIMES_FOR_DATE,
+                new GetAvailableTimesForDateHandler(reservationController)
+        );
+
         
 
         
