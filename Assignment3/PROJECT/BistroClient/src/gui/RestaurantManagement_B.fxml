@@ -52,6 +52,11 @@
                         maxWidth="300" prefWidth="260"
                         styleClass="btnSecondary"
                         onAction="#onManageReservationClicked"/>
+
+                <Button text="Manage Current Diners"
+                        maxWidth="300" prefWidth="260"
+                        styleClass="btnSecondary"
+                        onAction="#onManageDinersClicked"/>
                  
                 <Button fx:id="btnWaitingList" 
                         maxWidth="300" prefWidth="260"

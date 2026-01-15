@@ -12,6 +12,8 @@ public enum Commands {
     
 
     GET_ALL_RESERVATIONS,
+    GET_CURRENT_DINERS,
+
 
 
 
@@ -42,7 +44,7 @@ public enum Commands {
     GET_ALL_SUBSCRIBERS,
     DELETE_SUBSCRIBER,
     UPDATE_SUBSCRIBER, 
-    GET_WAITING_LIST,
+    GET_WAITING_LIST, 
 
 
 

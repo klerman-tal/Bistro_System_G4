@@ -695,6 +695,28 @@ public class Reservation_DB_Controller {
          return ps.executeUpdate() > 0;
      }
  }
+ 
+ public ArrayList<Reservation> getCurrentDinersFromDB() throws SQLException {
+	    ArrayList<Reservation> diners = new ArrayList<>();
+	    // שאילתה שבודקת: יש צ'ק-אין (יושבים) ואין צ'ק-אאוט (עוד לא עזבו)
+	    String query = "SELECT created_by, created_by_role, table_number " +
+	                   "FROM reservations " +
+	                   "WHERE checkin IS NOT NULL AND checkout IS NULL AND is_active = 1";
+
+	    try (PreparedStatement pstmt = conn.prepareStatement(query);
+	         ResultSet rs = pstmt.executeQuery()) {
+	        
+	        while (rs.next()) {
+	            Reservation res = new Reservation();
+	            res.setCreatedByUserId(rs.getInt("created_by"));
+	            // המרה של ה-String מה-DB ל-Enum של Role
+	            res.setCreatedByRole(Enums.UserRole.valueOf(rs.getString("created_by_role")));
+	            res.setTableNumber(rs.getInt("table_number"));
+	            diners.add(res);
+	        }
+	    }
+	    return diners;
+	}
 
 
     // =====================================================
