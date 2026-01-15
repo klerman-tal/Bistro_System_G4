@@ -6,7 +6,7 @@ import java.util.List;
 import application.ChatClient;
 import dto.ResponseDTO;
 import entities.User;
-import entities.Waiting; // שימוש במחלקה הקיימת שלך
+import entities.Waiting;
 import entities.Enums.UserRole;
 import entities.Enums.WaitingStatus;
 import javafx.application.Platform;
@@ -17,6 +17,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.BorderPane;
@@ -28,8 +29,6 @@ public class ManageWaitingListController {
 
     @FXML private BorderPane rootPane;
     @FXML private TableView<Waiting> tblWaitingList;
-    
-    // התאמת העמודות לשמות המשתנים ב-Waiting.java
     @FXML private TableColumn<Waiting, Integer> colWaitingId;
     @FXML private TableColumn<Waiting, Integer> colCreatedBy;
     @FXML private TableColumn<Waiting, UserRole> colRole;
@@ -57,7 +56,7 @@ public class ManageWaitingListController {
                         @SuppressWarnings("unchecked")
                         List<Waiting> list = (List<Waiting>) response.getData();
                         waitingData.setAll(list);
-                        tblWaitingList.refresh(); // מוודא שהטבלה מציירת מחדש את השורות שנוספו
+                        tblWaitingList.refresh();
                     });
                 }
             }
@@ -70,89 +69,74 @@ public class ManageWaitingListController {
     }
 
     private void setupTable() {
-        // waitingId -> מחפש getWaitingId()
         colWaitingId.setCellValueFactory(new PropertyValueFactory<>("waitingId"));
-        
-        // createdByUserId -> מחפש getCreatedByUserId()
         colCreatedBy.setCellValueFactory(new PropertyValueFactory<>("createdByUserId"));
-        
-        // createdByRole -> מחפש getCreatedByRole()
         colRole.setCellValueFactory(new PropertyValueFactory<>("createdByRole"));
-        
-        // guestAmount -> מחפש getGuestAmount()
         colGuests.setCellValueFactory(new PropertyValueFactory<>("guestAmount"));
-        
-        // confirmationCode -> מחפש getConfirmationCode()
         colCode.setCellValueFactory(new PropertyValueFactory<>("confirmationCode"));
-        
-        // tableFreedTime -> מחפש getTableFreedTime()
         colFreedTime.setCellValueFactory(new PropertyValueFactory<>("tableFreedTime"));
-        
-        // tableNumber -> מחפש getTableNumber()
         colTableNum.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
-        
-        // waitingStatus -> מחפש getWaitingStatus()
         colStatus.setCellValueFactory(new PropertyValueFactory<>("waitingStatus"));
+
+        // הוספת צביעת שורות לפי סטטוס
+        tblWaitingList.setRowFactory(tv -> new TableRow<Waiting>() {
+            @Override
+            protected void updateItem(Waiting item, boolean empty) {
+                super.updateItem(item, empty);
+                getStyleClass().removeAll("row-cancelled", "row-seated");
+                if (item != null && !empty) {
+                    if (item.getWaitingStatus() == WaitingStatus.Cancelled) {
+                        getStyleClass().add("row-cancelled");
+                    } else if (item.getWaitingStatus() == WaitingStatus.Seated) {
+                        getStyleClass().add("row-seated");
+                    }
+                }
+            }
+        });
 
         tblWaitingList.setItems(waitingData);
     }
-    
+
     @FXML
     private void onAddWaitingClicked() {
         try {
-            // שים לב לנתיב של ה-FXML, וודא שהוא נכון
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/JoinWaiting_B.fxml")); 
             Parent root = loader.load();
-            
-            // שימוש בשם הקלאס המדויק שמופיע אצלך בפרויקט
             JoinWaiting_BController controller = loader.getController();
             controller.setClient(user, chatClient);
-            
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setScene(new Scene(root));
             stage.show();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        } catch (IOException e) { e.printStackTrace(); }
     }
 
     @FXML
     private void onCancelWaitingClicked() {
+        Waiting selected = tblWaitingList.getSelectionModel().getSelectedItem();
+        if (selected == null) return; 
+
         try {
-            // שים לב לנתיב של ה-FXML, וודא שהוא נכון
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/CancelWaiting_B.fxml"));
             Parent root = loader.load();
-            
-            // שימוש בשם הקלאס המדויק שמופיע אצלך בפרויקט
             CancelWaiting_BController controller = loader.getController();
-            controller.setClient(user, chatClient);
+            
+            // הקריאה למתודה החדשה שיצרנו ב-CancelWaiting_BController
+            controller.setClient(user, chatClient, selected.getConfirmationCode());
             
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setScene(new Scene(root));
             stage.show();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        } catch (IOException e) { e.printStackTrace(); }
     }
     
     @FXML
     private void onRefreshClicked() {
-        // ניקוי זמני של הרשימה נותן אינדיקציה ויזואלית למשתמש שהנתונים נטענים מחדש
         waitingData.clear();
-        
-        // קריאה למתודה שקיימת כבר אצלך בקוד ושולחת בקשה לשרת
         loadWaitingList();
-        
-        System.out.println("DEBUG: Waiting list refresh requested by manager.");
     }
 
     private void loadWaitingList() {
-        try {
-            // וודא שקיימת מתודה כזו ב-ClientAPI שלך
-            clientAPI.getWaitingList(); 
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        try { clientAPI.getWaitingList(); } catch (IOException e) { e.printStackTrace(); }
     }
 
     @FXML
@@ -165,8 +149,6 @@ public class ManageWaitingListController {
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setScene(new Scene(root));
             stage.show();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        } catch (IOException e) { e.printStackTrace(); }
     }
 }
