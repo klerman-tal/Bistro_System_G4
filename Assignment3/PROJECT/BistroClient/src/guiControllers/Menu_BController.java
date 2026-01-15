@@ -17,6 +17,9 @@ public class Menu_BController {
 
     @FXML
     private BorderPane rootPane;
+    
+    @FXML
+    private Button btnPersonalDetails;
 
     @FXML
     private javafx.scene.control.Label lblMessage;
@@ -41,6 +44,9 @@ public class Menu_BController {
         if (user != null && user.getUserRole() == Enums.UserRole.RandomClient) {
             btnRestaurantManagement.setVisible(false);
             btnRestaurantManagement.setManaged(false);
+            
+            btnPersonalDetails.setVisible(false);
+            btnPersonalDetails.setManaged(false);
         }
     }
 
