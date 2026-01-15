@@ -58,6 +58,22 @@ public class Waiting_DB_Controller {
             e.printStackTrace();
         }
     }
+    
+    public ArrayList<Waiting> getAllWaitings() throws SQLException {
+        // הורדנו את ה-WHERE, עכשיו הוא מביא הכל. 
+        // הוספתי DESC כדי שההזמנות הכי חדשות יופיעו למעלה.
+        String sql = "SELECT * FROM waiting_list ORDER BY waiting_id DESC;"; 
+        
+        ArrayList<Waiting> list = new ArrayList<>();
+        try (PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                list.add(mapRowToWaiting(rs));
+            }
+        }
+        return list;
+    }
+    
 
     // Inserts waiting entry
     public int addToWaitingList(int guests, String confirmationCode, int userId, UserRole role) throws SQLException {
@@ -208,25 +224,39 @@ public class Waiting_DB_Controller {
         return null;
     }
 
-    // ===== Mapping =====
     private Waiting mapRowToWaiting(ResultSet rs) throws SQLException {
         Waiting w = new Waiting();
 
+        // שליפת כל השדות מה-DB והשמתם באובייקט ה-Entity
         w.setWaitingId(rs.getInt("waiting_id"));
-        w.setConfirmationCode(rs.getString("confirmation_code"));
-
         w.setGuestAmount(rs.getInt("number_of_guests"));
-
+        w.setConfirmationCode(rs.getString("confirmation_code"));
         w.setCreatedByUserId(rs.getInt("created_by"));
-        w.setCreatedByRole(UserRole.valueOf(rs.getString("created_by_role")));
+        
+        // טיפול ב-Enum של ה-Role
+        String roleStr = rs.getString("created_by_role");
+        if (roleStr != null) {
+            w.setCreatedByRole(UserRole.valueOf(roleStr));
+        }
 
+        // טיפול בזמן (יכול להיות NULL)
         Timestamp freed = rs.getTimestamp("table_freed_time");
         w.setTableFreedTime(freed == null ? null : freed.toLocalDateTime());
 
+        // טיפול במספר שולחן (יכול להיות NULL)
         int tableNum = rs.getInt("table_number");
         w.setTableNumber(rs.wasNull() ? null : tableNum);
 
-        w.setWaitingStatus(WaitingStatus.valueOf(rs.getString("waiting_status")));
+        // טיפול בסטטוס (כולל תיקון פורמט טקסט)
+        String statusStr = rs.getString("waiting_status");
+        if (statusStr != null) {
+            try {
+                String formattedStatus = statusStr.substring(0, 1).toUpperCase() + statusStr.substring(1).toLowerCase();
+                w.setWaitingStatus(WaitingStatus.valueOf(formattedStatus));
+            } catch (Exception e) {
+                w.setWaitingStatus(WaitingStatus.Waiting);
+            }
+        }
 
         return w;
     }
