@@ -92,8 +92,6 @@ public class RestaurantController {
         db.updateOpeningHours(oh);
         loadOpeningHoursFromDb();
     }
-    
-    
 
     /**
      * ✅ NEW: Returns opening hours list for the client.

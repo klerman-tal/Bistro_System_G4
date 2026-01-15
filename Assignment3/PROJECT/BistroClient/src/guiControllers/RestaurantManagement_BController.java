@@ -1,7 +1,5 @@
 package guiControllers;
 
-import java.io.IOException;
-
 import application.ChatClient;
 import entities.User;
 import javafx.fxml.FXML;
@@ -85,26 +83,6 @@ public class RestaurantManagement_BController {
         } catch (Exception e) {
             e.printStackTrace();
             showMessage("Failed to open: " + fxmlName);
-        }
-    }
-    
-    @FXML
-    private void onManageDinersClicked() {
-        try {
-            // טעינת ה-FXML של המסך החדש (נצטרך ליצור אותו בהמשך)
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/ManageCurrentDiners_B.fxml"));
-            Parent root = loader.load();
-
-            // שליחת הנתונים לקונטרולר החדש (בהנחה שזה שמו)
-            // ManageCurrentDiners_BController controller = loader.getController();
-            // controller.setClient(user, chatClient);
-
-            Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setScene(new Scene(root));
-            stage.show();
-        } catch (IOException e) {
-            System.err.println("Notice: ManageCurrentDiners_B.fxml not found yet. Create it to avoid this error.");
-            e.printStackTrace();
         }
     }
 

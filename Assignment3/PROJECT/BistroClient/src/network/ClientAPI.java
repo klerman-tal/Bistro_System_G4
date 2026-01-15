@@ -251,13 +251,6 @@ public class ClientAPI {
 	    RequestDTO request = new RequestDTO(Commands.GET_WAITING_LIST, null);
 	    client.sendToServer(request);
 	}
-	
-	public void getCurrentDiners() throws IOException {
-	    dto.GetCurrentDinersDTO data = new dto.GetCurrentDinersDTO();
-	    RequestDTO request = new RequestDTO(Commands.GET_CURRENT_DINERS, data);
-	    client.sendToServer(request);
-	}
-
 
 
 
