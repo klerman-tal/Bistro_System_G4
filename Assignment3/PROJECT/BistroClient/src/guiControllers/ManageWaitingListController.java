@@ -96,6 +96,17 @@ public class ManageWaitingListController {
 
         tblWaitingList.setItems(waitingData);
     }
+    
+    @FXML
+    private void onRefreshClicked() {
+        // ניקוי זמני של הרשימה נותן אינדיקציה ויזואלית למשתמש שהנתונים נטענים מחדש
+        waitingData.clear();
+        
+        // קריאה למתודה שקיימת כבר אצלך בקוד ושולחת בקשה לשרת
+        loadWaitingList();
+        
+        System.out.println("DEBUG: Waiting list refresh requested by manager.");
+    }
 
     private void loadWaitingList() {
         try {

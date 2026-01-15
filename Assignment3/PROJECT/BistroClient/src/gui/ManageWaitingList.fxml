@@ -38,11 +38,13 @@
         </VBox>
     </center>
     <bottom>
-        <HBox alignment="CENTER_RIGHT" spacing="10">
+        <HBox alignment="CENTER_RIGHT" spacing="15">
             <padding>
                 <Insets top="10" right="20" bottom="20" left="20"/>
             </padding>
             <children>
+                <Button onAction="#onRefreshClicked" text="Refresh List" styleClass="btnPrimary"/>
+                
                 <Button onAction="#onBackClicked" text="Back" styleClass="btnSecondary"/>
             </children>
         </HBox>
