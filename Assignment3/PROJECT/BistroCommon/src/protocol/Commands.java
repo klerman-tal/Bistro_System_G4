@@ -7,13 +7,14 @@ public enum Commands {
     CANCEL_RESERVATION,
     UPDATE_SPECIAL_OPENING_HOURS,
 
-
     CHECKIN_RESERVATION,
-    
 
     GET_ALL_RESERVATIONS,
+    PAY_RECEIPT,
+    GET_RECEIPT_BY_CODE,
 
-
+    // ✅ NEW: fetch available times for a date (+ guests)
+    GET_AVAILABLE_TIMES_FOR_DATE,
 
     // Waiting List
     JOIN_WAITING_LIST,
@@ -41,9 +42,6 @@ public enum Commands {
     GET_SUBSCRIBERS_REPORT,
     GET_ALL_SUBSCRIBERS,
     DELETE_SUBSCRIBER,
-    UPDATE_SUBSCRIBER, 
+    UPDATE_SUBSCRIBER,
     GET_WAITING_LIST,
-
-
-
 }

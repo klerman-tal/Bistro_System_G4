@@ -12,6 +12,7 @@ import java.util.Map;
 
 import application.RestaurantServer;
 import dbControllers.Notification_DB_Controller;
+import dbControllers.Receipt_DB_Controller;
 import dbControllers.Reservation_DB_Controller;
 import dto.CreateReservationDTO;
 import entities.Enums.ReservationStatus;
@@ -33,6 +34,9 @@ public class ReservationController {
     private final Restaurant restaurant;
     private final RestaurantServer server;
     private final RestaurantController restaurantController;
+    private final ReceiptController receiptController;
+
+
 
     // ✅ NEW: link to waiting logic for "table freed" scenario
     private WaitingController waitingController;
@@ -58,15 +62,19 @@ public class ReservationController {
      * Constructor: connects controller to DB layer, server logger, and restaurant availability logic.
      */
     public ReservationController(Reservation_DB_Controller db,
-                                 Notification_DB_Controller notificationDB,
-                                 RestaurantServer server,
-                                 RestaurantController rc) {
-        this.db = db;
-        this.notificationDB = notificationDB;
-        this.server = server;
-        this.restaurant = Restaurant.getInstance();
-        this.restaurantController = rc;
-    }
+            Notification_DB_Controller notificationDB,
+            RestaurantServer server,
+            RestaurantController rc,
+            ReceiptController receiptController) {
+    	
+		this.db = db;
+		this.notificationDB = notificationDB;
+		this.server = server;
+		this.restaurant = Restaurant.getInstance();
+		this.restaurantController = rc;
+		this.receiptController = receiptController;
+	}
+
 
     /**
      * ✅ NEW: connect waiting controller after construction (avoid circular constructor dependency).
@@ -709,12 +717,11 @@ public class ReservationController {
             if (r == null) {
                 return new GetTableResultDTO(false, false, null, "Reservation not found.");
             }
+
             if (!r.isActive() || r.getReservationStatus() != ReservationStatus.Active) {
                 return new GetTableResultDTO(false, false, null, "Reservation is not active.");
             }
 
-            // time window: reservation_time <= now <= reservation_time + 15 minutes
-            // ⚠️ if you suspect timezone issues, replace LocalDateTime.now() with db.getDbNow()
             LocalDateTime now = LocalDateTime.now();
             LocalDateTime resTime = r.getReservationTime();
 
@@ -742,23 +749,53 @@ public class ReservationController {
                 );
             }
 
-            // Inside valid window: now it's allowed to expose table number
             Integer tableNumber = r.getTableNumber();
             if (tableNumber == null) {
-                return new GetTableResultDTO(false, false, null, "No table has been assigned yet. Please contact the restaurant.");
+                return new GetTableResultDTO(false, false, null,
+                        "No table has been assigned yet. Please contact the restaurant.");
             }
 
             // prevent double check-in
             if (r.getCheckinTime() != null) {
-                return new GetTableResultDTO(true, false, tableNumber, "You are already checked-in. Your table number is: " + tableNumber);
+                return new GetTableResultDTO(
+                        true,
+                        false,
+                        tableNumber,
+                        "You are already checked-in. Your table number is: " + tableNumber
+                );
             }
 
             boolean occupied = db.isTableOccupiedNow(tableNumber, r.getReservationId());
+
+            // If table is free -> do real check-in + schedule bill time + create receipt
             if (!occupied) {
-                db.updateCheckinTime(r.getReservationId(), now);
-                return new GetTableResultDTO(true, false, tableNumber, "Checked-in successfully. Your table number is: " + tableNumber);
+
+                boolean updated = db.updateCheckinTime(r.getReservationId(), now);
+                if (!updated) {
+                    return new GetTableResultDTO(false, false, null, "Failed to update check-in time.");
+                }
+
+                // mark bill due = checkin + 2 hours
+                try {
+                    db.setBillDueAt(r.getReservationId(), now.plusHours(2));
+                } catch (Exception ignore) {}
+
+                // create Receipt now (random amount) - via ReceiptController
+                try {
+                    if (receiptController != null) {
+                        receiptController.createReceiptIfMissingForCheckin(r, now);
+                    }
+                } catch (Exception ignore) {}
+
+                return new GetTableResultDTO(
+                        true,
+                        false,
+                        tableNumber,
+                        "Checked-in successfully. Your table number is: " + tableNumber
+                );
             }
 
+            // Table is occupied -> remember pending check-in and notify later when table freed
             pendingCheckins.put(tableNumber, new PendingReservationCheckin(
                     r.getReservationId(),
                     r.getCreatedByUserId(),
@@ -766,13 +803,19 @@ public class ReservationController {
                     tableNumber
             ));
 
-            return new GetTableResultDTO(false, true, tableNumber, "Your table is not ready yet. Please wait for a notification.");
+            return new GetTableResultDTO(
+                    false,
+                    true,
+                    tableNumber,
+                    "Your table is not ready yet. Please wait for a notification."
+            );
 
         } catch (Exception e) {
             server.log("ERROR: checkinReservationByCode failed. Code=" + code + ", Msg=" + e.getMessage());
             return new GetTableResultDTO(false, false, null, "Server error. Please try again.");
         }
     }
+
 
 
     private void notifyPendingReservationCheckins(Integer tableNumber) {
@@ -834,6 +877,23 @@ public class ReservationController {
             server.log("ERROR: Failed to update reservation. ID=" + res.getReservationId() + ", Msg=" + e.getMessage());
             return false;
         }
+    }
+
+    public ArrayList<LocalTime> getAvailableTimesForDay(LocalDate date, int guests) {
+        ArrayList<LocalTime> out = new ArrayList<>();
+        if (date == null || guests <= 0) return out;
+
+        LocalTime fromTime = null;
+
+        // אם זה היום - רק משעה+1 קדימה, מעוגל לחצי שעה
+        if (date.equals(LocalDate.now())) {
+            LocalDateTime rounded =
+                    restaurantController.roundUpToNextHalfHour(LocalDateTime.now().plusHours(1));
+            fromTime = rounded.toLocalTime();
+        }
+
+        fillAvailableTimesForDay(date, guests, fromTime, out);
+        return out;
     }
 
 }

@@ -60,7 +60,7 @@ public class TableReservation_BController implements ClientResponseHandler {
         });
 
         try {
-            api.getOpeningHours();
+            api.getOpeningHours(); // נשאר – אולי את משתמשת בזה בעוד מקום
         } catch (IOException e) {
             showMessage("Failed to load opening hours", "red");
         }
@@ -70,8 +70,20 @@ public class TableReservation_BController implements ClientResponseHandler {
 
     @FXML
     private void onDateSelected() {
-        if (datePicker.getValue() != null && cachedOpeningHours != null) {
-            updateComboBoxForDate(datePicker.getValue(), cachedOpeningHours);
+        hideMessage();
+        cmbHour.getItems().clear();
+        cmbHour.setValue(null);
+
+        LocalDate selected = datePicker.getValue();
+        if (selected == null) return;
+
+        int guests = parseGuestsOrDefault(1);
+
+        try {
+            // ✅ העיקר: להביא רק שעות שיש בהן שולחן פנוי ל-2 שעות בגריד
+            api.getAvailableTimesForDate(selected, guests);
+        } catch (IOException e) {
+            showMessage("Failed to load available times", "red");
         }
     }
 
@@ -145,18 +157,32 @@ public class TableReservation_BController implements ClientResponseHandler {
 
             if (response == null) return;
 
-            if (response.isSuccess() && response.getData() instanceof ArrayList) {
-                @SuppressWarnings("unchecked")
-                ArrayList<OpeningHouers> list =
-                        (ArrayList<OpeningHouers>) response.getData();
-                cachedOpeningHours = list;
+            Object data = response.getData();
 
-                if (datePicker.getValue() != null) {
-                    updateComboBoxForDate(datePicker.getValue(), cachedOpeningHours);
+            // ✅ 1) OpeningHours list
+            if (response.isSuccess() && data instanceof ArrayList<?> list && isOpeningHoursList(list)) {
+                @SuppressWarnings("unchecked")
+                ArrayList<OpeningHouers> oh = (ArrayList<OpeningHouers>) data;
+                cachedOpeningHours = oh;
+                return;
+            }
+
+            // ✅ 2) Available times list (success)
+            if (response.isSuccess() && data instanceof ArrayList<?> list && isLocalTimeList(list)) {
+                @SuppressWarnings("unchecked")
+                ArrayList<LocalTime> times = (ArrayList<LocalTime>) data;
+
+                updateHoursComboFromLocalTimes(times);
+
+                if (times.isEmpty()) {
+                    showMessage("אין מקום פנוי שעומד בדרישות ליום הנבחר", "red");
+                } else {
+                    hideMessage();
                 }
                 return;
             }
 
+            // ✅ 3) Reservation created
             if (response.isSuccess()) {
                 String msg = "Reservation Confirmed";
                 if (response.getData() instanceof String) {
@@ -166,36 +192,58 @@ public class TableReservation_BController implements ClientResponseHandler {
                 return;
             }
 
+            // ✅ 4) Reservation failed but got suggested times (LocalTime list)
+            if (!response.isSuccess() && data instanceof ArrayList<?> list && isLocalTimeList(list)) {
+                @SuppressWarnings("unchecked")
+                ArrayList<LocalTime> times = (ArrayList<LocalTime>) data;
+
+                updateHoursComboFromLocalTimes(times);
+
+                if (times.isEmpty()) {
+                    showMessage("No available tables match the selected day requirements.", "red");
+                } else {
+                    showMessage("The available time slots have been updated based on your selection.", "blue");
+                }
+                return;
+            }
+
+            // fallback
             showMessage(response.getMessage(), "red");
         });
     }
 
-    /* ================= HELPERS ================= */
-
-    private void updateComboBoxForDate(LocalDate date, ArrayList<OpeningHouers> allHours) {
+    private void updateHoursComboFromLocalTimes(ArrayList<LocalTime> times) {
         cmbHour.getItems().clear();
-        String day = date.getDayOfWeek().name();
-        String formattedDay = day.substring(0,1) + day.substring(1).toLowerCase();
+        cmbHour.setValue(null);
 
-        for (OpeningHouers oh : allHours) {
-            if (oh.getDayOfWeek().equals(formattedDay)) {
-                fillTimeSlots(oh.getOpenTime(), oh.getCloseTime(), date);
-                break;
-            }
+        if (times == null) return;
+
+        for (LocalTime t : times) {
+            cmbHour.getItems().add(t.toString());
         }
     }
 
-    private void fillTimeSlots(String open, String close, LocalDate selectedDate) {
-        LocalTime start = LocalTime.parse(open.substring(0,5));
-        LocalTime end = LocalTime.parse(close.substring(0,5));
-        LocalTime nowPlusHour = LocalTime.now().plusHours(1);
+    private boolean isOpeningHoursList(ArrayList<?> list) {
+        if (list == null || list.isEmpty()) return false;
+        return list.get(0) instanceof OpeningHouers;
+    }
 
-        while (!start.isAfter(end)) {
-            if (!selectedDate.equals(LocalDate.now())
-                    || start.isAfter(nowPlusHour)) {
-                cmbHour.getItems().add(start.toString());
-            }
-            start = start.plusMinutes(30);
+    private boolean isLocalTimeList(ArrayList<?> list) {
+        if (list == null) return true;
+        if (list.isEmpty()) return true;
+        return list.get(0) instanceof LocalTime;
+    }
+
+    /* ================= HELPERS ================= */
+
+    private int parseGuestsOrDefault(int def) {
+        try {
+            String s = txtGuests.getText();
+            if (s == null || s.isBlank()) return def;
+            int g = Integer.parseInt(s.trim());
+            return (g > 0) ? g : def;
+        } catch (Exception e) {
+            return def;
         }
     }
 

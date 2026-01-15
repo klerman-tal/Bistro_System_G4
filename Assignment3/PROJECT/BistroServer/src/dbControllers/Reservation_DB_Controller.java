@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import dto.DueBillDTO;
 import entities.Enums;
 import entities.Enums.ReservationStatus;
 import entities.Reservation;
@@ -60,7 +61,10 @@ public class Reservation_DB_Controller {
                 checkout DATETIME NULL,
                 reminder_at DATETIME NULL,
                 reminder_sent TINYINT(1) NOT NULL DEFAULT 0,
-
+                bill_at DATETIME NULL,
+        		bill_sent TINYINT(1) NOT NULL DEFAULT 0,
+        		
+        		INDEX idx_bill_due (bill_sent, bill_at),
                 UNIQUE (confirmation_code),
                 INDEX (reservation_datetime),
                 INDEX (created_by),
@@ -728,4 +732,63 @@ public class Reservation_DB_Controller {
             }
         }
     }
+    
+    public ArrayList<DueBillDTO> getDueBills() throws SQLException {
+        String sql = """
+            SELECT reservation_id, created_by, confirmation_code
+            FROM reservations
+            WHERE bill_at IS NOT NULL
+              AND bill_sent = 0
+              AND is_active = 1
+              AND reservation_status = 'Active'
+              AND checkin IS NOT NULL
+              AND checkout IS NULL
+              AND bill_at <= NOW()
+            ORDER BY bill_at;
+            """;
+
+        ArrayList<DueBillDTO> list = new ArrayList<>();
+        try (PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                list.add(new DueBillDTO(
+                        rs.getInt("reservation_id"),
+                        rs.getInt("created_by"),
+                        rs.getString("confirmation_code")
+                ));
+            }
+        }
+        return list;
+    }
+
+    public boolean setBillDueAt(int reservationId, LocalDateTime billAt) throws SQLException {
+        String sql = """
+            UPDATE reservations
+            SET bill_at = ?,
+                bill_sent = 0
+            WHERE reservation_id = ?;
+            """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, billAt);
+            ps.setInt(2, reservationId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    public boolean markBillSent(int reservationId) throws SQLException {
+        String sql = """
+            UPDATE reservations
+            SET bill_sent = 1
+            WHERE reservation_id = ?
+              AND bill_sent = 0;
+            """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, reservationId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
 }

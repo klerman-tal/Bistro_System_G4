@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 
 import dbControllers.DBController;
 import dbControllers.Notification_DB_Controller;
+import dbControllers.Receipt_DB_Controller;
 import dbControllers.Reservation_DB_Controller;
 import dbControllers.Restaurant_DB_Controller;
 import dbControllers.User_DB_Controller;
@@ -18,6 +19,7 @@ import javafx.application.Platform;
 import logicControllers.NotificationDispatcher;
 import logicControllers.NotificationSchedulerService;
 import logicControllers.OnlineUsersRegistry;
+import logicControllers.ReceiptController;
 import logicControllers.ReservationController;
 import logicControllers.RestaurantController;
 import logicControllers.UserController;
@@ -40,6 +42,8 @@ public class RestaurantServer extends AbstractServer {
     private User_DB_Controller userDB;
     private Waiting_DB_Controller waitingDB;
     private Notification_DB_Controller notificationDB;
+    private Receipt_DB_Controller receiptDB;
+
 
     // ===== Logic Controllers =====
     private RestaurantController restaurantController;
@@ -47,6 +51,7 @@ public class RestaurantServer extends AbstractServer {
     private UserController userController;
     private WaitingController waitingController;
     private ReportsController reportsController;
+    private ReceiptController receiptController;
 
     // ===== Notifications runtime =====
     private OnlineUsersRegistry onlineUsersRegistry;
@@ -115,6 +120,8 @@ public class RestaurantServer extends AbstractServer {
             userDB = new User_DB_Controller(sqlConn);
             waitingDB = new Waiting_DB_Controller(sqlConn);
             notificationDB = new Notification_DB_Controller(sqlConn);
+            receiptDB = new Receipt_DB_Controller(sqlConn);
+
 
             log("⚙️ Ensuring all database tables exist...");
             userDB.createSubscribersTable();
@@ -124,14 +131,18 @@ public class RestaurantServer extends AbstractServer {
             reservationDB.createReservationsTable();
             waitingDB.createWaitingListTable();
             notificationDB.createNotificationsTable();
+            receiptDB.createReceiptsTable();
+
             log("✅ Database schema ensured.");
 
             // ===== Logic Controllers =====
             restaurantController = new RestaurantController(restaurantDB);
             userController = new UserController(userDB);
+            receiptController = new ReceiptController(receiptDB);
 
             reservationController =
-                    new ReservationController(reservationDB, notificationDB, this, restaurantController);
+                    new ReservationController(reservationDB, notificationDB, this, restaurantController, receiptController);
+
 
             waitingController =
                     new WaitingController(waitingDB, notificationDB, this, restaurantController, reservationController);
@@ -264,7 +275,32 @@ public class RestaurantServer extends AbstractServer {
         router.register(Commands.GET_WAITING_LIST, 
                 new GetWaitingListHandler(waitingController)); 
         
+        router.register(
+                Commands.GET_AVAILABLE_TIMES_FOR_DATE,
+                new GetAvailableTimesForDateHandler(reservationController)
+        );
+
+        router.register(
+                Commands.PAY_RECEIPT,
+                new PayReceiptHandler(
+                        reservationController,
+                        receiptController,
+                        userController
+                )
+        );
+
+        router.register(
+                Commands.GET_RECEIPT_BY_CODE,
+                new GetReceiptByCodeHandler(reservationController, receiptController)
+        );
         
+        router.register(
+        	    Commands.CHECKIN_RESERVATION,
+        	    new CheckinReservationHandler(reservationController)
+        	);
+
+
+
         
 
         

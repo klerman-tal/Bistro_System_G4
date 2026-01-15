@@ -41,7 +41,11 @@ public class Notification_DB_Controller {
 
                 is_sent TINYINT(1) NOT NULL DEFAULT 0,
                 sent_at DATETIME NULL,
+                reservation_id INT NULL,
+        		confirmation_code VARCHAR(20) NULL,
 
+        		INDEX (reservation_id),
+        		INDEX (confirmation_code),
                 INDEX (user_id),
                 INDEX (scheduled_for),
                 INDEX (is_sent),
@@ -175,4 +179,6 @@ public class Notification_DB_Controller {
                 sentAt
         );
     }
+    
+    
 }
