@@ -82,6 +82,9 @@ public class NotificationDispatcher {
 
             case BILL_AFTER_2H_FROM_CHECKIN:
                 return "Your bill details have been sent via SMS.";
+                
+            case MONTHLY_REPORT_READY:
+                return "Monthly report for the previous month is now available.";
 
             default:
                 return "You have a new notification.";
