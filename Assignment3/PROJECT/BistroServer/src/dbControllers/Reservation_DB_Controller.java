@@ -798,7 +798,7 @@ public class Reservation_DB_Controller {
         String sql = """
             SELECT * FROM reservations
             WHERE reservation_status = 'Active'
-              AND DATE(reservation_time) = ?
+              AND DATE(reservation_datetime) = ?
         """;
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -813,6 +813,7 @@ public class Reservation_DB_Controller {
 
         return list;
     }
+
 
 
 }
