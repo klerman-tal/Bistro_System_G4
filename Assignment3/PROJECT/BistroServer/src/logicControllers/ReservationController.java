@@ -398,6 +398,15 @@ public class ReservationController {
             return false;
         }
     }
+    
+    public ArrayList<Reservation> getCurrentDiners() {
+        try {
+            return db.getCurrentDinersFromDB();
+        } catch (SQLException e) {
+            server.log("ERROR: Failed to load current diners. Message=" + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
 
     private void rollbackReservation(LocalDateTime requested, int tableNumber) {
         server.log("Rolling back: releasing 2 hours (4 slots) for table " + tableNumber);
