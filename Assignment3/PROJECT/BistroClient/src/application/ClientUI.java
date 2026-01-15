@@ -28,7 +28,7 @@ public class ClientUI extends Application implements ChatIF, ClientActions {
         activeController = controller;
     }
     //
-
+//test
     @Override 
     public void start(Stage primaryStage) throws Exception {
         TextInputDialog dialog = new TextInputDialog("localhost");
