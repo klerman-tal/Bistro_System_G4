@@ -27,6 +27,7 @@ public class ClientUI extends Application implements ChatIF, ClientActions {
     public static void setActiveController(ChatIF controller) {
         activeController = controller;
     }
+    //
 
     @Override 
     public void start(Stage primaryStage) throws Exception {
