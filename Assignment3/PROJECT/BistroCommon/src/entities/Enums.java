@@ -46,7 +46,11 @@ public class Enums {
         TABLE_AVAILABLE,
         RESEND_CONFIRMATION_CODE,
         BILL_AFTER_2H_FROM_CHECKIN,
+
+        RESERVATION_CANCELLED_OPENING_HOURS,
+
         MONTHLY_REPORT_READY
+
     }
 
 }
