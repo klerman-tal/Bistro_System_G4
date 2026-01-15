@@ -15,7 +15,7 @@ import javafx.scene.control.TextInputDialog;
 import javafx.stage.Stage;
 
 import javafx.scene.image.Image;
-
+//TEST
 
 public class ClientUI extends Application implements ChatIF, ClientActions {
 

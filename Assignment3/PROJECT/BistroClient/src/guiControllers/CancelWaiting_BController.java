@@ -1,7 +1,6 @@
 package guiControllers;
 
 import java.io.IOException;
-
 import application.ChatClient;
 import dto.ResponseDTO;
 import entities.User;
@@ -33,9 +32,16 @@ public class CancelWaiting_BController implements ClientResponseHandler {
         this.user = user;
         this.chatClient = chatClient;
         this.api = new ClientAPI(chatClient);
-
         if (chatClient != null) {
             chatClient.setResponseHandler(this);
+        }
+    }
+    
+    // המתודה שפותרת את השגיאה ב-ManageWaitingListController
+    public void setClient(User user, ChatClient chatClient, String confirmationCode) {
+        setClient(user, chatClient); 
+        if (confirmationCode != null && txtConfirmationCode != null) {
+            txtConfirmationCode.setText(confirmationCode);
         }
     }
 
@@ -43,19 +49,15 @@ public class CancelWaiting_BController implements ClientResponseHandler {
 
     @FXML
     private void onCancelWaitingClicked() {
-
         hideMessage();
-
         String code = txtConfirmationCode.getText();
         if (code == null || code.isBlank()) {
             showError("Confirmation code is required.");
             return;
         }
-
         try {
             api.cancelWaiting(code.trim());
             showInfo("Cancel request sent.");
-
         } catch (IOException e) {
             showError("Failed to send cancel request.");
             e.printStackTrace();
@@ -65,25 +67,15 @@ public class CancelWaiting_BController implements ClientResponseHandler {
     @FXML
     private void onBackClicked() {
         try {
-            FXMLLoader loader =
-                    new FXMLLoader(getClass().getResource("/gui/ReservationMenu_B.fxml"));
+            // מעודכן: חוזר למסך ניהול הרשימה (הטבלה)
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/ManageWaitingList.fxml"));
             Parent root = loader.load();
-
-            ReservationMenu_BController controller =
-                    loader.getController();
-
-            if (controller != null) {
-                controller.setClient(user, chatClient);
-            }
-
+            ManageWaitingListController controller = loader.getController();
+            controller.setClient(user, chatClient);
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setScene(new Scene(root));
-            stage.centerOnScreen();
             stage.show();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        } catch (Exception e) { e.printStackTrace(); }
     }
 
     /* ================= SERVER RESPONSE ================= */
@@ -92,47 +84,33 @@ public class CancelWaiting_BController implements ClientResponseHandler {
     public void handleResponse(ResponseDTO response) {
         Platform.runLater(() -> {
             if (response == null) return;
-
             if (response.isSuccess()) {
-                showSuccess(response.getMessage() != null
-                        ? response.getMessage()
-                        : "Waiting list entry cancelled successfully.");
+                showSuccess(response.getMessage() != null ? response.getMessage() : "Cancelled successfully.");
             } else {
-                showError(response.getMessage() != null
-                        ? response.getMessage()
-                        : "Cancel request failed.");
+                showError(response.getMessage() != null ? response.getMessage() : "Cancel failed.");
             }
         });
     }
-
-    /* ================= UI HELPERS ================= */
 
     private void showError(String msg) {
         lblMessage.setText(msg);
         lblMessage.setStyle("-fx-text-fill: red;");
         lblMessage.setVisible(true);
-        lblMessage.setManaged(true);
     }
 
     private void showSuccess(String msg) {
         lblMessage.setText(msg);
         lblMessage.setStyle("-fx-text-fill: green;");
         lblMessage.setVisible(true);
-        lblMessage.setManaged(true);
     }
 
     private void showInfo(String msg) {
         lblMessage.setText(msg);
         lblMessage.setStyle("-fx-text-fill: #2e7d32;");
         lblMessage.setVisible(true);
-        lblMessage.setManaged(true);
     }
 
-    private void hideMessage() {
-        lblMessage.setVisible(false);
-        lblMessage.setManaged(false);
-    }
-
+    private void hideMessage() { lblMessage.setVisible(false); }
     @Override public void handleConnectionError(Exception e) {}
     @Override public void handleConnectionClosed() {}
 }

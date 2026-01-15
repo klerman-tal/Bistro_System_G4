@@ -43,8 +43,12 @@
                 <Insets top="10" right="20" bottom="20" left="20"/>
             </padding>
             <children>
-                <Button onAction="#onRefreshClicked" text="Refresh List" styleClass="btnPrimary"/>
+                <Button onAction="#onAddWaitingClicked" text="Add Entry" styleClass="btnPrimary"/>
+                <Button onAction="#onCancelWaitingClicked" text="Cancel Entry" styleClass="btnSecondary"/>
                 
+                <Region HBox.hgrow="ALWAYS" />
+
+                <Button onAction="#onRefreshClicked" text="Refresh List" styleClass="btnPrimary"/>
                 <Button onAction="#onBackClicked" text="Back" styleClass="btnSecondary"/>
             </children>
         </HBox>
