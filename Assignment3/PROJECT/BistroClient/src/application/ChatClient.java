@@ -10,7 +10,7 @@ import interfaces.ChatIF;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import network.ClientResponseHandler;
-//testLior112
+//testLior1123
 public class ChatClient extends AbstractClient
 { 
   ChatIF clientUI;
