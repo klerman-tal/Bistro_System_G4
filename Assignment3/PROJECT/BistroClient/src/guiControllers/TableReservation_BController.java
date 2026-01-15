@@ -136,7 +136,12 @@ public class TableReservation_BController implements ClientResponseHandler {
                 try {
                     controller.getClass()
                             .getMethod("setClient", User.class, ChatClient.class)
-                            .invoke(controller, user, chatClient);
+                            .invoke(
+                            	    controller,
+                            	    application.ClientSession.getLoggedInUser(),
+                            	    chatClient
+                            	);
+
                 } catch (Exception ignored) {}
             }
 

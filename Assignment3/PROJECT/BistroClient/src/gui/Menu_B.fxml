@@ -3,65 +3,101 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 
 <BorderPane fx:id="rootPane" stylesheets="@Style.css"
-	xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-	fx:controller="guiControllers.Menu_BController">
+            xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="guiControllers.Menu_BController">
 
-	<top>
-		<HBox fx:id="header" alignment="CENTER_LEFT">
-			<padding>
-				<Insets bottom="18" left="25" right="25" top="18" />
-			</padding>
-			<children>
-				<Label styleClass="title" text="Main Menu" textFill="WHITE" />
-				<Region HBox.hgrow="ALWAYS" />
-			</children>
-		</HBox>
-	</top>
+    <top>
+        <HBox fx:id="header" alignment="CENTER_LEFT">
+            <padding>
+                <Insets bottom="18" left="25" right="25" top="18" />
+            </padding>
+            <children>
+                <Label styleClass="title" text="Main Menu" textFill="WHITE" />
+                <Region HBox.hgrow="ALWAYS" />
+            </children>
+        </HBox>
+    </top>
 
-	<center>
-		<VBox alignment="TOP_CENTER" spacing="18">
-			<padding>
-				<Insets bottom="20" left="40" right="40" top="30" />
-			</padding>
+    <center>
+        <VBox alignment="TOP_CENTER" spacing="18">
+            <padding>
+                <Insets bottom="20" left="40" right="40" top="30" />
+            </padding>
 
-			<children>
-				<Label styleClass="section" text="Choose an action" />
+            <children>
+                <Label styleClass="section" text="Choose an action" />
 
-				<Button maxWidth="300" prefWidth="260"
-					styleClass="btnSecondary" text="Reservations"
-					onAction="#onSelectReservationsClicked" />
+                <Button maxWidth="300" prefWidth="260"
+                        styleClass="btnSecondary" text="Reservations"
+                        onAction="#onSelectReservationsClicked" />
 
-				<Button maxWidth="300" prefWidth="260"
-					styleClass="btnSecondary" text="My Visit"
-					onAction="#onSelectMyVisitClicked" />
+                <Button maxWidth="300" prefWidth="260"
+                        styleClass="btnSecondary" text="My Visit"
+                        onAction="#onSelectMyVisitClicked" />
 
-				<Button fx:id="btnPersonalDetails" maxWidth="300"
-					prefWidth="260" styleClass="btnSecondary" text="Personal Details"
-					onAction="#onSelectPersonalDetailsClicked" />
+                <Button fx:id="btnPersonalDetails" maxWidth="300"
+                        prefWidth="260" styleClass="btnSecondary" text="Personal Details"
+                        onAction="#onSelectPersonalDetailsClicked" />
 
-				<Button fx:id="btnRestaurantManagement" maxWidth="300"
-					prefWidth="260" styleClass="btnSecondary"
-					text="Restaurant Management"
-					onAction="#onSelectRestaurantManagementClicked" />
+                <!-- Visible only for RestaurantAgent/RestaurantManager (handled in controller) -->
+                <Button fx:id="btnRestaurantManagement" maxWidth="300"
+                        prefWidth="260" styleClass="btnSecondary"
+                        text="Restaurant Management"
+                        onAction="#onSelectRestaurantManagementClicked" />
 
-				<Label fx:id="lblMessage" managed="false" visible="false"
-					styleClass="errorMsg" text="" />
+                <!-- ✅ Acting user controls (staff only) -->
+                <!-- Controller will toggle visible/managed -->
+                <BorderPane fx:id="actAsBox" visible="false" managed="false"
+                            style="-fx-background-color: rgba(0,0,0,0.04); -fx-background-radius: 10; -fx-padding: 10;">
+                    <top>
+                        <Label text="Work on behalf of a customer (staff only)"
+                               style="-fx-font-weight: bold;" />
+                    </top>
 
-				<Button text="Logout" onAction="#onLogoutClicked"
-					style="-fx-background-color: #000000;
+                    <center>
+                        <VBox spacing="8">
+                            <!-- must match controller: lblActingUser -->
+                            <Label fx:id="lblActingUser" text="Acting User: —" />
+
+                            <HBox spacing="8" alignment="CENTER_LEFT">
+                                <!-- must match controller: txtIdForRegistered -->
+                                <TextField fx:id="txtIdForRegistered"
+                                           promptText="id for registered (existing user)"
+                                           prefWidth="240"/>
+
+                                <!-- must match controller: txtPhoneForNewGuest -->
+                                <TextField fx:id="txtPhoneForNewGuest"
+                                           promptText="phone for new guest"
+                                           prefWidth="200"/>
+                            </HBox>
+
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <!-- must match controller: btnOk + onOkClicked -->
+                                <Button fx:id="btnOk" text="OK" onAction="#onOkClicked"/>
+                            </HBox>
+                        </VBox>
+                    </center>
+                </BorderPane>
+
+                <Label fx:id="lblMessage" managed="false" visible="false"
+                       styleClass="errorMsg" text="" />
+
+                <Button text="Logout" onAction="#onLogoutClicked"
+                        style="-fx-background-color: #000000;
                                -fx-text-fill: white;
                                -fx-font-size: 11px;
                                -fx-padding: 4 12;
                                -fx-background-radius: 12;"
-					styleClass="btnSecondary" />
-			</children>
-		</VBox>
-	</center>
+                        styleClass="btnSecondary" />
+            </children>
+        </VBox>
+    </center>
 
 </BorderPane>

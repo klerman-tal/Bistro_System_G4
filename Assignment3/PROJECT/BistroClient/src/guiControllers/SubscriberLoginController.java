@@ -1,6 +1,7 @@
 package guiControllers;
 
 import application.ChatClient;
+import application.ClientSession;
 import dto.ResponseDTO;
 import entities.Subscriber;
 import javafx.application.Platform;
@@ -28,17 +29,13 @@ public class SubscriberLoginController implements ClientResponseHandler {
     private ChatClient chatClient;
     private ClientAPI api;
 
-    // ✅ שומרים את ה-Stage שבו נמצאים (מוגדר בזמן קליק)
     private Stage stage;
 
-    /**
-     * חיבור ל־ChatClient + רישום כ־ResponseHandler
-     */
     public void setClient(ChatClient chatClient) {
         this.chatClient = chatClient;
         if (chatClient != null) {
             this.api = new ClientAPI(chatClient);
-            chatClient.setResponseHandler(this); // ✅ רק למסך הזה
+            chatClient.setResponseHandler(this);
         }
     }
 
@@ -60,7 +57,6 @@ public class SubscriberLoginController implements ClientResponseHandler {
     private void handleSubscriberLogin(ActionEvent event) {
         hideMessage();
 
-        // ✅ לוכדים את ה-Stage מהאירוע (זה תמיד קיים בזמן קליק)
         this.stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
 
         String idStr = subscriberIdField.getText().trim();
@@ -85,39 +81,33 @@ public class SubscriberLoginController implements ClientResponseHandler {
         }
     }
 
-    /**
-     * 🔥 קבלת תשובות מהשרת
-     */
     @Override
     public void handleResponse(ResponseDTO response) {
         Platform.runLater(() -> {
-            // אם התגובה הצליחה, עוברים לתפריט
             if (response.isSuccess()) {
-                if (response.getData() instanceof Subscriber) {
-                    Subscriber subscriber = (Subscriber) response.getData();
+                if (response.getData() instanceof Subscriber subscriber) {
+
+                    // ✅ Session: logged in = subscriber, acting = subscriber
+                    ClientSession.setLoggedInUser(subscriber);
+                    ClientSession.setActingUser(subscriber);
+
                     goToMenu(subscriber);
                 }
             } else {
-                // אם התגובה נכשלה (למשל פרטים לא נכונים), מציגים את הודעת השגיאה מהשרת
                 showError(response.getMessage());
             }
         });
     }
 
-    /**
-     * מעבר לתפריט הראשי
-     */
-    private void goToMenu(Subscriber subscriber) {
+    private void goToMenu(Subscriber loggedInUser) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
             Parent root = loader.load();
 
             Menu_BController menu = loader.getController();
-            menu.setClient(subscriber, chatClient); // ✅ הזרקה נכונה
+            menu.setClient(loggedInUser, chatClient);
 
-            // ✅ משתמשים ב-stage ששמרנו בזמן הלחיצה
             if (stage == null) {
-                // fallback אחרון (במקרה קיצון)
                 if (subscriberIdField != null && subscriberIdField.getScene() != null) {
                     stage = (Stage) subscriberIdField.getScene().getWindow();
                 }
@@ -146,7 +136,7 @@ public class SubscriberLoginController implements ClientResponseHandler {
 
             ForgotCodeController controller = loader.getController();
             controller.setClient(chatClient);
-            chatClient.setResponseHandler(controller); // ✅ החלפת handler
+            chatClient.setResponseHandler(controller);
 
             Stage popupStage = new Stage();
             popupStage.initModality(Modality.APPLICATION_MODAL);
@@ -155,7 +145,6 @@ public class SubscriberLoginController implements ClientResponseHandler {
             popupStage.setResizable(false);
             popupStage.showAndWait();
 
-            // אחרי סגירת הפופאפ – חוזרים ל־Login כ־handler
             chatClient.setResponseHandler(this);
 
         } catch (IOException e) {
@@ -183,12 +172,10 @@ public class SubscriberLoginController implements ClientResponseHandler {
         }
     }
 
-    /* ================= UI HELPERS ================= */
-
     private void showError(String msg) {
         if (lblMessage == null) return;
         lblMessage.setText(msg);
-        lblMessage.setStyle("-fx-text-fill: #ff0000; -fx-font-weight: bold;"); // צבע אדום מודגש
+        lblMessage.setStyle("-fx-text-fill: #ff0000; -fx-font-weight: bold;");
         lblMessage.setVisible(true);
         lblMessage.setManaged(true);
     }
