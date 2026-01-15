@@ -40,21 +40,7 @@ public class ManageReservationController implements Initializable {
     @FXML private TableColumn<Reservation, ReservationStatus> colStatus;
     @FXML private TableColumn<Reservation, Integer> colTableNumber;
 
-
-
-    // ===== FORM =====
-
-    @FXML private TextField txtReservationId;
-    @FXML private TextField txtConfirmationCode;
-    @FXML private DatePicker dpDate;
-    @FXML private TextField txtTime;
-    @FXML private TextField txtGuests;
-    @FXML private TextField txtCreatedBy;
-    @FXML private ComboBox<String> cmbReservationStatus;
-    @FXML private TextField txtTableNumber;
-
     @FXML private Button btnAdd;
-    @FXML private Button btnUpdate;
     @FXML private Button btnDelete;
     @FXML private Button btnBack;
 
@@ -100,8 +86,7 @@ public class ManageReservationController implements Initializable {
 
     @Override
     public void initialize(java.net.URL location, java.util.ResourceBundle resources) {
-        cmbReservationStatus.getItems().clear();
-        cmbReservationStatus.getItems().addAll("Active", "Cancelled", "Finished");
+        // המתודה נשארת ריקה כי מחקנו את ה-ComboBox שגרם לשגיאה
     }
 
     private void initializeTableBehavior() {
@@ -114,11 +99,8 @@ public class ManageReservationController implements Initializable {
         colTableNumber.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
 
         tblReservations.setItems(reservationsList);
-        tblReservations.getSelectionModel()
-                .selectedItemProperty()
-                .addListener((obs, oldVal, selected) -> {
-                    if (selected != null) fillForm(selected);
-                });
+        
+        // הסרנו את ה-Listener שקרא ל-fillForm כי השדות נמחקו
     }
 
     private void loadReservationsOnEnter() {
@@ -148,27 +130,6 @@ public class ManageReservationController implements Initializable {
         else {
             showMessage("Error: " + response.getMessage());
         }
-    }
-
-    private void fillForm(Reservation r) {
-        txtReservationId.setText(String.valueOf(r.getReservationId()));
-        txtConfirmationCode.setText(r.getConfirmationCode());
-
-        if (r.getReservationTime() != null) {
-            dpDate.setValue(r.getReservationTime().toLocalDate());
-            txtTime.setText(r.getReservationTime().toLocalTime().toString());
-        }
-
-        txtGuests.setText(String.valueOf(r.getGuestAmount()));
-        txtCreatedBy.setText(String.valueOf(r.getCreatedByUserId()));
-
-        if (r.getReservationStatus() != null) {
-            cmbReservationStatus.setValue(r.getReservationStatus().name());
-        }
-
-        txtTableNumber.setText(
-                r.getTableNumber() != null ? String.valueOf(r.getTableNumber()) : ""
-        );
     }
 
     @FXML
@@ -212,8 +173,6 @@ public class ManageReservationController implements Initializable {
             CancelReservation_BController controller = loader.getController();
             controller.setClient(user, chatClient);
             controller.setConfirmationCode(reservation.getConfirmationCode());
-
-            // ✅ התאמה ל-CANCEL (הדבר היחיד שנוסף)
             controller.setBackFxml("/gui/ManageReservation.fxml");
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
