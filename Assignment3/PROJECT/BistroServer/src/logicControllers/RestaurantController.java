@@ -334,4 +334,48 @@ public class RestaurantController {
         if (t.matches("^\\d{2}:\\d{2}$")) return t;
         return t.length() >= 5 ? t.substring(0, 5) : "";
     }
+    
+ // ===== ADD THESE METHODS INSIDE RestaurantController CLASS =====
+
+    public OpeningHouers getEffectiveOpeningHoursForDatePublic(LocalDate date) {
+        return getEffectiveOpeningHoursForDate(date);
+    }
+
+    /**
+     * Returns all dates in the next 30 days (including today) that match the given English weekday name.
+     * Example input: "Thursday"
+     */
+    public List<LocalDate> getDatesForWeekdayNext30Days(String dayOfWeekEn) {
+
+        List<LocalDate> out = new ArrayList<>();
+        if (dayOfWeekEn == null || dayOfWeekEn.isBlank()) return out;
+
+        DayOfWeek target;
+        try {
+            target = DayOfWeek.valueOf(dayOfWeekEn.trim().toUpperCase(Locale.ROOT));
+        } catch (Exception e) {
+            // If DB stores "Thursday" etc. this should still work with valueOf after upper,
+            // but if someone sends weird text -> return empty safely
+            return out;
+        }
+
+        LocalDate start = LocalDate.now();
+        LocalDate end = start.plusDays(30);
+
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            if (d.getDayOfWeek() == target) out.add(d);
+        }
+
+        return out;
+    }
+
+    /** Normalizes time string to HH:MM (supports HH:MM:SS too). */
+    public String toHHMM(String t) {
+        if (t == null) return "";
+        t = t.trim();
+        if (t.matches("^\\d{2}:\\d{2}:\\d{2}$")) return t.substring(0, 5);
+        if (t.matches("^\\d{2}:\\d{2}$")) return t;
+        return t.length() >= 5 ? t.substring(0, 5) : "";
+    }
+
 }
