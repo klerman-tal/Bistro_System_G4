@@ -316,7 +316,7 @@ public class ManageSubscriberController {
 
 	@FXML
 	private void onBackClicked() {
-		navigateTo("/gui/selectUser.fxml", "Manage Users");
+		navigateTo("/gui/RestaurantManagement_B.fxml", "Restaurant Management");
 	}
 
 	@FXML
