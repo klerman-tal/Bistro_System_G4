@@ -271,27 +271,47 @@ public class ManageSubscriberController {
 
 	@FXML
 	private void onUpdateClicked() {
+	    hideMessage(); // ניקוי הודעות קודמות
+	    
+	    Subscriber selected = tblSubscribers.getSelectionModel().getSelectedItem();
 
-		Subscriber selected = tblSubscribers.getSelectionModel().getSelectedItem();
+	    if (selected == null) {
+	        showMessage("Please select a subscriber to update.");
+	        return;
+	    }
 
-		if (selected == null) {
-			showMessage("Please select a subscriber to update.");
-			return;
-		}
+	    // שליפת הנתונים מהשדות
+	    String phone = txtPhone.getText().trim();
+	    String email = txtEmail.getText().trim();
 
-		try {
-			clientAPI.updateSubscriberDetails(selected.getUserId(), txtUsername.getText().trim(), // ✅ username
-					txtFirstName.getText().trim(), // ✅ firstName
-					txtLastName.getText().trim(), // ✅ lastName
-					txtPhone.getText().trim(), // ✅ phone
-					txtEmail.getText().trim() // ✅ email
-			);
+	    // בדיקת ולידציה לטלפון: חייב להתחיל ב-05 ובאורך 10 תווים
+	    if (!phone.startsWith("05") || phone.length() != 10 || !phone.matches("\\d+")) {
+	        showMessage("Invalid phone: must start with '05' and be exactly 10 digits.");
+	        return;
+	    }
 
-			showMessage("Updating subscriber...");
-		} catch (IOException e) {
-			e.printStackTrace();
-			showMessage("Failed to update subscriber.");
-		}
+	    // בדיקת ולידציה לאימייל: חייב להכיל @ ונקודה (.)
+	    if (!email.contains("@") || !email.contains(".") || email.indexOf("@") > email.lastIndexOf(".")) {
+	        showMessage("Invalid email: must contain '@' and a '.' (e.g., name@example.com).");
+	        return;
+	    }
+
+	    // אם הכל תקין - שולחים לעדכון
+	    try {
+	        clientAPI.updateSubscriberDetails(
+	                selected.getUserId(), 
+	                txtUsername.getText().trim(), 
+	                txtFirstName.getText().trim(), 
+	                txtLastName.getText().trim(), 
+	                phone, 
+	                email
+	        );
+
+	        showMessage("Updating subscriber...");
+	    } catch (IOException e) {
+	        e.printStackTrace();
+	        showMessage("Failed to update subscriber.");
+	    }
 	}
 
 	@FXML

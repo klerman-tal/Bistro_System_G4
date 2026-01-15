@@ -12,12 +12,14 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextFormatter; // הוספה חדשה
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import network.ClientAPI;
 import network.ClientResponseHandler;
 
 import java.io.IOException;
+import java.util.function.UnaryOperator; // הוספה חדשה
 
 public class GuestLoginController implements ClientResponseHandler {
 
@@ -27,6 +29,22 @@ public class GuestLoginController implements ClientResponseHandler {
 
     private ChatClient chatClient;
     private ClientAPI api;
+
+    // Regex לבדיקת אימייל רצינית (מונע תווים כמו ! ? ומחייב מבנה תקין)
+    private final String EMAIL_REGEX = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
+
+    @FXML
+    public void initialize() {
+        // הגבלת שדה הטלפון ל-10 תווים בלבד ומניעת הקלדת אותיות
+        UnaryOperator<TextFormatter.Change> filter = change -> {
+            String text = change.getControlNewText();
+            if (text.matches("\\d*") && text.length() <= 10) {
+                return change;
+            }
+            return null;
+        };
+        phoneField.setTextFormatter(new TextFormatter<>(filter));
+    }
 
     public void setClient(ChatClient chatClient) {
         this.chatClient = chatClient;
@@ -43,13 +61,21 @@ public class GuestLoginController implements ClientResponseHandler {
         String phone = phoneField.getText() != null ? phoneField.getText().trim() : "";
         String email = emailField.getText() != null ? emailField.getText().trim() : "";
 
-        if (phone.isEmpty() && email.isEmpty()) {
-            showError("Please enter at least a phone number or an email.");
+        // 1. בדיקה ששני השדות לא ריקים
+        if (phone.isEmpty() || email.isEmpty()) {
+            showError("Please enter both phone and email.");
             return;
         }
 
-        if (!email.isEmpty() && (!email.contains("@") || !email.contains("."))) {
-            showError("Please enter a valid email address.");
+        // 2. בדיקת ולידציה לטלפון (חייב להתחיל ב-05 ובאורך 10)
+        if (!phone.startsWith("05") || phone.length() != 10) {
+            showError("Phone must start with '05' and be exactly 10 digits.");
+            return;
+        }
+
+        // 3. בדיקת אימייל רצינית (Regex)
+        if (!email.matches(EMAIL_REGEX)) {
+            showError("Invalid email address (check for special characters or typos).");
             return;
         }
 
@@ -67,6 +93,7 @@ public class GuestLoginController implements ClientResponseHandler {
         }
     }
 
+    // שאר המתודות (handleResponse, goToMenu, וכו') נשארות בדיוק אותו דבר ללא שינוי
     @Override
     public void handleResponse(ResponseDTO response) {
         Platform.runLater(() -> {
@@ -83,10 +110,8 @@ public class GuestLoginController implements ClientResponseHandler {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
             Parent root = loader.load();
-
             Menu_BController menu = loader.getController();
             menu.setClient(guestUser, chatClient);
-
             Stage stage = (Stage) phoneField.getScene().getWindow();
             stage.setScene(new Scene(root));
             stage.show();
@@ -96,30 +121,24 @@ public class GuestLoginController implements ClientResponseHandler {
         }
     }
 
-    // ✅ NEW: Open ForgotGuestConfirmation popup
     @FXML
     private void handleForgotConfirmationCode(ActionEvent event) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/ForgotGuestConfirmation.fxml"));
             Parent root = loader.load();
-
             Object controller = loader.getController();
             if (controller instanceof ForgotGuestConfirmationController) {
                 ((ForgotGuestConfirmationController) controller).setClient(chatClient);
             }
-
             Stage popupStage = new Stage();
             popupStage.initModality(Modality.APPLICATION_MODAL);
             popupStage.setTitle("Recover Confirmation Code");
             popupStage.setScene(new Scene(root));
             popupStage.setResizable(false);
             popupStage.showAndWait();
-
-            // ✅ IMPORTANT: restore handler back to THIS screen
             if (chatClient != null) {
                 chatClient.setResponseHandler(this);
             }
-
         } catch (IOException e) {
             e.printStackTrace();
             showError("Failed to open recovery window.");
@@ -135,13 +154,11 @@ public class GuestLoginController implements ClientResponseHandler {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
             Parent root = loader.load();
-
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
             stage.setScene(new Scene(root));
             stage.centerOnScreen();
             stage.show();
         } catch (IOException e) {
-            System.err.println("Error navigating to: " + fxmlPath);
             e.printStackTrace();
         }
     }
