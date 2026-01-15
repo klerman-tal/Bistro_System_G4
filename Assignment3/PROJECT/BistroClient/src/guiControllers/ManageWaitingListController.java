@@ -98,6 +98,44 @@ public class ManageWaitingListController {
     }
     
     @FXML
+    private void onAddWaitingClicked() {
+        try {
+            // שים לב לנתיב של ה-FXML, וודא שהוא נכון
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/JoinWaiting_B.fxml")); 
+            Parent root = loader.load();
+            
+            // שימוש בשם הקלאס המדויק שמופיע אצלך בפרויקט
+            JoinWaiting_BController controller = loader.getController();
+            controller.setClient(user, chatClient);
+            
+            Stage stage = (Stage) rootPane.getScene().getWindow();
+            stage.setScene(new Scene(root));
+            stage.show();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @FXML
+    private void onCancelWaitingClicked() {
+        try {
+            // שים לב לנתיב של ה-FXML, וודא שהוא נכון
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/CancelWaiting_B.fxml"));
+            Parent root = loader.load();
+            
+            // שימוש בשם הקלאס המדויק שמופיע אצלך בפרויקט
+            CancelWaiting_BController controller = loader.getController();
+            controller.setClient(user, chatClient);
+            
+            Stage stage = (Stage) rootPane.getScene().getWindow();
+            stage.setScene(new Scene(root));
+            stage.show();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    @FXML
     private void onRefreshClicked() {
         // ניקוי זמני של הרשימה נותן אינדיקציה ויזואלית למשתמש שהנתונים נטענים מחדש
         waitingData.clear();
