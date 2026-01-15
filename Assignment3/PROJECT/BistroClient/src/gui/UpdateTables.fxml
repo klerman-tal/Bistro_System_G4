@@ -98,10 +98,7 @@
                                     onAction="#onDeleteSelected"
                                     styleClass="btnDanger"/>
 
-                            <Button text="Refresh"
-                                    onAction="#onRefresh"
-                                    styleClass="btnSecondary"/>
-
+                           
                             <Region HBox.hgrow="ALWAYS"/>
                         </children>
                     </HBox>
