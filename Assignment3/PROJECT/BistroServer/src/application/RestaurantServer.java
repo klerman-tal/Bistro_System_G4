@@ -12,6 +12,7 @@ import dbControllers.Notification_DB_Controller;
 import dbControllers.Receipt_DB_Controller;
 import dbControllers.Reservation_DB_Controller;
 import dbControllers.Restaurant_DB_Controller;
+import dbControllers.SpecialOpeningHours_DB_Controller;
 import dbControllers.User_DB_Controller;
 import dbControllers.Waiting_DB_Controller;
 import dto.RequestDTO;
@@ -43,6 +44,8 @@ public class RestaurantServer extends AbstractServer {
     private Waiting_DB_Controller waitingDB;
     private Notification_DB_Controller notificationDB;
     private Receipt_DB_Controller receiptDB;
+    private SpecialOpeningHours_DB_Controller specialOpeningHoursDB;
+
 
 
     // ===== Logic Controllers =====
@@ -121,6 +124,8 @@ public class RestaurantServer extends AbstractServer {
             waitingDB = new Waiting_DB_Controller(sqlConn);
             notificationDB = new Notification_DB_Controller(sqlConn);
             receiptDB = new Receipt_DB_Controller(sqlConn);
+            specialOpeningHoursDB = new SpecialOpeningHours_DB_Controller(sqlConn);
+            
 
 
             log("⚙️ Ensuring all database tables exist...");
@@ -132,6 +137,7 @@ public class RestaurantServer extends AbstractServer {
             waitingDB.createWaitingListTable();
             notificationDB.createNotificationsTable();
             receiptDB.createReceiptsTable();
+            specialOpeningHoursDB.createSpecialOpeningHoursTable();
 
             log("✅ Database schema ensured.");
 
@@ -151,6 +157,9 @@ public class RestaurantServer extends AbstractServer {
 
             reportsController =
                     new ReportsController(reservationDB, waitingDB, userDB);
+            
+            restaurantController.setSpecialOpeningHoursDB(specialOpeningHoursDB);
+
 
             // ===== Waiting auto-cancel scheduler =====
             waitingScheduler = Executors.newSingleThreadScheduledExecutor();
@@ -297,6 +306,20 @@ public class RestaurantServer extends AbstractServer {
         router.register(
         	    Commands.CHECKIN_RESERVATION,
         	    new CheckinReservationHandler(reservationController)
+        	);
+        
+        router.register(
+        	    Commands.GET_SPECIAL_OPENING_HOURS,
+        	    new GetSpecialOpeningHoursHandler(specialOpeningHoursDB)
+        	);
+
+        router.register(
+        	    Commands.UPDATE_SPECIAL_OPENING_HOURS,
+        	    new UpdateSpecialOpeningHoursHandler(
+        	        specialOpeningHoursDB,
+        	        restaurantController,
+        	        reservationController
+        	    )
         	);
 
 

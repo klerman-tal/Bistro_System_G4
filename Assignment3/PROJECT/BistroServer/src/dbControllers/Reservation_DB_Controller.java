@@ -1,6 +1,7 @@
 package dbControllers;
 
 import java.sql.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -790,5 +791,28 @@ public class Reservation_DB_Controller {
             return ps.executeUpdate() > 0;
         }
     }
+    
+    public ArrayList<Reservation> getActiveReservationsByDate(LocalDate date) throws SQLException {
+        ArrayList<Reservation> list = new ArrayList<>();
+
+        String sql = """
+            SELECT * FROM reservations
+            WHERE reservation_status = 'Active'
+              AND DATE(reservation_time) = ?
+        """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDate(1, Date.valueOf(date));
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRowToReservation(rs));
+                }
+            }
+        }
+
+        return list;
+    }
+
 
 }

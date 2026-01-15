@@ -5,7 +5,10 @@ public enum Commands {
     CREATE_RESERVATION,
     GET_RESERVATION_HISTORY,
     CANCEL_RESERVATION,
+
+    // ✅ Special Opening Hours
     UPDATE_SPECIAL_OPENING_HOURS,
+    GET_SPECIAL_OPENING_HOURS,
 
     CHECKIN_RESERVATION,
 
@@ -13,7 +16,7 @@ public enum Commands {
     PAY_RECEIPT,
     GET_RECEIPT_BY_CODE,
 
-    // ✅ NEW: fetch available times for a date (+ guests)
+    // fetch available times for a date (+ guests)
     GET_AVAILABLE_TIMES_FOR_DATE,
 
     // Waiting List

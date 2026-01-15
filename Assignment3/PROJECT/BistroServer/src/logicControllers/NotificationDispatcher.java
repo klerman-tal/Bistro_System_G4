@@ -82,6 +82,9 @@ public class NotificationDispatcher {
 
             case BILL_AFTER_2H_FROM_CHECKIN:
                 return "Your bill details have been sent via SMS.";
+                
+            case RESERVATION_CANCELLED_OPENING_HOURS:
+                return "Your reservation was cancelled due to a change in opening hours.";
 
             default:
                 return "You have a new notification.";

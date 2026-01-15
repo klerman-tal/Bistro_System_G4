@@ -3,9 +3,9 @@ package guiControllers;
 import application.ChatClient;
 import dto.RequestDTO;
 import dto.ResponseDTO;
-import dto.UpdateOpeningHoursDTO;
 import entities.OpeningHouers;
 import entities.Restaurant;
+import entities.SpecialOpeningHours;
 import entities.User;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
@@ -21,6 +21,8 @@ import network.ClientResponseHandler;
 import protocol.Commands;
 
 import java.io.IOException;
+import java.sql.Time;
+import java.time.LocalDate;
 import java.util.ArrayList;
 
 public class OpeningHoursController implements ClientResponseHandler {
@@ -34,6 +36,18 @@ public class OpeningHoursController implements ClientResponseHandler {
     @FXML private Button updateButton;
     @FXML private Button backButton;
 
+    // Special opening hours
+    @FXML private TableView<SpecialOpeningHours> specialHoursTable;
+    @FXML private TableColumn<SpecialOpeningHours, String> specialDateColumn;
+    @FXML private TableColumn<SpecialOpeningHours, String> specialOpenColumn;
+    @FXML private TableColumn<SpecialOpeningHours, String> specialCloseColumn;
+
+    @FXML private DatePicker specialDatePicker;
+    @FXML private CheckBox specialClosedCheck;
+    @FXML private TextField specialOpenField;
+    @FXML private TextField specialCloseField;
+    @FXML private Button addSpecialButton;
+
     private User user;
     private ChatClient chatClient;
     private ClientAPI api;
@@ -41,19 +55,16 @@ public class OpeningHoursController implements ClientResponseHandler {
     private enum EditTarget { OPEN_TIME, CLOSE_TIME }
     private EditTarget editTarget = EditTarget.OPEN_TIME;
 
-    /**
-     * נקרא מהמסך הקודם אחרי טעינת ה-FXML.
-     */
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
         this.api = new ClientAPI(chatClient);
 
-        // מקשרים את ה-controller הזה לקבלת ResponseDTO
         this.chatClient.setResponseHandler(this);
 
         try {
             api.getOpeningHours();
+            api.getSpecialOpeningHours();
         } catch (IOException e) {
             showAlert("Failed to load opening hours.");
         }
@@ -80,7 +91,6 @@ public class OpeningHoursController implements ClientResponseHandler {
 
         openingHoursTable.getSelectionModel().selectedItemProperty().addListener((obs, oldV, selected) -> {
             if (selected == null) return;
-
             openTimeField.setText(
                     editTarget == EditTarget.OPEN_TIME
                             ? toHHMM(selected.getOpenTime())
@@ -90,149 +100,136 @@ public class OpeningHoursController implements ClientResponseHandler {
 
         updateButton.setOnAction(e -> onUpdateClicked());
         backButton.setOnAction(e -> onBackClicked());
-    }
 
-    // =====================
-    // Button handlers
-    // =====================
+        // Special table
+        specialDateColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getSpecialDate().toString()));
+
+        specialOpenColumn.setCellValueFactory(c -> {
+            if (c.getValue().isClosed()) return new SimpleStringProperty("CLOSED");
+            Time t = c.getValue().getOpenTime();
+            return new SimpleStringProperty(t == null ? "" : t.toString().substring(0, 5));
+        });
+
+        specialCloseColumn.setCellValueFactory(c -> {
+            if (c.getValue().isClosed()) return new SimpleStringProperty("CLOSED");
+            Time t = c.getValue().getCloseTime();
+            return new SimpleStringProperty(t == null ? "" : t.toString().substring(0, 5));
+        });
+
+        specialClosedCheck.selectedProperty().addListener((obs, o, isClosed) -> {
+            specialOpenField.setDisable(isClosed);
+            specialCloseField.setDisable(isClosed);
+            if (isClosed) {
+                specialOpenField.clear();
+                specialCloseField.clear();
+            }
+        });
+
+        addSpecialButton.setOnAction(e -> onSaveSpecialClicked());
+    }
 
     private void onUpdateClicked() {
 
-        if (chatClient == null) {
-            showAlert("ChatClient not set (setClient was not called).");
-            return;
-        }
-
         OpeningHouers selected = openingHoursTable.getSelectionModel().getSelectedItem();
         if (selected == null) {
-            showAlert("Please select a day from the table.");
+            showAlert("Please select a day.");
             return;
         }
 
-        String newTime = openTimeField.getText();
-        newTime = (newTime == null) ? "" : newTime.trim();
+        String newTime = openTimeField.getText().trim();
 
         String open = selected.getOpenTime();
         String close = selected.getCloseTime();
 
-        // אם ריק -> סגור יום (שולחים null כדי שייכנס NULL ב-DB)
         if (newTime.isBlank()) {
             open = null;
             close = null;
         } else {
             if (!newTime.matches("^\\d{2}:\\d{2}$")) {
-                showAlert("Invalid time format. Use HH:MM (e.g., 09:30) or leave empty for CLOSED.");
+                showAlert("Invalid time format (HH:MM).");
                 return;
             }
-
             if (editTarget == EditTarget.OPEN_TIME) open = newTime;
             else close = newTime;
         }
 
-        UpdateOpeningHoursDTO dto =
-                new UpdateOpeningHoursDTO(selected.getDayOfWeek(), open, close);
-
         try {
-            RequestDTO request = new RequestDTO(Commands.UPDATE_OPENING_HOURS, dto);
-            chatClient.sendToServer(request);
+            chatClient.sendToServer(
+                    new RequestDTO(Commands.UPDATE_OPENING_HOURS,
+                            new dto.UpdateOpeningHoursDTO(
+                                    selected.getDayOfWeek(), open, close)));
         } catch (IOException e) {
-            showAlert("Failed to send update to server.");
+            showAlert("Failed to update opening hours.");
         }
     }
 
-    private void onBackClicked() {
+    private void onSaveSpecialClicked() {
+        LocalDate date = specialDatePicker.getValue();
+        if (date == null) {
+            showAlert("Please choose a date.");
+            return;
+        }
 
-        if (chatClient != null) chatClient.setResponseHandler(null);
+        boolean closed = specialClosedCheck.isSelected();
+        Time open = null, close = null;
+
+        if (!closed) {
+            open = Time.valueOf(specialOpenField.getText() + ":00");
+            close = Time.valueOf(specialCloseField.getText() + ":00");
+        }
 
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/RestaurantManagement_B.fxml"));
-            Parent root = loader.load();
-
-            Object controller = loader.getController();
-            if (controller instanceof RestaurantManagement_BController) {
-                ((RestaurantManagement_BController) controller).setClient(user, chatClient); // ✅ זה התיקון
-            }
-
-            Stage stage = (Stage) backButton.getScene().getWindow();
-            stage.setTitle("Bistro - Restaurant Management");
-            stage.setScene(new Scene(root));
-            stage.show();
-
-        } catch (IOException e) {
-            e.printStackTrace();
-            showAlert("Failed to go back.");
+            api.updateSpecialOpeningHours(date, open, close, closed);
+        } catch (Exception e) {
+            showAlert("Failed to save special hours.");
         }
     }
-
-    // =====================
-    // Server -> Client
-    // =====================
 
     @Override
     public void handleResponse(ResponseDTO response) {
 
-        Platform.runLater(() -> {
+        if (response == null || !response.isSuccess()) {
+            showAlert(response != null ? response.getMessage() : "Unknown error");
+            return;
+        }
 
-            if (response == null) return;
+        if (response.getData() instanceof ArrayList<?> list && !list.isEmpty()) {
 
-            if (!response.isSuccess()) {
-                showAlert(response.getMessage());
-                return;
+            if (list.get(0) instanceof OpeningHouers) {
+                openingHoursTable.getItems().setAll((ArrayList<OpeningHouers>) list);
+                Restaurant.getInstance().setOpeningHours((ArrayList<OpeningHouers>) list);
             }
 
-            // GET_OPENING_HOURS מחזיר ArrayList<OpeningHouers>
-            if (response.getData() instanceof ArrayList) {
-                @SuppressWarnings("unchecked")
-                ArrayList<OpeningHouers> list = (ArrayList<OpeningHouers>) response.getData();
-
-                Restaurant.getInstance().setOpeningHours(list);
-                openingHoursTable.getItems().setAll(list);
-                return;
+            if (list.get(0) instanceof SpecialOpeningHours) {
+                specialHoursTable.getItems().setAll((ArrayList<SpecialOpeningHours>) list);
             }
-
-            // UPDATE_OPENING_HOURS הצליח -> רענון
-            try {
-                api.getOpeningHours();
-            } catch (IOException e) {
-                showAlert("Updated, but failed to refresh opening hours.");
-            }
-        });
-    }
-
-    @Override
-    public void handleConnectionError(Exception e) {
-        Platform.runLater(() -> showAlert("Connection lost."));
-    }
-
-    @Override
-    public void handleConnectionClosed() {}
-
-    // =====================
-    // Helpers
-    // =====================
-
-    private void detectClickedColumn() {
-        if (openingHoursTable.getSelectionModel().getSelectedCells().isEmpty()) return;
-
-        TablePosition<OpeningHouers, ?> pos = openingHoursTable.getSelectionModel().getSelectedCells().get(0);
-        TableColumn<?, ?> col = pos.getTableColumn();
-
-        if (col == openTimeColumn) editTarget = EditTarget.OPEN_TIME;
-        else if (col == closeTimeColumn) editTarget = EditTarget.CLOSE_TIME;
-
-        OpeningHouers selected = openingHoursTable.getSelectionModel().getSelectedItem();
-        if (selected != null) {
-            openTimeField.setText(editTarget == EditTarget.OPEN_TIME
-                    ? toHHMM(selected.getOpenTime())
-                    : toHHMM(selected.getCloseTime()));
         }
     }
 
+    private void onBackClicked() {
+        chatClient.setResponseHandler(null);
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/RestaurantManagement_B.fxml"));
+            Parent root = loader.load();
+            ((RestaurantManagement_BController) loader.getController()).setClient(user, chatClient);
+            Stage stage = (Stage) backButton.getScene().getWindow();
+            stage.setScene(new Scene(root));
+        } catch (IOException e) {
+            showAlert("Failed to go back.");
+        }
+    }
+
+    private void detectClickedColumn() {
+        if (openingHoursTable.getSelectionModel().getSelectedCells().isEmpty()) return;
+        TablePosition<?, ?> pos = openingHoursTable.getSelectionModel().getSelectedCells().get(0);
+        editTarget = pos.getTableColumn() == openTimeColumn
+                ? EditTarget.OPEN_TIME
+                : EditTarget.CLOSE_TIME;
+    }
+
     private String toHHMM(String t) {
-        if (t == null) return "";
-        t = t.trim();
-        if (t.length() >= 5) return t.substring(0, 5);
-        return t;
+        return (t == null || t.length() < 5) ? "" : t.substring(0, 5);
     }
 
     private void showAlert(String msg) {
@@ -242,4 +239,16 @@ public class OpeningHoursController implements ClientResponseHandler {
         a.setContentText(msg);
         a.showAndWait();
     }
+
+	@Override
+	public void handleConnectionError(Exception e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void handleConnectionClosed() {
+		// TODO Auto-generated method stub
+		
+	}
 }
