@@ -293,6 +293,12 @@ public class RestaurantServer extends AbstractServer {
                 Commands.GET_RECEIPT_BY_CODE,
                 new GetReceiptByCodeHandler(reservationController, receiptController)
         );
+        
+        router.register(
+        	    Commands.CHECKIN_RESERVATION,
+        	    new CheckinReservationHandler(reservationController)
+        	);
+
 
 
         

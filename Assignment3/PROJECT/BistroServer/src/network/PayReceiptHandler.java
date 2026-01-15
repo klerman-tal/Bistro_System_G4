@@ -34,6 +34,13 @@ public class PayReceiptHandler implements RequestHandler {
             return;
         }
 
+        // ✅ session user (saved at login)
+        Object sessionUserObj = (client == null) ? null : client.getInfo("user");
+        if (!(sessionUserObj instanceof entities.User sessionUser)) {
+            client.sendToClient(new ResponseDTO(false, "Not logged-in session. Please login again.", null));
+            return;
+        }
+
         String code = (dto.getConfirmationCode() == null) ? "" : dto.getConfirmationCode().trim();
         if (code.isEmpty()) {
             client.sendToClient(new ResponseDTO(false, "Confirmation code is required.", null));
@@ -71,6 +78,12 @@ public class PayReceiptHandler implements RequestHandler {
             return;
         }
 
+        // ✅ ownership check
+        if (r.getCreatedByUserId() != sessionUser.getUserId()) {
+            client.sendToClient(new ResponseDTO(false, "This reservation does not belong to you.", null));
+            return;
+        }
+
         if (!r.isActive() || r.getReservationStatus() != ReservationStatus.Active) {
             client.sendToClient(new ResponseDTO(false, "Reservation is not active.", null));
             return;
@@ -93,16 +106,20 @@ public class PayReceiptHandler implements RequestHandler {
         }
 
         // 1) Mark receipt paid
-        boolean paid = receiptController.markPaid(r.getReservationId(), dto.getPaymentType(), java.time.LocalDateTime.now());
+        boolean paid = receiptController.markPaid(
+                r.getReservationId(),
+                dto.getPaymentType(),
+                java.time.LocalDateTime.now()
+        );
+
         if (!paid) {
             client.sendToClient(new ResponseDTO(false, "Payment failed. Please try again.", null));
             return;
         }
 
-        // 2) Finish reservation (status finished + checkout + is_active false + free table slots)
+        // 2) Finish reservation
         boolean finished = reservationController.FinishReservation(code);
         if (!finished) {
-            // Receipt already paid, but reservation not finished - still report error
             client.sendToClient(new ResponseDTO(false, "Payment done, but failed to finish reservation.", null));
             return;
         }

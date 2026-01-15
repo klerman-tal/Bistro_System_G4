@@ -84,7 +84,6 @@ public class Payment_BController implements ClientResponseHandler {
 
     // ✅ same signature as all other screens
     public void setClient(User user, ChatClient chatClient) {
-        System.out.println("Payment setClient ✅");
 
         this.user = user;
         this.chatClient = chatClient;
@@ -96,8 +95,6 @@ public class Payment_BController implements ClientResponseHandler {
 
     @FXML
     private void onLoadClicked() {
-        System.out.println("api is null? " + (api == null));
-        System.out.println("client is null? " + (chatClient == null));
 
         clearMessage();
 

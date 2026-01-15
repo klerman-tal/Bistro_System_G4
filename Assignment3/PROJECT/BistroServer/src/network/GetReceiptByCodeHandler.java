@@ -33,6 +33,13 @@ public class GetReceiptByCodeHandler implements RequestHandler {
             return;
         }
 
+        // ✅ session user (saved at login)
+        Object sessionUserObj = (client == null) ? null : client.getInfo("user");
+        if (!(sessionUserObj instanceof entities.User sessionUser)) {
+            client.sendToClient(new ResponseDTO(false, "Not logged-in session. Please login again.", null));
+            return;
+        }
+
         String code = (dto.getConfirmationCode() == null) ? "" : dto.getConfirmationCode().trim();
         if (code.isEmpty()) {
             client.sendToClient(new ResponseDTO(false, "Confirmation code is required.", null));
@@ -42,6 +49,12 @@ public class GetReceiptByCodeHandler implements RequestHandler {
         Reservation r = reservationController.getReservationByConfirmationCode(code);
         if (r == null) {
             client.sendToClient(new ResponseDTO(false, "Reservation not found.", null));
+            return;
+        }
+
+        // ✅ ownership check
+        if (r.getCreatedByUserId() != sessionUser.getUserId()) {
+            client.sendToClient(new ResponseDTO(false, "This confirmation code does not belong to you.", null));
             return;
         }
 
@@ -66,7 +79,7 @@ public class GetReceiptByCodeHandler implements RequestHandler {
             return;
         }
 
-        // ✅ Subscriber discount 10% (project logic) – return discounted amount to client (no DB change)
+        // ✅ Subscriber discount 10% (return discounted amount to client only)
         if (r.getCreatedByRole() == Enums.UserRole.Subscriber) {
             Receipt copy = new Receipt();
             copy.setReceiptId(receipt.getReceiptId());
