@@ -229,19 +229,34 @@ public class WaitingController {
     }
 
     public int cancelExpiredWaitings() {
+
         try {
             LocalDateTime now = LocalDateTime.now();
+            
+            ArrayList<String> expiredCodes =
+                    db.getExpiredWaitingCodes(now);
 
-            ArrayList<String> expiredCodes = db.getExpiredWaitingCodes(now);
-            int count = db.cancelExpiredWaitings(now);
+            int count =
+                    db.cancelExpiredWaitings(now);
+
+            for (String code : expiredCodes) {
+                if (code == null) continue;
+
+                server.log(
+                    "Waiting auto-cancelled (no arrival after 15 min): " + code
+                );
+            }
 
             return count;
 
         } catch (Exception e) {
-            server.log("ERROR: cancelExpiredWaitings failed. Msg=" + e.getMessage());
+            server.log(
+                "ERROR: cancelExpiredWaitings failed. Msg=" + e.getMessage()
+            );
             return 0;
         }
     }
+
 
 
 
@@ -253,8 +268,8 @@ public class WaitingController {
      * - DOES NOT create reservation here
      *
      * English texts:
-     * - Popup (safe, no code): "A table is now available. Please confirm your arrival within 15 minutes."
-     * - SMS/Email (includes code): "A table is now available. Your waiting code is: <CODE>. Please confirm your arrival within 15 minutes."
+     * - Popup (safe, no code): "A table is now available. Please arrive within 15 minutes to avoid cancellation."
+     * - SMS/Email (includes code): "A table is now available. Your waiting code is: <CODE>. Please arrive within 15 minutes to avoid cancellation."
      */
 
     public boolean handleTableFreed(Table freedTable) {
@@ -277,7 +292,7 @@ public class WaitingController {
             if (notificationDB != null) {
                 String smsEmailBody =
                         "A table is now available. Your waiting code is: " + next.getConfirmationCode() +
-                        ". Please confirm your arrival within 15 minutes.";
+                        ". Please arrive within 15 minutes to avoid cancellation.";
 
                 notificationDB.addNotification(new Notification(
                         next.getCreatedByUserId(),
