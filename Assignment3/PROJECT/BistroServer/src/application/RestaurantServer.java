@@ -359,6 +359,10 @@ public class RestaurantServer extends AbstractServer {
         	        reservationController
         	    )
         	);
+        
+        router.register(Commands.GET_CURRENT_DINERS,
+        	    new GetCurrentDinersHandler(reservationController)); 
+
 
 	}
 

@@ -263,4 +263,13 @@ public class ClientAPI {
         RequestDTO request = new RequestDTO(Commands.PAY_RECEIPT, data);
         client.sendToServer(request);
     }
+    
+    public void getCurrentDiners() throws IOException {
+        System.out.println("Sending GET_CURRENT_DINERS...");
+        RequestDTO request = new RequestDTO(Commands.GET_CURRENT_DINERS, null);
+        client.sendToServer(request);
+        
+    }
+    
+    
 }

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane fx:id="rootPane"
+            stylesheets="@Style.css"
+            xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="guiControllers.ManageCurrentDinersController">
+
+    <!-- HEADER -->
+    <top>
+        <HBox alignment="CENTER_LEFT">
+            <padding>
+                <Insets top="18" right="25" bottom="18" left="25"/>
+            </padding>
+            <children>
+                <Label text="Current Diners"
+                       styleClass="title"
+                       textFill="WHITE"/>
+            </children>
+        </HBox>
+    </top>
+
+    <!-- CENTER -->
+    <center>
+        <VBox spacing="20" alignment="TOP_CENTER">
+            <padding>
+                <Insets top="25" right="40" bottom="25" left="40"/>
+            </padding>
+
+            <children>
+
+                <Label text="Active diners in restaurant"
+                       styleClass="section"/>
+
+                <TableView fx:id="tblCurrentDiners"
+                           prefHeight="400"
+                           maxWidth="600">
+
+                    <columns>
+
+                        <TableColumn fx:id="colCreatedBy"
+                                     text="created_by"
+                                     prefWidth="200"/>
+
+                        <TableColumn fx:id="colCreatedByRole"
+                                     text="created_by_role"
+                                     prefWidth="200"/>
+
+                        <TableColumn fx:id="colTableNumber"
+                                     text="table_number"
+                                     prefWidth="200"/>
+
+                    </columns>
+                </TableView>
+
+                <!-- STATUS / ERROR MESSAGE (was missing, caused lblStatus == null) -->
+                <Label fx:id="lblStatus"
+                       text=""
+                       visible="false"
+                       managed="false"
+                       wrapText="true"
+                       styleClass="error"/>
+
+            </children>
+        </VBox>
+    </center>
+
+</BorderPane>

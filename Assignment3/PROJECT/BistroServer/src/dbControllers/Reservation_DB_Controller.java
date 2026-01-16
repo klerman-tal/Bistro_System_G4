@@ -762,6 +762,26 @@ public class Reservation_DB_Controller {
         }
         return list;
     }
+    
+    
+    /**
+     * Returns reservations of diners currently in the restaurant:
+     * checkin IS NOT NULL AND checkout IS NULL
+     */
+    public ArrayList<Reservation> getCurrentDiners() throws SQLException {
+        // הסרנו את התנאי של status = 'Active' כי הוא עלול להטעות
+        String sql = """
+            SELECT *
+            FROM reservations
+            WHERE checkin IS NOT NULL
+              AND checkout IS NULL
+            ORDER BY checkin;
+            """;
+
+        return executeReservationListQuery(sql);
+    }
+
+    
 
     public boolean setBillDueAt(int reservationId, LocalDateTime billAt) throws SQLException {
         String sql = """
