@@ -506,26 +506,7 @@ public class ReservationController {
     }
 
 
-    private void notifyUserReservationCancelledIfOnline(Reservation r, String reason) {
-        if (r == null) return;
-
-        int userId = r.getCreatedByUserId();
-        if (userId <= 0) return;
-
-        String display = "Your reservation was cancelled.";
-        String smsBody = "Your reservation was cancelled. Confirmation code: " + r.getConfirmationCode();
-        if (reason != null && !reason.isBlank()) {
-            smsBody += " Reason: " + reason;
-        }
-
-        // ✅ Popup only if user is connected
-        server.pushPopupToUserIfOnline(userId, new dto.NotificationDTO(
-                dto.NotificationDTO.Type.INFO,
-                "SMS",
-                display,
-                smsBody
-        ));
-    }
+   
 
     private void rollbackReservation(LocalDateTime requested, int tableNumber) {
         server.log("Rolling back: releasing 2 hours (4 slots) for table " + tableNumber);

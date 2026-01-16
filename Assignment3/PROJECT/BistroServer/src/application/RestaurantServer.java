@@ -365,20 +365,7 @@ public class RestaurantServer extends AbstractServer {
                         reservationController,
                         receiptController));
     }
-    public boolean pushPopupToUserIfOnline(int userId, dto.NotificationDTO dto) {
-        if (onlineUsersRegistry == null) return false;
-
-        var client = onlineUsersRegistry.getClient(userId);
-        if (client == null) return false;
-
-        try {
-            client.sendToClient(dto);
-            return true;
-        } catch (Exception e) {
-            log("❌ pushPopupToUserIfOnline failed | userId=" + userId + " | " + e.getMessage());
-            return false;
-        }
-    }
+  
 
 
     // ================= Messages =================
