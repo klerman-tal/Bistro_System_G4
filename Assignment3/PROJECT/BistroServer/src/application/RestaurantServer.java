@@ -324,6 +324,8 @@ public class RestaurantServer extends AbstractServer {
                 new FindUserByIdHandler(userController));
         router.register(Commands.CREATE_GUEST_BY_PHONE,
                 new CreateGuestByPhoneHandler(userController));
+        router.register(Commands.BARCODE_LOGIN, 
+                new BarcodeLoginHandler(userController, onlineUsersRegistry));
 
         // ===== Reports =====
         router.register(Commands.GET_TIME_REPORT,
@@ -344,6 +346,8 @@ public class RestaurantServer extends AbstractServer {
                 new UpdateOpeningHoursHandler(
                         restaurantController,
                         reservationController));
+        
+        
 
         // ===== Special Opening Hours =====
         router.register(Commands.GET_SPECIAL_OPENING_HOURS,

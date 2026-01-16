@@ -176,6 +176,25 @@ public class UserController {
         // Delegate creation to DB layer
        
     }
+    
+ // מתודה חדשה ב-UserController במיוחד עבור הברקוד
+    public Subscriber loginByBarcode(int subscriberId) {
+        // 1. ולידציה בסיסית של הקלט
+        if (subscriberId <= 0) {
+            return null;
+        }
+
+        // 2. שליפה ישירה מה-DB (ללא בדיקת performedBy כי זה תהליך לוגין)
+        Subscriber sub = userDB.getSubscriberById(subscriberId);
+        
+        // 3. כאן אפשר להוסיף את בדיקת ה-Role שציינת
+        // רק מנוי, נציג או מנהל רשאים להיכנס (בהנחה שכולם מופיעים בטבלת Subscribers)
+        if (sub != null) {
+            return sub;
+        }
+        
+        return null;
+    }
 
 
     public Subscriber getSubscriberById(int subscriberId, Subscriber performedBy) {
