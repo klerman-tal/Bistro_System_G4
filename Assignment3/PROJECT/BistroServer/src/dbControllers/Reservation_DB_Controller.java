@@ -833,6 +833,28 @@ public class Reservation_DB_Controller {
 
         return list;
     }
+    
+    public ArrayList<Reservation> getActiveReservationsByUser(int userId) throws SQLException {
+        String sql = """
+            SELECT *
+            FROM reservations
+            WHERE created_by = ?
+              AND is_active = 1
+              AND reservation_status = 'Active'
+            ORDER BY reservation_datetime;
+            """;
+
+        ArrayList<Reservation> list = new ArrayList<>();
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRowToReservation(rs));
+                }
+            }
+        }
+        return list;
+    }
 
 
 

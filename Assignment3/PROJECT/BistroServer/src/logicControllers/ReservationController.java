@@ -1002,4 +1002,15 @@ public class ReservationController {
 		}
     }
 
+    public ArrayList<Reservation> getActiveReservationsForUser(int userId) {
+        try {
+            return db.getActiveReservationsByUser(userId);
+        } catch (Exception e) {
+            server.log("ERROR: getActiveReservationsForUser failed. UserId=" + userId + ", Msg=" + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+
+
 }
