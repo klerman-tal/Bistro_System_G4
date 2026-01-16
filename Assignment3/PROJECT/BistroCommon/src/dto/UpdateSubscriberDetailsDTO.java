@@ -2,6 +2,14 @@ package dto;
 
 import java.io.Serializable;
 
+/**
+ * Data Transfer Object (DTO) used to update subscriber details
+ * between the client and the server.
+ * <p>
+ * This object contains details such as the subscriber ID, username, first name,
+ * last name, phone number, and email.
+ * </p>
+ */
 public class UpdateSubscriberDetailsDTO implements Serializable {
 
     private static final long serialVersionUID = 1L;

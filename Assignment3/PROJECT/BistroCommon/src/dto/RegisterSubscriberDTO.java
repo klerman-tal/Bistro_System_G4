@@ -3,6 +3,14 @@ package dto;
 import java.io.Serializable;
 import entities.Enums;
 
+/**
+ * Data Transfer Object (DTO) used to transfer subscriber registration data
+ * between the client and the server.
+ * <p>
+ * This object contains details such as the username, first name, last name,
+ * phone number, email, and user role of the subscriber.
+ * </p>
+ */
 public class RegisterSubscriberDTO implements Serializable {
 
     private final String username;

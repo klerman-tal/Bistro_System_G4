@@ -4,10 +4,12 @@ import java.io.Serializable;
 import java.util.Map;
 
 /**
- * Data Transfer Object for Monthly Time Report.
- *
- * Used to transfer aggregated arrival and stay-duration statistics
- * for a specific month from the server to the client.
+ * Data Transfer Object (DTO) used to transfer monthly time report data
+ * from the server to the client.
+ * <p>
+ * This object contains aggregated statistics about arrival and stay durations
+ * for a specific month, including the year and other relevant data.
+ * </p>
  */
 public class TimeReportDTO implements Serializable {
 

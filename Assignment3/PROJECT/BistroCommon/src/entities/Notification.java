@@ -6,11 +6,14 @@ import entities.Enums.Channel;
 import entities.Enums.NotificationType;
 
 /**
- * Server-side entity stored in DB for scheduling messages (SMS/Email simulation).
+ * Entity representing a scheduled notification stored on the server side.
+ * <p>
+ * This entity is used to simulate SMS or email notifications and is persisted
+ * in the database. It contains scheduling information, delivery status, and
+ * metadata related to the notification channel and type.
+ * </p>
  */
 public class Notification {
-
-    
 
     private int notificationId;
     private int userId;
@@ -24,9 +27,17 @@ public class Notification {
     private boolean sent;
     private LocalDateTime sentAt;
 
+    /**
+     * Default constructor required for frameworks and database mapping.
+     */
     public Notification() {}
 
-    // For insert
+    /**
+     * Constructs a new notification instance intended for insertion into the database.
+     * <p>
+     * The notification is initialized as not sent.
+     * </p>
+     */
     public Notification(int userId,
     							Channel channel,
                               NotificationType notificationType,
@@ -40,7 +51,13 @@ public class Notification {
         this.sent = false;
     }
 
-    // For DB load
+    /**
+     * Constructs a notification instance loaded from the database.
+     * <p>
+     * This constructor is typically used when reconstructing the entity
+     * from persisted data.
+     * </p>
+     */
     public Notification(int notificationId,
                               int userId,
                               Channel channel,

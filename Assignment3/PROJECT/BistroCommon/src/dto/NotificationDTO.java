@@ -2,6 +2,15 @@ package dto;
 
 import java.io.Serializable;
 
+/**
+ * Data Transfer Object (DTO) used to deliver notification information
+ * from the server to the client.
+ * <p>
+ * This object represents a user-facing notification, including its type,
+ * the message to be displayed in the application, and an optional channel
+ * message intended for external communication such as SMS or email.
+ * </p>
+ */
 public class NotificationDTO implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -10,15 +19,9 @@ public class NotificationDTO implements Serializable {
         INFO, SUCCESS, WARNING, ERROR
     }
 
-    // What the app should show in popup (NO sensitive info like codes)
     private final String displayMessage;
-
-    // The simulated SMS/Email content (can include the code)
     private final String channelMessage;
-
-    // Optional: for future use (SMS / EMAIL)
     private final String channel;
-
     private final Type type;
 
     public NotificationDTO(Type type, String channel, String displayMessage, String channelMessage) {

@@ -4,6 +4,13 @@ import java.io.Serializable;
 import java.util.Map;
 
 /**
+ * Data Transfer Object (DTO) used to transfer monthly subscribers report data
+ * from the server to the client.
+ * <p>
+ * This object contains aggregated statistics about subscribers for a specific month,
+ * including the year and other relevant data.
+ * </p>
+ *
  * Data Transfer Object for Monthly Subscribers Report.
  *
  * Used to transfer aggregated subscribers-related statistics

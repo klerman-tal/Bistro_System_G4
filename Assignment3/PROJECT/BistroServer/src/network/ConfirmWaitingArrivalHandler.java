@@ -7,14 +7,34 @@ import entities.Waiting;
 import logicControllers.WaitingController;
 import ocsf.server.ConnectionToClient;
 
+/**
+ * Server-side request handler responsible for confirming
+ * a waiting list arrival.
+ * <p>
+ * This handler validates the waiting confirmation code,
+ * delegates the arrival confirmation logic to the
+ * {@link WaitingController}, and returns the updated
+ * waiting entry to the client upon success.
+ * </p>
+ */
 public class ConfirmWaitingArrivalHandler implements RequestHandler {
 
     private final WaitingController waitingController;
 
+    /**
+     * Constructs a handler with the required waiting controller dependency.
+     */
     public ConfirmWaitingArrivalHandler(WaitingController waitingController) {
         this.waitingController = waitingController;
     }
 
+    /**
+     * Handles a waiting arrival confirmation request received from the client.
+     * <p>
+     * The method validates the confirmation code, confirms the user's arrival
+     * in the waiting list, and returns the updated waiting state if successful.
+     * </p>
+     */
     @Override
     public void handle(RequestDTO request, ConnectionToClient client) throws Exception {
 

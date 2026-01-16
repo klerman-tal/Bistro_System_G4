@@ -2,6 +2,13 @@ package dto;
 
 import java.io.Serializable;
 
+/**
+ * Data Transfer Object (DTO) used to recover a subscriber's code
+ * between the client and the server.
+ * <p>
+ * This object contains the username, phone number, and email of the subscriber.
+ * </p>
+ */
 public class RecoverSubscriberCodeDTO implements Serializable {
 
     private final String username;

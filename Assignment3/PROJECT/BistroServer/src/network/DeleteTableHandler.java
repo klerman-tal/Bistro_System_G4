@@ -6,14 +6,33 @@ import dto.ResponseDTO;
 import logicControllers.RestaurantController;
 import ocsf.server.ConnectionToClient;
 
+/**
+ * Server-side request handler responsible for deleting
+ * a restaurant table.
+ * <p>
+ * This handler processes table deletion requests, delegates
+ * the removal logic to the {@link RestaurantController},
+ * and returns an appropriate response to the client.
+ * </p>
+ */
 public class DeleteTableHandler implements RequestHandler {
 
     private final RestaurantController restaurantController;
 
+    /**
+     * Constructs a handler with the required restaurant controller dependency.
+     */
     public DeleteTableHandler(RestaurantController restaurantController) {
         this.restaurantController = restaurantController;
     }
 
+    /**
+     * Handles a delete table request received from the client.
+     * <p>
+     * The method attempts to remove the specified table and sends
+     * a success or failure response back to the client.
+     * </p>
+     */
     @Override
     public void handle(RequestDTO request, ConnectionToClient client) {
         try {

@@ -8,24 +8,35 @@ import entities.Enums.TypeOfPayment;
 import entities.Enums.UserRole;
 
 /**
- * Receipt entity: created at check-in and later marked as paid at payment time.
+ * Entity representing a receipt generated for a restaurant reservation.
+ * <p>
+ * A receipt is created at check-in time and may later be marked as paid.
+ * This entity stores payment-related information, timestamps, and
+ * optional metadata about the user who created the receipt.
+ * </p>
  */
 public class Receipt implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
     // ===== Fields =====
-    private int receiptId;                 // DB AUTO_INCREMENT
-    private int reservationId;             // FK to reservations.reservation_id
-    private LocalDateTime createdAt;       // when receipt was created (check-in)
-    private BigDecimal amount;             // total amount
-    private boolean paid;                  // is_paid
-    private LocalDateTime paidAt;          // paid_at (nullable)
-    private TypeOfPayment paymentType;     // nullable until payment
-    private Integer createdByUserId;       // who created the receipt (optional)
-    private UserRole createdByRole;        // optional
+    private int receiptId;                 
+    private int reservationId;             
+    private LocalDateTime createdAt;       
+    private BigDecimal amount;             
+    private boolean paid;                  
+    private LocalDateTime paidAt;          
+    private TypeOfPayment paymentType;     
+    private Integer createdByUserId;       
+    private UserRole createdByRole;        
 
-    // ===== Constructor =====
+    /**
+     * Default constructor.
+     * <p>
+     * Initializes the receipt with default values and is typically used
+     * for framework support or database mapping.
+     * </p>
+     */
     public Receipt() {
         this.receiptId = 0;
         this.reservationId = 0;
@@ -67,6 +78,13 @@ public class Receipt implements Serializable {
         return amount;
     }
 
+    /**
+     * Sets the receipt amount.
+     * <p>
+     * If a {@code null} value is provided, the amount is safely
+     * initialized to {@link BigDecimal#ZERO}.
+     * </p>
+     */
     public void setAmount(BigDecimal amount) {
         this.amount = (amount == null) ? BigDecimal.ZERO : amount;
     }

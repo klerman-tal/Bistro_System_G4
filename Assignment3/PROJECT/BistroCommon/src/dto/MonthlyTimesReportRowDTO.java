@@ -2,6 +2,15 @@ package dto;
 
 import java.time.LocalDate;
 
+/**
+ * Data Transfer Object (DTO) representing a single row in a monthly
+ * timing statistics report.
+ * <p>
+ * This object contains aggregated timing data for a specific day,
+ * including the average arrival offset in minutes and the average
+ * stay duration in minutes.
+ * </p>
+ */
 public class MonthlyTimesReportRowDTO {
 
     private final LocalDate day;

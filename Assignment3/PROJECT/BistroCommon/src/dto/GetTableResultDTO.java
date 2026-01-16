@@ -3,7 +3,14 @@ package dto;
 import java.io.Serializable;
 
 /**
- * Result object returned for "get table" flows.
+ * Data Transfer Object (DTO) used to return the result of a
+ * table allocation request.
+ * <p>
+ * This object is sent from the server to the client and contains
+ * information about whether the request was successful, whether
+ * the client should be placed on a waiting list, the allocated
+ * table number (if applicable), and an informational message.
+ * </p>
  */
 public class GetTableResultDTO implements Serializable {
 

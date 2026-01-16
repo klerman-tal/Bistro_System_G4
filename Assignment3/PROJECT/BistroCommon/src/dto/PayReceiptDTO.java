@@ -1,9 +1,17 @@
 package dto;
 
 import java.io.Serializable;
-
 import entities.Enums;
 
+/**
+ * Data Transfer Object (DTO) used to submit payment information
+ * for a reservation receipt.
+ * <p>
+ * This object contains the reservation confirmation code, the
+ * selected payment type, and optional payment details required
+ * to process the transaction.
+ * </p>
+ */
 public class PayReceiptDTO implements Serializable {
     private static final long serialVersionUID = 1L;
 

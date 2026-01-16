@@ -2,6 +2,15 @@ package dto;
 
 import java.io.Serializable;
 
+/**
+ * Generic Data Transfer Object (DTO) used to represent a standard
+ * response returned from the server.
+ * <p>
+ * This object encapsulates the outcome of a request, including
+ * a success indicator, an informational message, and an optional
+ * payload containing response data.
+ * </p>
+ */
 public class ResponseDTO implements Serializable{
 	
 	private boolean success;
@@ -24,7 +33,4 @@ public class ResponseDTO implements Serializable{
 	public Object getData() {
 		return data;
 	}
-	
-	
-
 }

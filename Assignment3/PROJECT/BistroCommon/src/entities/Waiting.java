@@ -7,6 +7,14 @@ import java.util.Random;
 import entities.Enums.UserRole;
 import entities.Enums.WaitingStatus;
 
+/**
+ * Entity representing a waiting list entry.
+ * <p>
+ * This class stores information about users who joined the waiting list,
+ * including guest count, creator details, waiting status, optional table
+ * assignment, and lifecycle timestamps.
+ * </p>
+ */
 public class Waiting implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -22,21 +30,25 @@ public class Waiting implements Serializable {
     private Integer tableNumber;
     private LocalDateTime tableFreedTime;
 
-    // ✅ NEW: when the user joined the waiting list
     private LocalDateTime joinedAt;
 
-    // =========================
-    // Confirmation Code
-    // =========================
-
+    // ====Confirmation Code====
+  
+    /**
+     * Generates and assigns a random six-digit confirmation code
+     * for this waiting list entry.
+     * <p>
+     * The confirmation code is used to identify the waiting request
+     * from the user's perspective.
+     * </p>
+     */
     public void generateAndSetConfirmationCode() {
         Random rnd = new Random();
         this.confirmationCode = String.valueOf(100000 + rnd.nextInt(900000));
     }
 
-    // =========================
-    // Getters / Setters
-    // =========================
+	// ===== Getters / Setters =====
+
 
     public String getConfirmationCode() {
         return confirmationCode;
@@ -102,7 +114,6 @@ public class Waiting implements Serializable {
         this.waitingId = waitingId;
     }
 
-    // ✅ NEW: joinedAt
     public LocalDateTime getJoinedAt() {
         return joinedAt;
     }

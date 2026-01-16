@@ -4,6 +4,10 @@ import java.io.Serializable;
 
 /**
  * Sent by client to request getting table for an existing reservation (check-in).
+ * <p>
+ * This object contains the reservation confirmation code required for
+ * checking in to a reservation.
+ * </p>
  */
 public class CheckinReservationDTO implements Serializable {
 
