@@ -3,6 +3,8 @@ package application;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.sql.Connection;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -12,9 +14,11 @@ import dbControllers.Notification_DB_Controller;
 import dbControllers.Receipt_DB_Controller;
 import dbControllers.Reservation_DB_Controller;
 import dbControllers.Restaurant_DB_Controller;
+import dbControllers.SpecialOpeningHours_DB_Controller;
 import dbControllers.User_DB_Controller;
 import dbControllers.Waiting_DB_Controller;
 import dto.RequestDTO;
+import entities.OpeningHouers;
 import javafx.application.Platform;
 import logicControllers.NotificationDispatcher;
 import logicControllers.NotificationSchedulerService;
@@ -36,13 +40,17 @@ public class RestaurantServer extends AbstractServer {
 
 	private DBController conn;
 
-	// ===== DB Controllers =====
-	private Restaurant_DB_Controller restaurantDB;
-	private Reservation_DB_Controller reservationDB;
-	private User_DB_Controller userDB;
-	private Waiting_DB_Controller waitingDB;
-	private Notification_DB_Controller notificationDB;
-	private Receipt_DB_Controller receiptDB;
+
+    // ===== DB Controllers =====
+    private Restaurant_DB_Controller restaurantDB;
+    private Reservation_DB_Controller reservationDB;
+    private User_DB_Controller userDB;
+    private Waiting_DB_Controller waitingDB;
+    private Notification_DB_Controller notificationDB;
+    private Receipt_DB_Controller receiptDB;
+    private SpecialOpeningHours_DB_Controller specialOpeningHoursDB;
+
+
 
 	// ===== Logic Controllers =====
 	private RestaurantController restaurantController;
@@ -61,7 +69,13 @@ public class RestaurantServer extends AbstractServer {
 	private ScheduledExecutorService waitingScheduler;
 	private final ScheduledExecutorService idleScheduler = Executors.newSingleThreadScheduledExecutor();
 
+
+    private ScheduledExecutorService closingScheduler;
+    private LocalDate lastClosingHandledDate = null;
+
+
 	private RequestRouter router;
+
 
 	private gui.ServerGUIController uiController;
 	private String serverIp;
@@ -120,6 +134,15 @@ public class RestaurantServer extends AbstractServer {
 			notificationDB = new Notification_DB_Controller(sqlConn);
 			receiptDB = new Receipt_DB_Controller(sqlConn);
 
+            // ===== DB Controllers =====
+            restaurantDB = new Restaurant_DB_Controller(sqlConn);
+            reservationDB = new Reservation_DB_Controller(sqlConn);
+            userDB = new User_DB_Controller(sqlConn);
+            waitingDB = new Waiting_DB_Controller(sqlConn);
+            notificationDB = new Notification_DB_Controller(sqlConn);
+            receiptDB = new Receipt_DB_Controller(sqlConn);
+            specialOpeningHoursDB = new SpecialOpeningHours_DB_Controller(sqlConn);
+            
 			log("⚙️ Ensuring all database tables exist...");
 			userDB.createSubscribersTable();
 			userDB.createGuestsTable();
@@ -130,12 +153,26 @@ public class RestaurantServer extends AbstractServer {
 			notificationDB.createNotificationsTable();
 			receiptDB.createReceiptsTable();
 
+
 			log("✅ Database schema ensured.");
+
+
+            log("⚙️ Ensuring all database tables exist...");
+            userDB.createSubscribersTable();
+            userDB.createGuestsTable();
+            restaurantDB.createRestaurantTablesTable();
+            restaurantDB.createOpeningHoursTable();
+            reservationDB.createReservationsTable();
+            waitingDB.createWaitingListTable();
+            notificationDB.createNotificationsTable();
+            receiptDB.createReceiptsTable();
+            specialOpeningHoursDB.createSpecialOpeningHoursTable();
 
 			// ===== Logic Controllers =====
 			restaurantController = new RestaurantController(restaurantDB);
 			userController = new UserController(userDB);
 			receiptController = new ReceiptController(receiptDB);
+
 
 			reservationController = new ReservationController(reservationDB, notificationDB, this, restaurantController,
 					receiptController);
@@ -166,7 +203,58 @@ public class RestaurantServer extends AbstractServer {
 			notificationScheduler.start();
 			createMonthlyReportNotificationIfNeeded();
 
+            reportsController =
+                    new ReportsController(reservationDB, waitingDB, userDB);
+            
+            restaurantController.setSpecialOpeningHoursDB(specialOpeningHoursDB);
+
 			registerHandlers();
+
+            // ===== Waiting auto-cancel scheduler =====
+            waitingScheduler = Executors.newSingleThreadScheduledExecutor();
+            waitingScheduler.scheduleAtFixedRate(() -> {
+                try {
+                    int c = waitingController.cancelExpiredWaitingsAndReservations();
+                    if (c > 0)
+                        log("⏳ Auto-cancelled expired waitings: " + c);
+                } catch (Exception e) {
+                    log("Waiting scheduler error: " + e.getMessage());
+                }
+            }, 10, 10, TimeUnit.SECONDS);
+            closingScheduler = Executors.newSingleThreadScheduledExecutor();
+
+         // ... בתוך serverStarted() איפה שיש closingScheduler.scheduleAtFixedRate ...
+
+            closingScheduler.scheduleAtFixedRate(() -> {
+                try {
+                    LocalDate today = LocalDate.now();
+
+                    // אל תרוץ פעמיים באותו יום
+                    if (today.equals(lastClosingHandledDate)) return;
+
+                    OpeningHouers oh =
+                            restaurantController.getEffectiveOpeningHoursForDate(today);
+
+                    if (oh == null || oh.getCloseTime() == null) return;
+
+                    LocalTime closeTime = LocalTime.parse(
+                            oh.getCloseTime().substring(0, 5)
+                    );
+
+                    if (LocalTime.now().isAfter(closeTime)) {
+
+                        // ✅ NEW: server talks only to controller (clean architecture)
+                        waitingController.cancelAllWaitingsEndOfDay(today);
+
+                        lastClosingHandledDate = today;
+                    }
+
+                } catch (Exception e) {
+                    log("❌ Closing scheduler error: " + e.getMessage());
+                }
+            }, 10, 60, TimeUnit.SECONDS);
+
+
 
 			try {
 				restaurantController.initAvailabilityGridNext30Days();
@@ -174,6 +262,7 @@ public class RestaurantServer extends AbstractServer {
 			} catch (Exception e) {
 				log("⚠️ Grid init failed: " + e.getMessage());
 			}
+
 
 			log("✅ Server fully initialized.");
 
@@ -197,7 +286,9 @@ public class RestaurantServer extends AbstractServer {
 		// ===== Opening Hours =====
 		router.register(Commands.GET_OPENING_HOURS, new GetOpeningHoursHandler(restaurantController));
 
-		router.register(Commands.UPDATE_OPENING_HOURS, new UpdateOpeningHoursHandler(restaurantController));
+		router.register(Commands.UPDATE_OPENING_HOURS,
+		        new UpdateOpeningHoursHandler(restaurantController, reservationController));
+
 
 		// ===== Tables =====
 		router.register(Commands.GET_TABLES, new GetTablesHandler(restaurantController));
@@ -245,12 +336,47 @@ public class RestaurantServer extends AbstractServer {
 		router.register(Commands.PAY_RECEIPT,
 				new PayReceiptHandler(reservationController, receiptController, userController));
 
-		router.register(Commands.GET_RECEIPT_BY_CODE,
-				new GetReceiptByCodeHandler(reservationController, receiptController));
 
-		router.register(Commands.CHECKIN_RESERVATION, new CheckinReservationHandler(reservationController));
+        router.register(
+                Commands.GET_RECEIPT_BY_CODE,
+                new GetReceiptByCodeHandler(reservationController, receiptController)
+        );
+        
+        router.register(
+        	    Commands.CHECKIN_RESERVATION,
+        	    new CheckinReservationHandler(reservationController)
+        	);
+        
+        router.register(
+        	    Commands.GET_SPECIAL_OPENING_HOURS,
+        	    new GetSpecialOpeningHoursHandler(specialOpeningHoursDB)
+        	);
+
+        router.register(
+        	    Commands.UPDATE_SPECIAL_OPENING_HOURS,
+        	    new UpdateSpecialOpeningHoursHandler(
+        	        specialOpeningHoursDB,
+        	        restaurantController,
+        	        reservationController
+        	    )
+        	);
+        
+        router.register(Commands.GET_CURRENT_DINERS,
+        	    new GetCurrentDinersHandler(reservationController)); 
+
+
+        router.register(Commands.FIND_USER_BY_ID, new FindUserByIdHandler(userController));
+        router.register(Commands.CREATE_GUEST_BY_PHONE, new CreateGuestByPhoneHandler(userController));
+        router.register(Commands.GET_MY_ACTIVE_RESERVATIONS,
+                new GetMyActiveReservationsHandler(reservationController));
+
+        router.register(Commands.GET_MY_ACTIVE_WAITINGS,
+                new GetMyActiveWaitingsHandler(waitingController));
+
+
 
 	}
+
 
 	// ================= Messages =================
 	@Override

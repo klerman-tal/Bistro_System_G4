@@ -691,4 +691,20 @@ public boolean isTableFreeAtSlot(LocalDateTime slot, int tableNumber) throws SQL
         }
     }
 }
+
+public void deleteGridSlotsForDate(LocalDate date) throws SQLException {
+    if (date == null) return;
+
+    LocalDateTime start = date.atStartOfDay();
+    LocalDateTime end = date.plusDays(1).atStartOfDay();
+
+    String sql = "DELETE FROM table_availability_grid WHERE slot_datetime >= ? AND slot_datetime < ?";
+
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setTimestamp(1, Timestamp.valueOf(start));
+        ps.setTimestamp(2, Timestamp.valueOf(end));
+        ps.executeUpdate();
+    }
+}
+
 }

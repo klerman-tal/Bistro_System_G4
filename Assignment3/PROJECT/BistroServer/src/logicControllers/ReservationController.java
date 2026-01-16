@@ -415,6 +415,20 @@ public class ReservationController {
             } catch (Exception ignore) {}
         }
     }
+    
+    
+    /**
+     * Returns current diners (checked-in but not checked-out).
+     */
+    public ArrayList<Reservation> getCurrentDiners() {
+        try {
+            return db.getCurrentDiners();
+        } catch (SQLException e) {
+            server.log("ERROR: Failed to load current diners. Msg=" + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
 
     // =====================================================
     // READ (QUERIES)
@@ -926,6 +940,109 @@ public class ReservationController {
          return 0;
      }
  }
+
+
+    public int cancelReservationsDueToOpeningHoursChange(
+            LocalDate date,
+            LocalTime newOpen,
+            LocalTime newClose,
+            boolean isClosed
+    ) {
+
+        int cancelledCount = 0;
+
+        try {
+            // בטיחות: רק חודש קדימה
+            if (date.isAfter(LocalDate.now().plusMonths(1))) {
+                server.log("Skip cancel: date beyond 1 month: " + date);
+                return 0;
+            }
+
+            ArrayList<Reservation> reservations =
+                    db.getActiveReservationsByDate(date);
+
+            for (Reservation r : reservations) {
+
+                LocalTime resTime = r.getReservationTime().toLocalTime();
+
+                boolean invalid;
+
+                if (isClosed) {
+                    invalid = true;
+                } else {
+                    invalid =
+                            resTime.isBefore(newOpen) ||
+                            resTime.isAfter(newClose.minusHours(2));
+                }
+
+                if (!invalid) continue;
+
+                // משתמשים בלוגיקה הקיימת שלך
+                boolean cancelled = CancelReservation(r.getConfirmationCode());
+
+                if (cancelled) {
+                    cancelledCount++;
+
+                    notifyReservationCancelledOpeningHours(r);
+                }
+            }
+
+        } catch (Exception e) {
+            server.log("ERROR: cancelReservationsDueToOpeningHoursChange failed: " + e.getMessage());
+        }
+
+        return cancelledCount;
+    }
+    
+    private void notifyReservationCancelledOpeningHours(Reservation r) {
+
+        if (notificationDB == null || r == null) return;
+
+        LocalDateTime now = LocalDateTime.now();
+
+        String body =
+            "Your reservation on " +
+            r.getReservationTime().toLocalDate() +
+            " at " +
+            r.getReservationTime().toLocalTime().toString().substring(0,5) +
+            " was cancelled due to a change in opening hours.";
+
+        try {
+			notificationDB.addNotification(new Notification(
+			        r.getCreatedByUserId(),
+			        Enums.Channel.SMS,
+			        Enums.NotificationType.RESERVATION_CANCELLED_OPENING_HOURS,
+			        body,
+			        now
+			));
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+        try {
+			notificationDB.addNotification(new Notification(
+			        r.getCreatedByUserId(),
+			        Enums.Channel.EMAIL,
+			        Enums.NotificationType.RESERVATION_CANCELLED_OPENING_HOURS,
+			        body,
+			        now
+			));
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    }
+
+    public ArrayList<Reservation> getActiveReservationsForUser(int userId) {
+        try {
+            return db.getActiveReservationsByUser(userId);
+        } catch (Exception e) {
+            server.log("ERROR: getActiveReservationsForUser failed. UserId=" + userId + ", Msg=" + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
 
 
 }

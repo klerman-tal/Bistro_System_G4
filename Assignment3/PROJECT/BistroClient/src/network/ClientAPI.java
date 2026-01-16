@@ -7,6 +7,8 @@ import java.time.LocalTime;
 
 import application.ChatClient;
 import dto.CreateReservationDTO;
+import dto.FindUserByIdDTO;
+import dto.GuestLoginDTO;
 import dto.JoinWaitingDTO;
 import dto.RegisterSubscriberDTO;
 import dto.RequestDTO;
@@ -17,264 +19,291 @@ import protocol.Commands;
 
 public class ClientAPI {
 
-	private final ChatClient client;
+    private final ChatClient client;
 
-	public ClientAPI(ChatClient client) {
-		this.client = client;
-	}
+    public ClientAPI(ChatClient client) {
+        this.client = client;
+    }
 
-	// =========================
-	// RESERVATIONS
-	// =========================
+    // =========================
+    // RESERVATIONS
+    // =========================
 
-	public void createReservation(LocalDate date, LocalTime time, int guests, User user) throws IOException {
-		if (date == null || time == null || user == null)
-			throw new IllegalArgumentException("Invalid reservation data");
+    public void createReservation(LocalDate date, LocalTime time, int guests, User user) throws IOException {
+        if (date == null || time == null || user == null)
+            throw new IllegalArgumentException("Invalid reservation data");
 
-		LocalDateTime requested = LocalDateTime.of(date, time);
-		if (requested.isBefore(LocalDateTime.now().plusHours(1))) {
-			throw new IllegalArgumentException("Reservation must be at least 1 hour in advance.");
-		}
-		if (requested.isAfter(LocalDateTime.now().plusMonths(1))) {
-			throw new IllegalArgumentException("Reservation cannot be more than 1 month in advance.");
-		}
+        LocalDateTime requested = LocalDateTime.of(date, time);
+        if (requested.isBefore(LocalDateTime.now().plusHours(1))) {
+            throw new IllegalArgumentException("Reservation must be at least 1 hour in advance.");
+        }
+        if (requested.isAfter(LocalDateTime.now().plusMonths(1))) {
+            throw new IllegalArgumentException("Reservation cannot be more than 1 month in advance.");
+        }
 
-		int userId = user.getUserId();
-		UserRole userRole = user.getUserRole();
+        int userId = user.getUserId();
+        UserRole userRole = user.getUserRole();
 
-		CreateReservationDTO data = new CreateReservationDTO(date, time, guests, userId, userRole);
-		RequestDTO request = new RequestDTO(Commands.CREATE_RESERVATION, data);
+        CreateReservationDTO data = new CreateReservationDTO(date, time, guests, userId, userRole);
+        RequestDTO request = new RequestDTO(Commands.CREATE_RESERVATION, data);
 
-		client.sendToServer(request);
-	}
+        client.sendToServer(request);
+    }
 
-	public void getReservationHistory(int subscriberId) throws IOException {
-		dto.GetReservationHistoryDTO data = new dto.GetReservationHistoryDTO(subscriberId);
-		RequestDTO request = new RequestDTO(Commands.GET_RESERVATION_HISTORY, data);
-		client.sendToServer(request);
-	}
+    public void getReservationHistory(int subscriberId) throws IOException {
+        dto.GetReservationHistoryDTO data = new dto.GetReservationHistoryDTO(subscriberId);
+        RequestDTO request = new RequestDTO(Commands.GET_RESERVATION_HISTORY, data);
+        client.sendToServer(request);
+    }
 
-	public void cancelReservation(String confirmationCode) throws IOException {
+    public void cancelReservation(String confirmationCode) throws IOException {
 
-		if (confirmationCode == null || confirmationCode.isBlank()) {
-			throw new IllegalArgumentException("Confirmation code is required");
-		}
+        if (confirmationCode == null || confirmationCode.isBlank()) {
+            throw new IllegalArgumentException("Confirmation code is required");
+        }
 
-		dto.CancelReservationDTO data = new dto.CancelReservationDTO(confirmationCode, null);
+        dto.CancelReservationDTO data = new dto.CancelReservationDTO(confirmationCode, null);
+        RequestDTO request = new RequestDTO(Commands.CANCEL_RESERVATION, data);
+        client.sendToServer(request);
+    }
 
-		RequestDTO request = new RequestDTO(Commands.CANCEL_RESERVATION, data);
+    // =========================
+    // OPENING HOURS
+    // =========================
 
-		client.sendToServer(request);
-	}
+    public void getOpeningHours() throws IOException {
+        RequestDTO request = new RequestDTO(Commands.GET_OPENING_HOURS, null);
+        client.sendToServer(request);
+    }
 
-	// =========================
-	// OPENING HOURS
-	// =========================
+    // ✅ Special opening hours (dates)
+    public void getSpecialOpeningHours() throws IOException {
+        RequestDTO request = new RequestDTO(Commands.GET_SPECIAL_OPENING_HOURS, null);
+        client.sendToServer(request);
+    }
 
-	public void getOpeningHours() throws IOException {
-		RequestDTO request = new RequestDTO(Commands.GET_OPENING_HOURS, null);
-		client.sendToServer(request);
-	}
+    public void updateSpecialOpeningHours(LocalDate date, java.sql.Time openTime, java.sql.Time closeTime, boolean isClosed)
+            throws IOException {
 
-	// =========================
-	// LOGIN
-	// =========================
+        if (date == null) {
+            throw new IllegalArgumentException("Date must be provided for special opening hours.");
+        }
 
-	public void loginSubscriber(int subscriberId, String username) throws IOException {
-		dto.SubscriberLoginDTO data = new dto.SubscriberLoginDTO(subscriberId, username);
-		RequestDTO request = new RequestDTO(Commands.SUBSCRIBER_LOGIN, data);
-		client.sendToServer(request);
-	}
+        dto.SpecialOpeningHoursDTO data = new dto.SpecialOpeningHoursDTO(date, openTime, closeTime, isClosed);
+        RequestDTO request = new RequestDTO(Commands.UPDATE_SPECIAL_OPENING_HOURS, data);
+        client.sendToServer(request);
+    }
 
-	public void loginGuest(String phone, String email) throws IOException {
-		dto.GuestLoginDTO data = new dto.GuestLoginDTO(phone, email);
-		RequestDTO request = new RequestDTO(Commands.GUEST_LOGIN, data);
-		client.sendToServer(request);
-	}
+    // =========================
+    // LOGIN
+    // =========================
 
-	// =========================
-	// RECOVERY
-	// =========================
+    public void loginSubscriber(int subscriberId, String username) throws IOException {
+        dto.SubscriberLoginDTO data = new dto.SubscriberLoginDTO(subscriberId, username);
+        RequestDTO request = new RequestDTO(Commands.SUBSCRIBER_LOGIN, data);
+        client.sendToServer(request);
+    }
 
-	public void recoverSubscriberCode(String username, String phone, String email) throws IOException {
-		dto.RecoverSubscriberCodeDTO data = new dto.RecoverSubscriberCodeDTO(username, phone, email);
-		RequestDTO request = new RequestDTO(Commands.RECOVER_SUBSCRIBER_CODE, data);
-		client.sendToServer(request);
-	}
+    public void loginGuest(String phone, String email) throws IOException {
+        dto.GuestLoginDTO data = new dto.GuestLoginDTO(phone, email);
+        RequestDTO request = new RequestDTO(Commands.GUEST_LOGIN, data);
+        client.sendToServer(request);
+    }
 
-	public void recoverGuestConfirmationCode(String phone, String email, LocalDateTime reservationDateTime)
-			throws IOException {
-		if ((phone == null || phone.isBlank()) && (email == null || email.isBlank()))
-			throw new IllegalArgumentException("Please enter a phone number or an email.");
+    // =========================
+    // RECOVERY
+    // =========================
 
-		if (reservationDateTime == null)
-			throw new IllegalArgumentException("Please select reservation date and time.");
+    public void recoverSubscriberCode(String username, String phone, String email) throws IOException {
+        dto.RecoverSubscriberCodeDTO data = new dto.RecoverSubscriberCodeDTO(username, phone, email);
+        RequestDTO request = new RequestDTO(Commands.RECOVER_SUBSCRIBER_CODE, data);
+        client.sendToServer(request);
+    }
 
-		dto.RecoverGuestConfirmationCodeDTO data = new dto.RecoverGuestConfirmationCodeDTO(
-				phone == null ? "" : phone.trim(), email == null ? "" : email.trim(), reservationDateTime);
+    public void recoverGuestConfirmationCode(String phone, String email, LocalDateTime reservationDateTime)
+            throws IOException {
+        if ((phone == null || phone.isBlank()) && (email == null || email.isBlank()))
+            throw new IllegalArgumentException("Please enter a phone number or an email.");
 
-		RequestDTO request = new RequestDTO(Commands.RECOVER_GUEST_CONFIRMATION_CODE, data);
-		client.sendToServer(request);
-	}
+        if (reservationDateTime == null)
+            throw new IllegalArgumentException("Please select reservation date and time.");
 
-	// =========================
-	// SUBSCRIBERS
-	// =========================
+        dto.RecoverGuestConfirmationCodeDTO data = new dto.RecoverGuestConfirmationCodeDTO(
+                phone == null ? "" : phone.trim(), email == null ? "" : email.trim(), reservationDateTime);
 
-	public void registerSubscriber(String username, String firstName, String lastName, String phone, String email,
-			UserRole role) throws IOException {
+        RequestDTO request = new RequestDTO(Commands.RECOVER_GUEST_CONFIRMATION_CODE, data);
+        client.sendToServer(request);
+    }
 
-		dto.RegisterSubscriberDTO data = new dto.RegisterSubscriberDTO(username, firstName, lastName, phone, email,
-				role);
+    // =========================
+    // SUBSCRIBERS
+    // =========================
 
-		RequestDTO request = new RequestDTO(Commands.REGISTER_SUBSCRIBER, data);
-		client.sendToServer(request);
-	}
+    public void registerSubscriber(String username, String firstName, String lastName, String phone, String email,
+            UserRole role) throws IOException {
 
-	public void updateSubscriberDetails(int subscriberId, String username, String firstName, String lastName,
-			String phone, String email) throws IOException {
+        RegisterSubscriberDTO data = new dto.RegisterSubscriberDTO(username, firstName, lastName, phone, email, role);
+        RequestDTO request = new RequestDTO(Commands.REGISTER_SUBSCRIBER, data);
+        client.sendToServer(request);
+    }
 
-		dto.UpdateSubscriberDetailsDTO data = new dto.UpdateSubscriberDetailsDTO(subscriberId, username, firstName,
-				lastName, phone, email);
+    public void updateSubscriberDetails(int subscriberId, String username, String firstName, String lastName,
+            String phone, String email) throws IOException {
 
-		RequestDTO request = new RequestDTO(Commands.UPDATE_SUBSCRIBER_DETAILS, data);
-		client.sendToServer(request);
-	}
+        dto.UpdateSubscriberDetailsDTO data = new dto.UpdateSubscriberDetailsDTO(subscriberId, username, firstName,
+                lastName, phone, email);
 
-	public void deleteSubscriber(int subscriberId) throws IOException {
+        RequestDTO request = new RequestDTO(Commands.UPDATE_SUBSCRIBER_DETAILS, data);
+        client.sendToServer(request);
+    }
 
-		dto.DeleteSubscriberDTO data = new dto.DeleteSubscriberDTO(subscriberId);
+    public void deleteSubscriber(int subscriberId) throws IOException {
 
-		RequestDTO request = new RequestDTO(Commands.DELETE_SUBSCRIBER, data);
+        dto.DeleteSubscriberDTO data = new dto.DeleteSubscriberDTO(subscriberId);
+        RequestDTO request = new RequestDTO(Commands.DELETE_SUBSCRIBER, data);
+        client.sendToServer(request);
+    }
 
-		client.sendToServer(request);
+    // =========================
+    // TABLES
+    // =========================
 
-	}
+    public void getTables() throws IOException {
+        RequestDTO request = new RequestDTO(Commands.GET_TABLES, null);
+        client.sendToServer(request);
+    }
 
-	// =========================
-	// TABLES
-	// =========================
+    public void saveTable(int tableNumber, int seatsAmount) throws IOException {
+        dto.SaveTableDTO data = new dto.SaveTableDTO(tableNumber, seatsAmount);
+        RequestDTO request = new RequestDTO(Commands.SAVE_TABLE, data);
+        client.sendToServer(request);
+    }
 
-	public void getTables() throws IOException {
-		RequestDTO request = new RequestDTO(Commands.GET_TABLES, null);
-		client.sendToServer(request);
-	}
+    public void deleteTable(int tableNumber) throws IOException {
+        dto.DeleteTableDTO data = new dto.DeleteTableDTO(tableNumber);
+        RequestDTO request = new RequestDTO(Commands.DELETE_TABLE, data);
+        client.sendToServer(request);
+    }
 
-	public void saveTable(int tableNumber, int seatsAmount) throws IOException {
-		dto.SaveTableDTO data = new dto.SaveTableDTO(tableNumber, seatsAmount);
-		RequestDTO request = new RequestDTO(Commands.SAVE_TABLE, data);
-		client.sendToServer(request);
-	}
+    // =========================
+    // WAITING LIST
+    // =========================
 
-	public void deleteTable(int tableNumber) throws IOException {
-		dto.DeleteTableDTO data = new dto.DeleteTableDTO(tableNumber);
-		RequestDTO request = new RequestDTO(Commands.DELETE_TABLE, data);
-		client.sendToServer(request);
-	}
+    public void joinWaitingList(int guests, User user) throws IOException {
+        if (guests <= 0 || user == null) {
+            throw new IllegalArgumentException("Invalid waiting data");
+        }
 
-	// =========================
-	// WAITING LIST
-	// =========================
+        JoinWaitingDTO data = new JoinWaitingDTO(guests, user.getUserId(), user.getUserRole());
+        RequestDTO request = new RequestDTO(Commands.JOIN_WAITING_LIST, data);
+        client.sendToServer(request);
+    }
 
-	public void joinWaitingList(int guests, User user) throws IOException {
-		if (guests <= 0 || user == null) {
-			throw new IllegalArgumentException("Invalid waiting data");
-		}
+    public void getWaitingStatus(String confirmationCode) throws IOException {
+        WaitingCodeDTO data = new WaitingCodeDTO(confirmationCode);
+        RequestDTO req = new RequestDTO(Commands.GET_WAITING_STATUS, data);
+        client.sendToServer(req);
+    }
 
-		JoinWaitingDTO data = new JoinWaitingDTO(guests, user.getUserId(), user.getUserRole());
-
-		RequestDTO request = new RequestDTO(Commands.JOIN_WAITING_LIST, data);
-
-		client.sendToServer(request);
-	}
-
-	public void getWaitingStatus(String confirmationCode) throws IOException {
-		WaitingCodeDTO data = new WaitingCodeDTO(confirmationCode);
-		RequestDTO req = new RequestDTO(Commands.GET_WAITING_STATUS, data);
-		client.sendToServer(req);
-	}
-
-    
     public void checkinReservation(String confirmationCode) throws IOException {
         if (confirmationCode == null || confirmationCode.isBlank()) {
             throw new IllegalArgumentException("Confirmation code is required");
         }
 
-        dto.CheckinReservationDTO data =
-                new dto.CheckinReservationDTO(confirmationCode.trim());
-
-        RequestDTO request =
-                new RequestDTO(Commands.CHECKIN_RESERVATION, data);
-
+        dto.CheckinReservationDTO data = new dto.CheckinReservationDTO(confirmationCode.trim());
+        RequestDTO request = new RequestDTO(Commands.CHECKIN_RESERVATION, data);
         client.sendToServer(request);
     }
 
-	public void cancelWaiting(String confirmationCode) throws IOException {
-		WaitingCodeDTO data = new WaitingCodeDTO(confirmationCode);
-		RequestDTO req = new RequestDTO(Commands.CANCEL_WAITING, data);
-		client.sendToServer(req);
-	}
+    public void cancelWaiting(String confirmationCode) throws IOException {
+        WaitingCodeDTO data = new WaitingCodeDTO(confirmationCode);
+        RequestDTO req = new RequestDTO(Commands.CANCEL_WAITING, data);
+        client.sendToServer(req);
+    }
 
-	public void confirmWaitingArrival(String confirmationCode) throws IOException {
-		WaitingCodeDTO data = new WaitingCodeDTO(confirmationCode);
-		RequestDTO req = new RequestDTO(Commands.CONFIRM_WAITING_ARRIVAL, data);
-		client.sendToServer(req);
-	}
+    public void confirmWaitingArrival(String confirmationCode) throws IOException {
+        WaitingCodeDTO data = new WaitingCodeDTO(confirmationCode);
+        RequestDTO req = new RequestDTO(Commands.CONFIRM_WAITING_ARRIVAL, data);
+        client.sendToServer(req);
+    }
 
-	public void getAllSubscribers() throws IOException {
-		RequestDTO request = new RequestDTO(Commands.GET_ALL_SUBSCRIBERS, null);
-		client.sendToServer(request);
-	}
-
-	public void getAllReservations() throws IOException {
-		RequestDTO request = new RequestDTO(Commands.GET_ALL_RESERVATIONS, null);
-		client.sendToServer(request);
-	}
-	
-	public void updateSpecialOpeningHours(LocalDate date, java.sql.Time openTime, java.sql.Time closeTime, boolean isClosed) throws IOException {
-        if (date == null) {
-            throw new IllegalArgumentException("Date must be provided for special opening hours.");
-        }
-
-        // יצירת ה-DTO החדש עם הנתונים מהמסך
-        dto.SpecialOpeningHoursDTO data = new dto.SpecialOpeningHoursDTO(date, openTime, closeTime, isClosed);
-        
-        // עטיפה בתוך RequestDTO עם הפקודה שהגדרנו ב-Common
-        RequestDTO request = new RequestDTO(protocol.Commands.UPDATE_SPECIAL_OPENING_HOURS, data);
-        
-        // שליחה לשרת דרך ה-ChatClient
+    public void getAllSubscribers() throws IOException {
+        RequestDTO request = new RequestDTO(Commands.GET_ALL_SUBSCRIBERS, null);
         client.sendToServer(request);
     }
-	
-	public void getWaitingList() throws IOException {
-	    // שליחת בקשה לשרת לקבלת כל רשימת ההמתנה עבור המנהל
-	    RequestDTO request = new RequestDTO(Commands.GET_WAITING_LIST, null);
-	    client.sendToServer(request);
-	}
 
-	public void getAvailableTimesForDate(LocalDate date, int guests) throws IOException {
-	    if (date == null) throw new IllegalArgumentException("Date is required");
-	    if (guests <= 0) guests = 1;
+    public void getAllReservations() throws IOException {
+        RequestDTO request = new RequestDTO(Commands.GET_ALL_RESERVATIONS, null);
+        client.sendToServer(request);
+    }
 
-	    dto.GetAvailableTimesDTO data = new dto.GetAvailableTimesDTO(date, guests);
-	    RequestDTO request = new RequestDTO(Commands.GET_AVAILABLE_TIMES_FOR_DATE, data);
-	    client.sendToServer(request);
-	}
+    public void getWaitingList() throws IOException {
+        RequestDTO request = new RequestDTO(Commands.GET_WAITING_LIST, null);
+        client.sendToServer(request);
+    }
 
-	public void getReceiptByCode(String confirmationCode) throws IOException {
-	    if (confirmationCode == null || confirmationCode.isBlank())
-	        throw new IllegalArgumentException("Confirmation code is required");
+    public void getAvailableTimesForDate(LocalDate date, int guests) throws IOException {
+        if (date == null) throw new IllegalArgumentException("Date is required");
+        if (guests <= 0) guests = 1;
 
-	    dto.GetReceiptByCodeDTO data = new dto.GetReceiptByCodeDTO(confirmationCode.trim());
-	    RequestDTO request = new RequestDTO(Commands.GET_RECEIPT_BY_CODE, data);
-	    client.sendToServer(request);
-	}
+        dto.GetAvailableTimesDTO data = new dto.GetAvailableTimesDTO(date, guests);
+        RequestDTO request = new RequestDTO(Commands.GET_AVAILABLE_TIMES_FOR_DATE, data);
+        client.sendToServer(request);
+    }
 
-	public void payReceipt(dto.PayReceiptDTO data) throws IOException {
-	    if (data == null) throw new IllegalArgumentException("Payment data is required");
-	    RequestDTO request = new RequestDTO(Commands.PAY_RECEIPT, data);
-	    client.sendToServer(request);
-	}
+    public void getReceiptByCode(String confirmationCode) throws IOException {
+        if (confirmationCode == null || confirmationCode.isBlank())
+            throw new IllegalArgumentException("Confirmation code is required");
+
+        dto.GetReceiptByCodeDTO data = new dto.GetReceiptByCodeDTO(confirmationCode.trim());
+        RequestDTO request = new RequestDTO(Commands.GET_RECEIPT_BY_CODE, data);
+        client.sendToServer(request);
+    }
+
+    public void payReceipt(dto.PayReceiptDTO data) throws IOException {
+        if (data == null) throw new IllegalArgumentException("Payment data is required");
+        RequestDTO request = new RequestDTO(Commands.PAY_RECEIPT, data);
+        client.sendToServer(request);
+    }
+    
+
+    public void getCurrentDiners() throws IOException {
+        System.out.println("Sending GET_CURRENT_DINERS...");
+        RequestDTO request = new RequestDTO(Commands.GET_CURRENT_DINERS, null);
+        client.sendToServer(request);
+        
+    }
+    
+    
+
+    public void findUserById(int userId) throws IOException {
+        FindUserByIdDTO data = new FindUserByIdDTO(userId);
+        RequestDTO request = new RequestDTO(Commands.FIND_USER_BY_ID, data);
+        client.sendToServer(request);
+    }
+
+    public void createGuestByPhone(String phone) throws IOException {
+        // reuse existing DTO
+        GuestLoginDTO data = new GuestLoginDTO(phone, null);
+        RequestDTO request = new RequestDTO(Commands.CREATE_GUEST_BY_PHONE, data);
+        client.sendToServer(request);
+    }
+    
+    public void getMyActiveReservations(int userId) throws IOException {
+        dto.GetMyActiveReservationsDTO data = new dto.GetMyActiveReservationsDTO(userId);
+        RequestDTO request = new RequestDTO(Commands.GET_MY_ACTIVE_RESERVATIONS, data);
+        client.sendToServer(request);
+    }
+
+    public void getMyActiveWaitings(int userId) throws IOException {
+        dto.GetMyActiveWaitingsDTO data = new dto.GetMyActiveWaitingsDTO(userId);
+        RequestDTO request = new RequestDTO(Commands.GET_MY_ACTIVE_WAITINGS, data);
+        client.sendToServer(request);
+    }
+
+
+
+
 
 
 }

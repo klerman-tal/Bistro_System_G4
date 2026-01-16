@@ -1,8 +1,10 @@
 package logicControllers;
 
 import dbControllers.Restaurant_DB_Controller;
+import dbControllers.SpecialOpeningHours_DB_Controller;
 import entities.OpeningHouers;
 import entities.Restaurant;
+import entities.SpecialOpeningHours;
 import entities.Table;
 
 import java.sql.SQLException;
@@ -14,17 +16,23 @@ public class RestaurantController {
 
     private final Restaurant_DB_Controller db;
     private final Restaurant restaurant;
+    private ReservationController reservationController;
 
-    /**
-     * Constructor: gets DB controller and keeps Restaurant singleton reference (cache).
-     */
+    // ✅ NEW
+    private SpecialOpeningHours_DB_Controller specialDB;
+
     public RestaurantController(Restaurant_DB_Controller db) {
         this.db = db;
         this.restaurant = Restaurant.getInstance();
     }
 
+    // ✅ call this from server after constructing controllers
+    public void setSpecialOpeningHoursDB(SpecialOpeningHours_DB_Controller specialDB) {
+        this.specialDB = specialDB;
+    }
+
     // =========================
-    // TABLES (cache + DB)
+    // TABLES
     // =========================
 
     public void loadTablesFromDb() throws SQLException {
@@ -34,7 +42,6 @@ public class RestaurantController {
     public void saveOrUpdateTable(Table t) throws SQLException {
         if (t == null) return;
 
-        // Ensure cache list exists
         if (restaurant.getTables() == null) {
             restaurant.setTables(new ArrayList<>());
         }
@@ -80,7 +87,7 @@ public class RestaurantController {
     }
 
     // =========================
-    // OPENING HOURS (cache + DB)
+    // OPENING HOURS
     // =========================
 
     public void loadOpeningHoursFromDb() throws SQLException {
@@ -93,20 +100,16 @@ public class RestaurantController {
         loadOpeningHoursFromDb();
     }
 
-    /**
-     * ✅ NEW: Returns opening hours list for the client.
-     * Ensures cache is loaded from DB first.
-     */
     public ArrayList<OpeningHouers> getOpeningHours() throws SQLException {
         loadOpeningHoursFromDb();
 
         ArrayList<OpeningHouers> list = restaurant.getOpeningHours();
         if (list == null) return new ArrayList<>();
-        return new ArrayList<>(list); // return copy (safe)
+        return new ArrayList<>(list);
     }
 
     private OpeningHouers findOpeningHoursForDate(LocalDate date) {
-        String fullEn = date.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH); // "Sunday"
+        String fullEn = date.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
 
         if (restaurant.getOpeningHours() == null) return null;
 
@@ -119,8 +122,46 @@ public class RestaurantController {
         return null;
     }
 
+    // ✅ NEW: effective opening hours = special override if exists
+    public OpeningHouers getEffectiveOpeningHoursForDate(LocalDate date) {
+
+        if (date == null) return null;
+
+        // 1️⃣ Special override
+        if (specialDB != null) {
+            try {
+                SpecialOpeningHours sp = specialDB.getSpecialHoursByDate(date);
+                if (sp != null) {
+                    OpeningHouers oh = new OpeningHouers();
+                    oh.setDayOfWeek(
+                            date.getDayOfWeek()
+                                .getDisplayName(TextStyle.FULL, Locale.ENGLISH)
+                    );
+
+                    if (sp.isClosed()) {
+                        oh.setOpenTime(null);
+                        oh.setCloseTime(null);
+                    } else {
+                        oh.setOpenTime(
+                                sp.getOpenTime() == null ? null : sp.getOpenTime().toString()
+                        );
+                        oh.setCloseTime(
+                                sp.getCloseTime() == null ? null : sp.getCloseTime().toString()
+                        );
+                    }
+                    return oh;
+                }
+            } catch (Exception e) {
+                // safe fallback
+            }
+        }
+
+        // 2️⃣ Weekly fallback
+        return findOpeningHoursForDate(date);
+    }
+
     // =========================
-    // AVAILABILITY GRID (DB is truth)
+    // AVAILABILITY GRID
     // =========================
 
     public void initAvailabilityGridNext30Days() throws Exception {
@@ -133,7 +174,33 @@ public class RestaurantController {
         db.deletePastSlots();
 
         LocalDate start = LocalDate.now();
-        db.initGridForNextDays(start, 30, this::findOpeningHoursForDate);
+        db.initGridForNextDays(start, 30, this::getEffectiveOpeningHoursForDate);
+    }
+
+    // ✅ NEW: rebuild grid slots for one specific date based on effective hours
+    public void syncGridForSpecialDate(LocalDate date) throws Exception {
+        if (date == null) return;
+
+        List<Table> tables = getSortedTablesEnsured();
+        db.ensureAvailabilityGridSchema(tables);
+
+        // delete all slots for that date, then re-init based on effective hours
+        db.deleteGridSlotsForDate(date);
+
+        OpeningHouers oh = getEffectiveOpeningHoursForDate(date);
+        if (oh == null) return;
+
+        String openStr = safeHHMM(oh.getOpenTime());
+        String closeStr = safeHHMM(oh.getCloseTime());
+        if (openStr.isBlank() || closeStr.isBlank()) {
+            // closed -> leave day empty
+            return;
+        }
+
+        LocalTime open = LocalTime.parse(openStr);
+        LocalTime close = LocalTime.parse(closeStr);
+
+        db.initGridForDate(date, open, close);
     }
 
     public String getGridFromDbPayload(LocalDate date) throws Exception {
@@ -225,10 +292,6 @@ public class RestaurantController {
         return tables;
     }
 
-    /**
-     * Checks if a specific table is free for 2 hours starting from 'start'
-     * (4 slots of 30 minutes) WITHOUT reserving anything.
-     */
     public boolean isTableFreeForTwoHours(LocalDateTime start, int tableNumber) throws Exception {
         if (start == null) return false;
 
@@ -248,26 +311,71 @@ public class RestaurantController {
         }
         return new ArrayList<>(restaurant.getTables());
     }
+
+    public LocalDateTime roundUpToNextHalfHour(LocalDateTime dt) {
+        if (dt == null) return null;
+
+        int minute = dt.getMinute();
+        int mod = minute % 30;
+
+        if (mod == 0 && dt.getSecond() == 0 && dt.getNano() == 0) {
+            return dt;
+        }
+
+        int add = 30 - mod;
+        LocalDateTime rounded = dt.plusMinutes(add);
+        return rounded.withSecond(0).withNano(0);
+    }
+
+    private String safeHHMM(String t) {
+        if (t == null) return "";
+        t = t.trim();
+        if (t.matches("^\\d{2}:\\d{2}:\\d{2}$")) return t.substring(0, 5);
+        if (t.matches("^\\d{2}:\\d{2}$")) return t;
+        return t.length() >= 5 ? t.substring(0, 5) : "";
+    }
     
- // Rounds up a datetime to the next 30-min slot (00 or 30).
- // Examples: 10:02 -> 10:30, 10:30 -> 10:30, 10:31 -> 11:00
- public LocalDateTime roundUpToNextHalfHour(LocalDateTime dt) {
-     if (dt == null) return null;
+ // ===== ADD THESE METHODS INSIDE RestaurantController CLASS =====
 
-     int minute = dt.getMinute();
-     int mod = minute % 30;
+    public OpeningHouers getEffectiveOpeningHoursForDatePublic(LocalDate date) {
+        return getEffectiveOpeningHoursForDate(date);
+    }
 
-     // already aligned (00 or 30)
-     if (mod == 0 && dt.getSecond() == 0 && dt.getNano() == 0) {
-         return dt;
-     }
+    /**
+     * Returns all dates in the next 30 days (including today) that match the given English weekday name.
+     * Example input: "Thursday"
+     */
+    public List<LocalDate> getDatesForWeekdayNext30Days(String dayOfWeekEn) {
 
-     // move to next boundary
-     int add = 30 - mod;
-     LocalDateTime rounded = dt.plusMinutes(add);
+        List<LocalDate> out = new ArrayList<>();
+        if (dayOfWeekEn == null || dayOfWeekEn.isBlank()) return out;
 
-     // zero seconds/nanos
-     return rounded.withSecond(0).withNano(0);
- }
+        DayOfWeek target;
+        try {
+            target = DayOfWeek.valueOf(dayOfWeekEn.trim().toUpperCase(Locale.ROOT));
+        } catch (Exception e) {
+            // If DB stores "Thursday" etc. this should still work with valueOf after upper,
+            // but if someone sends weird text -> return empty safely
+            return out;
+        }
+
+        LocalDate start = LocalDate.now();
+        LocalDate end = start.plusDays(30);
+
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            if (d.getDayOfWeek() == target) out.add(d);
+        }
+
+        return out;
+    }
+
+    /** Normalizes time string to HH:MM (supports HH:MM:SS too). */
+    public String toHHMM(String t) {
+        if (t == null) return "";
+        t = t.trim();
+        if (t.matches("^\\d{2}:\\d{2}:\\d{2}$")) return t.substring(0, 5);
+        if (t.matches("^\\d{2}:\\d{2}$")) return t;
+        return t.length() >= 5 ? t.substring(0, 5) : "";
+    }
 
 }

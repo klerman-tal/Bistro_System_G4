@@ -5,7 +5,11 @@ public enum Commands {
     CREATE_RESERVATION,
     GET_RESERVATION_HISTORY,
     CANCEL_RESERVATION,
+    GET_CURRENT_DINERS,
+
+    // ✅ Special Opening Hours
     UPDATE_SPECIAL_OPENING_HOURS,
+    GET_SPECIAL_OPENING_HOURS,
 
     CHECKIN_RESERVATION,
 
@@ -13,8 +17,12 @@ public enum Commands {
     PAY_RECEIPT,
     GET_RECEIPT_BY_CODE,
 
-    // ✅ NEW: fetch available times for a date (+ guests)
+    // fetch available times for a date (+ guests)
     GET_AVAILABLE_TIMES_FOR_DATE,
+
+    // ✅ NEW: subscriber mini table
+    GET_MY_ACTIVE_RESERVATIONS,
+    GET_MY_ACTIVE_WAITINGS,
 
     // Waiting List
     JOIN_WAITING_LIST,
@@ -44,4 +52,6 @@ public enum Commands {
     DELETE_SUBSCRIBER,
     UPDATE_SUBSCRIBER,
     GET_WAITING_LIST,
+    FIND_USER_BY_ID,
+    CREATE_GUEST_BY_PHONE
 }

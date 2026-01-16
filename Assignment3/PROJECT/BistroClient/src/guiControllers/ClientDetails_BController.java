@@ -196,7 +196,11 @@ public class ClientDetails_BController implements ClientResponseHandler {
             // ✅ להעביר session לתפריט
             Menu_BController menu = loader.getController();
             if (menu != null) {
-                menu.setClient(subscriber, chatClient);
+            	menu.setClient(
+            		    application.ClientSession.getLoggedInUser(),
+            		    chatClient
+            		);
+
             }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();

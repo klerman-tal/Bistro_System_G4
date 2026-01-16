@@ -218,7 +218,11 @@ public class TimeReportController implements ClientResponseHandler {
 
             ReportsMenuController controller =
                     loader.getController();
-            controller.setClient(user, chatClient);
+            controller.setClient(
+            	    application.ClientSession.getLoggedInUser(),
+            	    chatClient
+            	);
+
 
             Stage stage =
                     (Stage) rootPane.getScene().getWindow();

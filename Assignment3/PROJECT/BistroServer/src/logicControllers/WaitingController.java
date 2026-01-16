@@ -1,6 +1,8 @@
 package logicControllers;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 
 import application.RestaurantServer;
@@ -9,15 +11,16 @@ import dbControllers.Waiting_DB_Controller;
 import entities.Enums;
 import entities.Enums.UserRole;
 import entities.Enums.WaitingStatus;
+import entities.Notification;
+import entities.OpeningHouers;
 import entities.Table;
 import entities.User;
 import entities.Waiting;
-import entities.Notification;
 
 public class WaitingController {
 
     private final Waiting_DB_Controller db;
-    private final Notification_DB_Controller notificationDB; // ✅ NEW
+    private final Notification_DB_Controller notificationDB;
     private final RestaurantServer server;
 
     private final RestaurantController restaurantController;
@@ -37,7 +40,57 @@ public class WaitingController {
         this.reservationController = reservationController;
     }
 
+    // ✅ NEW: exception to pass accurate reason to handler
+    public static class JoinWaitingBlockedException extends Exception {
+        private static final long serialVersionUID = 1L;
+
+        public JoinWaitingBlockedException(String message) {
+            super(message);
+        }
+    }
+
+    // ✅ NEW: Handler will call this to get accurate message
+    public Waiting joinWaitingListNowOrThrow(int guestsNumber, User user) throws JoinWaitingBlockedException {
+        Waiting w = joinWaitingListNow(guestsNumber, user);
+        if (w == null) {
+            throw new JoinWaitingBlockedException("Restaurant is closed. Cannot join waiting list.");
+        }
+        return w;
+    }
+
     public Waiting joinWaitingListNow(int guestsNumber, User user) {
+
+        // ===== Block join if restaurant is closed =====
+        try {
+            LocalDate today = LocalDate.now();
+
+            OpeningHouers oh =
+                    restaurantController.getEffectiveOpeningHoursForDate(today);
+
+            // If closed / missing hours -> block
+            if (oh == null || oh.getOpenTime() == null || oh.getCloseTime() == null) {
+                server.log("JOIN_WAITING blocked: restaurant closed (no opening hours).");
+                return null;
+            }
+
+            // times like "HH:mm" or "HH:mm:ss" -> take first 5 chars
+            LocalTime open = LocalTime.parse(oh.getOpenTime().substring(0, 5));
+            LocalTime close = LocalTime.parse(oh.getCloseTime().substring(0, 5));
+            LocalTime now = LocalTime.now();
+
+            // Outside business hours -> block
+            if (now.isBefore(open) || now.isAfter(close)) {
+                server.log("JOIN_WAITING blocked: outside business hours. now=" + now + ", open=" + open + ", close=" + close);
+                return null;
+            }
+
+        } catch (Exception e) {
+            // Safest: if we cannot determine hours -> block
+            server.log("JOIN_WAITING blocked: failed checking opening hours. " + e.getMessage());
+            return null;
+        }
+
+        // ===== Existing validation =====
         if (user == null || guestsNumber <= 0) return null;
 
         Waiting w = new Waiting();
@@ -94,18 +147,15 @@ public class WaitingController {
         w.setWaitingStatus(WaitingStatus.Waiting);
         return w;
     }
-    
+
     public ArrayList<Waiting> getActiveWaitingList() {
-        try { 
+        try {
             return db.getAllWaitings();
         } catch (Exception e) {
             server.log("ERROR: Failed to fetch waiting list: " + e.getMessage());
             return new ArrayList<>();
         }
     }
-    
-    
-    
 
     public boolean leaveWaitingList(String confirmationCode) {
         if (confirmationCode == null || confirmationCode.isBlank()) return false;
@@ -203,6 +253,7 @@ public class WaitingController {
     }
 
 
+
     /**
      * handleTableFreed (scenario 2B):
      * - assigns table to next waiting (FIFO)
@@ -214,6 +265,7 @@ public class WaitingController {
      * - Popup (safe, no code): "A table is now available. Please confirm your arrival within 15 minutes."
      * - SMS/Email (includes code): "A table is now available. Your waiting code is: <CODE>. Please confirm your arrival within 15 minutes."
      */
+
     public boolean handleTableFreed(Table freedTable) {
         if (freedTable == null) return false;
 
@@ -231,7 +283,6 @@ public class WaitingController {
 
             if (!updated) return false;
 
-            // ✅ schedule SMS + EMAIL notifications (immediate)
             if (notificationDB != null) {
                 String smsEmailBody =
                         "A table is now available. Your waiting code is: " + next.getConfirmationCode() +
@@ -272,6 +323,65 @@ public class WaitingController {
         } catch (Exception e) {
             server.log("ERROR: getWaitingByCode failed. Code=" + confirmationCode + ", Msg=" + e.getMessage());
             return null;
+        }
+    }
+
+    public ArrayList<Waiting> getActiveWaitingsForUser(int userId) {
+        try {
+            return db.getActiveWaitingsByUser(userId);
+        } catch (Exception e) {
+            server.log("ERROR: getActiveWaitingsForUser failed. UserId=" + userId + ", Msg=" + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    // ✅ End of day: cancel by joined_at date + send SMS/EMAIL
+    public int cancelAllWaitingsEndOfDay(LocalDate date) {
+        if (date == null) return 0;
+
+        try {
+            // 1) take snapshot of who is going to be cancelled (for notifications)
+            ArrayList<Waiting> toCancel = db.getActiveWaitingsByDate(date);
+
+            // 2) cancel in DB (no delete)
+            int count = db.cancelAllWaitingsByDate(date);
+
+            // 3) notify each user
+            if (count > 0 && notificationDB != null && toCancel != null) {
+                LocalDateTime now = LocalDateTime.now();
+
+                for (Waiting w : toCancel) {
+                    if (w == null) continue;
+
+                    String msg = "The restaurant is now closed. Your waiting request was cancelled.";
+
+                    notificationDB.addNotification(new Notification(
+                            w.getCreatedByUserId(),
+                            Enums.Channel.SMS,
+                            Enums.NotificationType.TABLE_AVAILABLE,
+                            msg,
+                            now
+                    ));
+
+                    notificationDB.addNotification(new Notification(
+                            w.getCreatedByUserId(),
+                            Enums.Channel.EMAIL,
+                            Enums.NotificationType.TABLE_AVAILABLE,
+                            msg,
+                            now
+                    ));
+                }
+            }
+
+            if (count > 0) {
+                server.log("🌙 End of day: cancelled waitings + notifications sent. Date=" + date + ", Count=" + count);
+            }
+
+            return count;
+
+        } catch (Exception e) {
+            server.log("❌ cancelAllWaitingsEndOfDay failed. Date=" + date + ", Msg=" + e.getMessage());
+            return 0;
         }
     }
 }

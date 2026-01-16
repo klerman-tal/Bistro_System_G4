@@ -22,12 +22,14 @@ public class Waiting implements Serializable {
     private Integer tableNumber;
     private LocalDateTime tableFreedTime;
 
+    // ✅ NEW: when the user joined the waiting list
+    private LocalDateTime joinedAt;
+
     // =========================
     // Confirmation Code
     // =========================
 
     public void generateAndSetConfirmationCode() {
-        // 6-digit numeric code (same style as Reservation)
         Random rnd = new Random();
         this.confirmationCode = String.valueOf(100000 + rnd.nextInt(900000));
     }
@@ -98,5 +100,14 @@ public class Waiting implements Serializable {
 
     public void setWaitingId(int waitingId) {
         this.waitingId = waitingId;
+    }
+
+    // ✅ NEW: joinedAt
+    public LocalDateTime getJoinedAt() {
+        return joinedAt;
+    }
+
+    public void setJoinedAt(LocalDateTime joinedAt) {
+        this.joinedAt = joinedAt;
     }
 }

@@ -1,6 +1,7 @@
 package dbControllers;
 
 import java.sql.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -761,6 +762,26 @@ public class Reservation_DB_Controller {
         }
         return list;
     }
+    
+    
+    /**
+     * Returns reservations of diners currently in the restaurant:
+     * checkin IS NOT NULL AND checkout IS NULL
+     */
+    public ArrayList<Reservation> getCurrentDiners() throws SQLException {
+        // הסרנו את התנאי של status = 'Active' כי הוא עלול להטעות
+        String sql = """
+            SELECT *
+            FROM reservations
+            WHERE checkin IS NOT NULL
+              AND checkout IS NULL
+            ORDER BY checkin;
+            """;
+
+        return executeReservationListQuery(sql);
+    }
+
+    
 
     public boolean setBillDueAt(int reservationId, LocalDateTime billAt) throws SQLException {
         String sql = """
@@ -827,5 +848,47 @@ public class Reservation_DB_Controller {
      return list;
  }
 
+    public ArrayList<Reservation> getActiveReservationsByDate(LocalDate date) throws SQLException {
+        ArrayList<Reservation> list = new ArrayList<>();
 
+        String sql = """
+            SELECT * FROM reservations
+            WHERE reservation_status = 'Active'
+              AND DATE(reservation_datetime) = ?
+        """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDate(1, Date.valueOf(date));
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRowToReservation(rs));
+                }
+            }
+        }
+
+        return list;
+    }
+    
+    public ArrayList<Reservation> getActiveReservationsByUser(int userId) throws SQLException {
+        String sql = """
+            SELECT *
+            FROM reservations
+            WHERE created_by = ?
+              AND is_active = 1
+              AND reservation_status = 'Active'
+            ORDER BY reservation_datetime;
+            """;
+
+        ArrayList<Reservation> list = new ArrayList<>();
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRowToReservation(rs));
+                }
+            }
+        }
+        return list;
+    }
 }
