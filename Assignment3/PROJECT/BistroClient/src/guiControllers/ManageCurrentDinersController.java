@@ -149,13 +149,15 @@ public class ManageCurrentDinersController implements ClientResponseHandler {
 
             Parent root = loader.load();
 
-            RestaurantManagement_BController controller =
-                    loader.getController();
+            RestaurantManagement_BController controller = loader.getController();
 
-            // חשוב: להעביר user + chatClient חזרה
+            // העברת הנתונים חזרה
             controller.setClient(user, chatClient);
 
-            rootPane.setCenter(root);
+            // תיקון: במקום להחליף רק את ה-Center, מחליפים את כל הסצנה בחלון
+            javafx.stage.Stage stage = (javafx.stage.Stage) rootPane.getScene().getWindow();
+            stage.setScene(new javafx.scene.Scene(root));
+            stage.show();
 
         } catch (IOException e) {
             e.printStackTrace();
