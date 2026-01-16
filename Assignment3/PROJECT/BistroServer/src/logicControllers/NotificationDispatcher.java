@@ -78,7 +78,7 @@ public class NotificationDispatcher {
                 return "Reminder: your reservation is in 2 hours.";
 
             case TABLE_AVAILABLE:
-                return "A table is now available. Please confirm your arrival.";
+                return "A table is now available. Please arrive within 15 minutes to avoid cancellation.";
 
             case BILL_AFTER_2H_FROM_CHECKIN:
                 return "Your bill details have been sent via SMS.";
