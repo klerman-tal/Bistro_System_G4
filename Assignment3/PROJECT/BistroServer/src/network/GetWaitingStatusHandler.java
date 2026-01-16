@@ -7,14 +7,34 @@ import entities.Waiting;
 import logicControllers.WaitingController;
 import ocsf.server.ConnectionToClient;
 
+/**
+ * Server-side request handler responsible for retrieving
+ * the current status of a waiting list entry.
+ * <p>
+ * This handler receives a waiting confirmation code,
+ * validates it, retrieves the corresponding waiting entry,
+ * and returns its current status to the client.
+ * </p>
+ */
 public class GetWaitingStatusHandler implements RequestHandler {
 
     private final WaitingController waitingController;
 
+    /**
+     * Constructs a handler with the required waiting controller dependency.
+     */
     public GetWaitingStatusHandler(WaitingController waitingController) {
         this.waitingController = waitingController;
     }
 
+    /**
+     * Handles a request to retrieve the status of a waiting entry.
+     * <p>
+     * The method validates the confirmation code, fetches the waiting
+     * record from the waiting controller, and returns the current
+     * waiting state to the client.
+     * </p>
+     */
     @Override
     public void handle(RequestDTO request, ConnectionToClient client) throws Exception {
 

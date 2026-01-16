@@ -10,14 +10,36 @@ import entities.Waiting;
 import logicControllers.WaitingController;
 import ocsf.server.ConnectionToClient;
 
+/**
+ * Server-side request handler responsible for joining
+ * the restaurant waiting list.
+ * <p>
+ * This handler processes waiting list join requests, validates
+ * the input data, constructs a minimal user context, and delegates
+ * the join logic to the {@link WaitingController}. The response
+ * indicates whether the user was seated immediately or added
+ * to the waiting list.
+ * </p>
+ */
 public class JoinWaitingListHandler implements RequestHandler {
 
     private final WaitingController waitingController;
 
+    /**
+     * Constructs a handler with the required waiting controller dependency.
+     */
     public JoinWaitingListHandler(WaitingController waitingController) {
         this.waitingController = waitingController;
     }
 
+    /**
+     * Handles a request to join the waiting list.
+     * <p>
+     * The method validates the number of guests, builds a minimal
+     * user object from the request data, attempts to join the waiting
+     * list, and returns the resulting waiting status to the client.
+     * </p>
+     */
     @Override
     public void handle(RequestDTO request, ConnectionToClient client) throws Exception {
 
@@ -27,7 +49,6 @@ public class JoinWaitingListHandler implements RequestHandler {
             return;
         }
 
-        // build minimal User from dto
         User u = new User();
         u.setUserId(dto.getUserId());
         u.setUserRole(dto.getRole() == null ? UserRole.RandomClient : dto.getRole());
@@ -35,7 +56,6 @@ public class JoinWaitingListHandler implements RequestHandler {
         Waiting w;
 
         try {
-            // Accurate reason (restaurant closed) comes from controller exception
             w = waitingController.joinWaitingListNowOrThrow(dto.getGuests(), u);
 
         } catch (WaitingController.JoinWaitingBlockedException e) {
@@ -43,7 +63,6 @@ public class JoinWaitingListHandler implements RequestHandler {
             return;
 
         } catch (Exception e) {
-            // Any other failure (DB/network/etc.)
             client.sendToClient(new ResponseDTO(false, "Failed to join waiting list", null));
             return;
         }
