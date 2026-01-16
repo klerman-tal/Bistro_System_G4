@@ -140,6 +140,8 @@ public class RestaurantServer extends AbstractServer {
             restaurantController = new RestaurantController(restaurantDB);
             userController = new UserController(userDB);
             receiptController = new ReceiptController(receiptDB);
+            restaurantController.setReservationDB(reservationDB);
+
 
             reservationController =
                     new ReservationController(
@@ -149,6 +151,7 @@ public class RestaurantServer extends AbstractServer {
                             restaurantController,
                             receiptController
                     );
+            restaurantController.setReservationController(reservationController);
 
             waitingController =
                     new WaitingController(
@@ -392,11 +395,19 @@ public class RestaurantServer extends AbstractServer {
     @Override
     protected synchronized void clientDisconnected(ConnectionToClient client) {
         touchActivity();
+
+        String ip =
+                client.getInetAddress() != null
+                        ? client.getInetAddress().getHostAddress()
+                        : "UNKNOWN";
+
         if (onlineUsersRegistry != null) {
             onlineUsersRegistry.removeClient(client);
         }
-        log("🔌 Client disconnected.");
+
+        log("🔌 Client disconnected (Logout or window closed) | IP: " + ip);
     }
+
 
     // ================= Shutdown =================
     @Override
