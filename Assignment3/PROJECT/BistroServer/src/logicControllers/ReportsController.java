@@ -65,7 +65,7 @@ public class ReportsController {
 
 			if (delayMinutes < 3) {
 				onTime++;
-			} else if (delayMinutes <= 15) {
+			} else if (delayMinutes <= 10) {
 				minorDelay++;
 			} else {
 				significantDelay++;

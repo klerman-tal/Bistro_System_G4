@@ -909,6 +909,47 @@ public class ReservationController {
         fillAvailableTimesForDay(date, guests, fromTime, out);
         return out;
     }
+    
+ // =====================================================
+ // AUTO-CANCEL: reservations without check-in (15 min)
+ // =====================================================
+ public int cancelReservationsWithoutCheckinAfterGracePeriod() {
+
+     int cancelledCount = 0;
+
+     try {
+         LocalDateTime now = LocalDateTime.now();
+
+         // מביא רק הזמנות שעברו 15 דק' ממועד ההזמנה
+         // ועדיין אין להן check-in
+         ArrayList<String> expiredCodes =
+                 db.getReservationsWithoutCheckinExpired(now.minusMinutes(15));
+
+         for (String code : expiredCodes) {
+             if (code == null) continue;
+
+             boolean cancelled = CancelReservation(code);
+             if (cancelled) {
+                 cancelledCount++;
+
+                 // ✅ לוג פשוט וברור – בדיוק כמו שביקשת
+                 server.log(
+                     "Reservation auto-cancelled (no check-in after 15 min): " + code
+                 );
+             }
+         }
+
+         return cancelledCount;
+
+     } catch (Exception e) {
+         server.log(
+             "ERROR: cancelReservationsWithoutCheckinAfterGracePeriod failed. " + e.getMessage()
+         );
+         return 0;
+     }
+ }
+
+
 
     public int cancelReservationsDueToOpeningHoursChange(
             LocalDate date,

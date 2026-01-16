@@ -228,26 +228,34 @@ public class WaitingController {
         }
     }
 
-    public int cancelExpiredWaitingsAndReservations() {
+    public int cancelExpiredWaitings() {
         try {
             LocalDateTime now = LocalDateTime.now();
 
             ArrayList<String> expiredCodes = db.getExpiredWaitingCodes(now);
             int count = db.cancelExpiredWaitings(now);
 
-            for (String code : expiredCodes) {
-                if (code == null) continue;
-                try { reservationController.CancelReservation(code); } catch (Exception ignore) {}
-            }
-
-            if (count > 0) server.log("Cancelled expired waitings. Count=" + count);
             return count;
 
         } catch (Exception e) {
-            server.log("ERROR: cancelExpiredWaitingsAndReservations failed. Msg=" + e.getMessage());
+            server.log("ERROR: cancelExpiredWaitings failed. Msg=" + e.getMessage());
             return 0;
         }
     }
+
+
+
+    /**
+     * handleTableFreed (scenario 2B):
+     * - assigns table to next waiting (FIFO)
+     * - updates waiting row with freed time + table number
+     * - schedules notifications (EMAIL + SMS) immediately (scheduled_for = NOW)
+     * - DOES NOT create reservation here
+     *
+     * English texts:
+     * - Popup (safe, no code): "A table is now available. Please confirm your arrival within 15 minutes."
+     * - SMS/Email (includes code): "A table is now available. Your waiting code is: <CODE>. Please confirm your arrival within 15 minutes."
+     */
 
     public boolean handleTableFreed(Table freedTable) {
         if (freedTable == null) return false;
