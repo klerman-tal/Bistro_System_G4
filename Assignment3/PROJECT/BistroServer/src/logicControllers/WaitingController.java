@@ -190,14 +190,18 @@ public class WaitingController {
                 try { reservationController.CancelReservation(code); } catch (Exception ignore) {}
             }
 
-            if (count > 0) server.log("Cancelled expired waitings. Count=" + count);
-            return count;
+            // 🔽⬇️⬇️ הוסף כאן ⬇️⬇️🔽
+            int cancelledReservations =
+                    reservationController.cancelReservationsWithoutCheckinAfterGracePeriod();
+
+            return count + cancelledReservations;
 
         } catch (Exception e) {
             server.log("ERROR: cancelExpiredWaitingsAndReservations failed. Msg=" + e.getMessage());
             return 0;
         }
     }
+
 
     /**
      * handleTableFreed (scenario 2B):

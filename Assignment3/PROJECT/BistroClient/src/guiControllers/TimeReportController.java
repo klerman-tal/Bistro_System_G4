@@ -165,8 +165,8 @@ public class TimeReportController implements ClientResponseHandler {
         );
 
         lblOnTime.setText("● On Time (< 3 min): " + onTime + " (" + percent(onTime, total) + ")");
-        lblMinorDelay.setText("● Minor Delay (3–14 min): " + minor + " (" + percent(minor, total) + ")");
-        lblMajorDelay.setText("● Significant Delay (≥ 15 min): " + major + " (" + percent(major, total) + ")");
+        lblMinorDelay.setText("● Minor Delay (3–10 min): " + minor + " (" + percent(minor, total) + ")");
+        lblMajorDelay.setText("● Significant Delay (≥ 10 min): " + major + " (" + percent(major, total) + ")");
     }
 
     private String percent(int value, int total) {

@@ -790,5 +790,42 @@ public class Reservation_DB_Controller {
             return ps.executeUpdate() > 0;
         }
     }
+    
+ // =====================================================
+ // AUTO-CANCEL: reservations without check-in (15 min)
+ // =====================================================
+
+ /**
+  * Returns confirmation codes of ACTIVE reservations
+  * that passed reservation_datetime + 15 minutes
+  * and were never checked-in.
+  */
+ public ArrayList<String> getReservationsWithoutCheckinExpired(LocalDateTime threshold)
+         throws SQLException {
+
+     String sql = """
+         SELECT confirmation_code
+         FROM reservations
+         WHERE is_active = 1
+           AND reservation_status = 'Active'
+           AND checkin IS NULL
+           AND reservation_datetime <= ?
+         """;
+
+     ArrayList<String> list = new ArrayList<>();
+
+     try (PreparedStatement ps = conn.prepareStatement(sql)) {
+         ps.setObject(1, threshold);
+
+         try (ResultSet rs = ps.executeQuery()) {
+             while (rs.next()) {
+                 list.add(rs.getString("confirmation_code"));
+             }
+         }
+     }
+
+     return list;
+ }
+
 
 }
