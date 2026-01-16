@@ -364,6 +364,9 @@ public class RestaurantServer extends AbstractServer {
         	    new GetCurrentDinersHandler(reservationController)); 
 
 
+        router.register(Commands.FIND_USER_BY_ID, new FindUserByIdHandler(userController));
+        router.register(Commands.CREATE_GUEST_BY_PHONE, new CreateGuestByPhoneHandler(userController));
+
 	}
 
 

@@ -7,6 +7,8 @@ import java.time.LocalTime;
 
 import application.ChatClient;
 import dto.CreateReservationDTO;
+import dto.FindUserByIdDTO;
+import dto.GuestLoginDTO;
 import dto.JoinWaitingDTO;
 import dto.RegisterSubscriberDTO;
 import dto.RequestDTO;
@@ -264,6 +266,7 @@ public class ClientAPI {
         client.sendToServer(request);
     }
     
+
     public void getCurrentDiners() throws IOException {
         System.out.println("Sending GET_CURRENT_DINERS...");
         RequestDTO request = new RequestDTO(Commands.GET_CURRENT_DINERS, null);
@@ -272,4 +275,20 @@ public class ClientAPI {
     }
     
     
+
+    public void findUserById(int userId) throws IOException {
+        FindUserByIdDTO data = new FindUserByIdDTO(userId);
+        RequestDTO request = new RequestDTO(Commands.FIND_USER_BY_ID, data);
+        client.sendToServer(request);
+    }
+
+    public void createGuestByPhone(String phone) throws IOException {
+        // reuse existing DTO
+        GuestLoginDTO data = new GuestLoginDTO(phone, null);
+        RequestDTO request = new RequestDTO(Commands.CREATE_GUEST_BY_PHONE, data);
+        client.sendToServer(request);
+    }
+
+
+
 }

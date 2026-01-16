@@ -11,6 +11,8 @@ import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -137,4 +139,28 @@ public class ManageCurrentDinersController implements ClientResponseHandler {
         lblStatus.setVisible(false);
         lblStatus.setManaged(false);
     }
+    
+    @FXML
+    private void onBackClicked() {
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/gui/RestaurantManagement_B.fxml")
+            );
+
+            Parent root = loader.load();
+
+            RestaurantManagement_BController controller =
+                    loader.getController();
+
+            // חשוב: להעביר user + chatClient חזרה
+            controller.setClient(user, chatClient);
+
+            rootPane.setCenter(root);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            showMessage("Failed to go back");
+        }
+    }
+
 }

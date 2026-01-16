@@ -19,7 +19,6 @@
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="guiControllers.ClientDetails_BController">
 
-    <!-- ===== HEADER ===== -->
     <top>
         <HBox fx:id="header" alignment="CENTER_LEFT">
             <padding>
@@ -31,107 +30,64 @@
         </HBox>
     </top>
 
-    <!-- ===== CENTER ===== -->
     <center>
         <VBox alignment="TOP_CENTER" spacing="25">
             <padding>
-                <Insets top="30" right="40" bottom="20" left="40"/>
+                <Insets top="20" right="40" bottom="10" left="40"/>
             </padding>
 
             <children>
-
                 <Label styleClass="section" text="Subscriber Information"/>
 
-                <GridPane hgap="15" vgap="15">
-
+                <GridPane hgap="15" vgap="12" maxWidth="500" alignment="CENTER">
                     <children>
                         <Label text="Subscriber number:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                        <TextField fx:id="txtSubscriberNumber"
-                                   editable="false"
-                                   GridPane.columnIndex="1"
-                                   GridPane.rowIndex="0"/>
+                        <TextField fx:id="txtSubscriberNumber" editable="false" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
 
                         <Label text="Username:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-                        <TextField fx:id="txtUserName"
-                                   editable="false"
-                                   GridPane.columnIndex="1"
-                                   GridPane.rowIndex="1"/>
+                        <TextField fx:id="txtUserName" editable="false" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
 
                         <Label text="First name:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
-                        <TextField fx:id="txtFirstName"
-                                   promptText="Enter first name"
-                                   GridPane.columnIndex="1"
-                                   GridPane.rowIndex="2"/>
+                        <TextField fx:id="txtFirstName" promptText="Enter first name" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
 
                         <Label text="Last name:" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
-                        <TextField fx:id="txtLastName"
-                                   promptText="Enter last name"
-                                   GridPane.columnIndex="1"
-                                   GridPane.rowIndex="3"/>
+                        <TextField fx:id="txtLastName" promptText="Enter last name" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
 
                         <Label text="Phone number:" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
-                        <TextField fx:id="txtPhoneNumber"
-                                   promptText="0501234567"
-                                   GridPane.columnIndex="1"
-                                   GridPane.rowIndex="4"/>
+                        <TextField fx:id="txtPhoneNumber" promptText="0501234567" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
 
                         <Label text="Email:" GridPane.columnIndex="0" GridPane.rowIndex="5"/>
-                        <TextField fx:id="txtEmail"
-                                   promptText="example@mail.com"
-                                   GridPane.columnIndex="1"
-                                   GridPane.rowIndex="5"/>
+                        <TextField fx:id="txtEmail" promptText="example@mail.com" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
                     </children>
-
                     <columnConstraints>
-                        <ColumnConstraints minWidth="150"/>
-                        <ColumnConstraints hgrow="ALWAYS"/>
+                        <ColumnConstraints minWidth="150" halignment="RIGHT"/>
+                        <ColumnConstraints hgrow="ALWAYS" minWidth="250"/>
                     </columnConstraints>
-
-                    <rowConstraints>
-                        <RowConstraints/>
-                        <RowConstraints/>
-                        <RowConstraints/>
-                        <RowConstraints/>
-                        <RowConstraints/>
-                        <RowConstraints/>
-                    </rowConstraints>
-
                 </GridPane>
 
-                <Label fx:id="lblMessage"
-                       visible="false"
-                       managed="false"
-                       styleClass="errorMsg"/>
+                <Label fx:id="lblMessage" visible="false" managed="false" styleClass="errorMsg"/>
 
                 <Label styleClass="section" text="Reservation History"/>
 
-                <!-- ✅ כאן הייתה השגיאה – TableView מתוקן -->
                 <TableView fx:id="tblReservationHistory"
-                           prefHeight="200"
-                           prefWidth="520">
-
+                           prefHeight="350" 
+                           maxWidth="850"
+                           VBox.vgrow="ALWAYS">
                     <columns>
-                        <TableColumn fx:id="colDateTime"
-                                     text="Date &amp; Time"
-                                     prefWidth="180"/>
-                        <TableColumn fx:id="colGuests"
-                                     text="Guests"
-                                     prefWidth="80"/>
-                        <TableColumn fx:id="colCode"
-                                     text="Confirmation Code"
-                                     prefWidth="140"/>
-                        <TableColumn fx:id="colStatus"
-                                     text="Status"
-                                     prefWidth="110"/>
+                        <TableColumn fx:id="colDateTime" text="Date &amp; Time" prefWidth="180"/>
+                        <TableColumn fx:id="colGuests" text="Guests" prefWidth="80"/>
+                        <TableColumn fx:id="colCode" text="Confirmation Code" prefWidth="140"/>
+                        <TableColumn fx:id="colStatus" text="Status" prefWidth="110"/>
                     </columns>
-
+                    <columnResizePolicy>
+                        <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                    </columnResizePolicy>
                 </TableView>
 
             </children>
         </VBox>
     </center>
 
-    <!-- ===== FOOTER ===== -->
     <bottom>
         <HBox alignment="CENTER_RIGHT" spacing="12">
             <padding>
