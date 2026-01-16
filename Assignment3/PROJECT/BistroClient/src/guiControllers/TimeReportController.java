@@ -177,9 +177,9 @@ public class TimeReportController implements ClientResponseHandler {
         int total = onTime + minor + major;
 
         arrivalPieChart.getData().setAll(
+        		new PieChart.Data(percent(onTime, total), onTime),
                 new PieChart.Data(percent(major, total), major),
-                new PieChart.Data(percent(minor, total), minor),
-                new PieChart.Data(percent(onTime, total), onTime)
+                new PieChart.Data(percent(minor, total), minor)
         );
 
         lblOnTime.setText("● On Time (< 3 min): " + onTime + " (" + percent(onTime, total) + ")");
