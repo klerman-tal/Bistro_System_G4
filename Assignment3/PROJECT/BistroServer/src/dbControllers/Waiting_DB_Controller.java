@@ -342,6 +342,28 @@ public class Waiting_DB_Controller {
 	    }
 	    return list;
 	}
+ 
+ public ArrayList<Waiting> getActiveWaitingsByUser(int userId) throws SQLException {
+	    String sql = """
+	        SELECT *
+	        FROM waiting_list
+	        WHERE created_by = ?
+	          AND waiting_status = 'Waiting'
+	        ORDER BY waiting_id DESC;
+	        """;
+
+	    ArrayList<Waiting> list = new ArrayList<>();
+	    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+	        ps.setInt(1, userId);
+	        try (ResultSet rs = ps.executeQuery()) {
+	            while (rs.next()) {
+	                list.add(mapRowToWaiting(rs));
+	            }
+	        }
+	    }
+	    return list;
+	}
+
 
 
 }

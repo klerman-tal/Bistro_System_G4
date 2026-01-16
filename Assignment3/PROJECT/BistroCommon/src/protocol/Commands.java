@@ -19,6 +19,10 @@ public enum Commands {
     // fetch available times for a date (+ guests)
     GET_AVAILABLE_TIMES_FOR_DATE,
 
+    // ✅ NEW: subscriber mini table
+    GET_MY_ACTIVE_RESERVATIONS,
+    GET_MY_ACTIVE_WAITINGS,
+
     // Waiting List
     JOIN_WAITING_LIST,
     GET_WAITING_STATUS,
@@ -49,5 +53,4 @@ public enum Commands {
     GET_WAITING_LIST,
     FIND_USER_BY_ID,
     CREATE_GUEST_BY_PHONE
-
 }

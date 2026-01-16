@@ -319,5 +319,15 @@ public class WaitingController {
 
         return count;
     }
+    
+    public ArrayList<Waiting> getActiveWaitingsForUser(int userId) {
+        try {
+            return db.getActiveWaitingsByUser(userId);
+        } catch (Exception e) {
+            server.log("ERROR: getActiveWaitingsForUser failed. UserId=" + userId + ", Msg=" + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
 
 }

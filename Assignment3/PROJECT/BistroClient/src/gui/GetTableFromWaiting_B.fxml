@@ -10,7 +10,6 @@
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="guiControllers.GetTableFromWaiting_BController">
 
-    <!-- ===== HEADER ===== -->
     <top>
         <HBox alignment="CENTER_LEFT">
             <padding>
@@ -31,7 +30,6 @@
         </HBox>
     </top>
 
-    <!-- ===== CENTER ===== -->
     <center>
         <VBox alignment="TOP_CENTER" spacing="14">
             <padding>
@@ -64,6 +62,21 @@
                        visible="false"
                        managed="false"
                        styleClass="errorMsg"/>
+
+                <!-- ✅ Subscriber-only -->
+                <VBox fx:id="boxMyActive" spacing="8" managed="false" visible="false" maxWidth="520">
+                    <Separator />
+                    <Label text="My active waiting requests (click to fill the code):"
+                           style="-fx-font-weight: bold; -fx-font-size: 12px;" />
+
+                    <TableView fx:id="tblMyActive" prefHeight="150" maxWidth="520">
+                        <columns>
+                            <TableColumn fx:id="colDate" text="Date" prefWidth="160"/>
+                            <TableColumn fx:id="colTime" text="Time" prefWidth="120"/>
+                            <TableColumn fx:id="colCode" text="Code" prefWidth="220"/>
+                        </columns>
+                    </TableView>
+                </VBox>
 
             </children>
         </VBox>

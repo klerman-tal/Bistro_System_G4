@@ -1,19 +1,28 @@
 package guiControllers;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.ArrayList;
+
 import application.ChatClient;
 import dto.GetTableResultDTO;
 import dto.ResponseDTO;
+import entities.Enums.UserRole;
+import entities.Reservation;
 import entities.User;
 import interfaces.ClientActions;
 import javafx.application.Platform;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import network.ClientAPI;
 import network.ClientResponseHandler;
@@ -26,6 +35,15 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
     @FXML private Label lblInfo;
     @FXML private Label lblError;
 
+    // ✅ Table (visible for: Subscriber/Agent/Manager; hidden for: RandomClient)
+    @FXML private VBox boxMyActive;
+    @FXML private TableView<Reservation> tblMyActive;
+    @FXML private TableColumn<Reservation, LocalDate> colDate;
+    @FXML private TableColumn<Reservation, LocalTime> colTime;
+    @FXML private TableColumn<Reservation, String> colCode;
+
+    private final ObservableList<Reservation> myActiveReservations = FXCollections.observableArrayList();
+
     private User user;
     private ChatClient chatClient;
     private ClientActions clientActions;
@@ -36,12 +54,60 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
         this.chatClient = chatClient;
         this.api = new ClientAPI(chatClient);
 
-        // this screen handles responses
         this.chatClient.setResponseHandler(this);
+
+        initMyActiveTable();
+        loadMyActiveIfAllowed();
     }
 
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
+    }
+
+    private void initMyActiveTable() {
+        if (tblMyActive == null) return;
+
+        colDate.setCellValueFactory(cd -> {
+            if (cd.getValue() == null || cd.getValue().getReservationTime() == null) {
+                return new SimpleObjectProperty<>(null);
+            }
+            return new SimpleObjectProperty<>(cd.getValue().getReservationTime().toLocalDate());
+        });
+
+        colTime.setCellValueFactory(cd -> {
+            if (cd.getValue() == null || cd.getValue().getReservationTime() == null) {
+                return new SimpleObjectProperty<>(null);
+            }
+            return new SimpleObjectProperty<>(cd.getValue().getReservationTime().toLocalTime());
+        });
+
+        colCode.setCellValueFactory(cd ->
+                new SimpleStringProperty(cd.getValue() == null ? "" : cd.getValue().getConfirmationCode()));
+
+        tblMyActive.setItems(myActiveReservations);
+
+        tblMyActive.getSelectionModel().selectedItemProperty().addListener((obs, oldV, selected) -> {
+            if (selected != null && selected.getConfirmationCode() != null) {
+                txtCode.setText(selected.getConfirmationCode());
+            }
+        });
+    }
+
+    private void loadMyActiveIfAllowed() {
+        boolean show = user != null && user.getUserRole() != UserRole.RandomClient;
+
+        if (boxMyActive != null) {
+            boxMyActive.setVisible(show);
+            boxMyActive.setManaged(show);
+        }
+
+        if (!show) return;
+
+        try {
+            api.getMyActiveReservations(user.getUserId());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @FXML
@@ -81,15 +147,23 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
                 return;
             }
 
-            GetTableResultDTO res = null;
-            try {
-                res = (GetTableResultDTO) response.getData();
-            } catch (Exception ignored) {}
+            // ✅ List for the table
+            if (response.isSuccess() && response.getData() instanceof ArrayList<?> list) {
+                myActiveReservations.clear();
+                for (Object o : list) {
+                    if (o instanceof Reservation r) {
+                        myActiveReservations.add(r);
+                    }
+                }
+                return;
+            }
 
-            // Prefer DTO if present
+            // ✅ Check-in result
+            GetTableResultDTO res = null;
+            try { res = (GetTableResultDTO) response.getData(); } catch (Exception ignored) {}
+
             if (res != null) {
 
-                // ✅ HARD GUARD: never show table number unless success=true AND tableNumber != null
                 if (res.isSuccess() && res.getTableNumber() != null) {
                     String msg = "Welcome 🎉\nYour table number is: " + res.getTableNumber();
                     showSuccessAlert("You are checked-in!", msg);
@@ -97,7 +171,6 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
                     return;
                 }
 
-                // shouldWait is not an error
                 if (res.isShouldWait()) {
                     showInfo(res.getMessage() != null
                             ? res.getMessage()
@@ -105,12 +178,10 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
                     return;
                 }
 
-                // ❌ Not success -> show only message (no table number even if mistakenly sent)
                 showError(res.getMessage() != null ? res.getMessage() : "Check-in failed.");
                 return;
             }
 
-            // Fallback: ResponseDTO only
             if (response.isSuccess()) {
                 showInfo(response.getMessage() != null ? response.getMessage() : "Done.");
             } else {
@@ -127,9 +198,6 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
     @Override
     public void handleConnectionClosed() {}
 
-    // =========================
-    // Back navigation (preserve user + chatClient)
-    // =========================
     @FXML
     private void onBackClicked() {
         if (chatClient != null) chatClient.setResponseHandler(null);
@@ -143,7 +211,6 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
 
             Object controller = loader.getController();
 
-            // Pass clientActions if exists
             if (controller != null && clientActions != null) {
                 try {
                     controller.getClass()
@@ -152,7 +219,6 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
                 } catch (Exception ignored) {}
             }
 
-            // Pass user + chatClient to preserve session
             if (controller != null && user != null && chatClient != null) {
                 try {
                     controller.getClass()
@@ -171,9 +237,6 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
         }
     }
 
-    // =========================
-    // UI helpers
-    // =========================
     private void hideMessages() {
         lblError.setText("");
         lblError.setVisible(false);
@@ -205,8 +268,7 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
     }
 
     private void showSuccessAlert(String title, String content) {
-        javafx.scene.control.Alert alert =
-                new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(content);
