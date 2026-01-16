@@ -6,6 +6,10 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Text?>
 <?import javafx.scene.text.TextFlow?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.HBox?>
+
 
 <BorderPane fx:id="rootPane" stylesheets="@Style.css"
 	xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
@@ -29,6 +33,11 @@
 			<padding>
 				<Insets top="20" right="30" bottom="20" left="30" />
 			</padding>
+			<HBox spacing="10" alignment="CENTER_LEFT">
+				<Label text="Select report month:" />
+				<ComboBox fx:id="cmbReportMonth" prefWidth="200" />
+			</HBox>
+
 
 			<TabPane prefWidth="900" prefHeight="700">
 
