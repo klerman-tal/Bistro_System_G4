@@ -155,16 +155,39 @@ public class ClientDetails_BController implements ClientResponseHandler {
 
     @FXML
     private void onUpdateDetailsClicked() {
+        String username = txtUserName.getText().trim();
+        String firstName = txtFirstName.getText().trim();
+        String lastName = txtLastName.getText().trim();
+        String phone = txtPhoneNumber.getText().trim();
+        String email = txtEmail.getText().trim();
+
+        // בדיקת תקינות טלפון: חייב להתחיל ב-05 ומכיל 10 ספרות
+        if (!phone.matches("^05\\d{8}$")) {
+            showMessage("Phone number must start with 05 and contain 10 digits.");
+            return;
+        }
+
+        // בדיקת תקינות אימייל: תבנית סטנדרטית
+        if (!email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")) {
+            showMessage("Please enter a valid email address (e.g., name@domain.com).");
+            return;
+        }
+
+        // בדיקה ששדות חובה לא ריקים
+        if (username.isEmpty() || firstName.isEmpty() || lastName.isEmpty()) {
+            showMessage("All fields must be filled.");
+            return;
+        }
 
         try {
             UpdateSubscriberDetailsDTO dto =
                     new UpdateSubscriberDetailsDTO(
                             subscriber.getUserId(),
-                            txtUserName.getText().trim(),
-                            txtFirstName.getText().trim(),
-                            txtLastName.getText().trim(),
-                            txtPhoneNumber.getText().trim(),
-                            txtEmail.getText().trim()
+                            username, // עכשיו מעדכן את ה-Username החדש מהשדה
+                            firstName,
+                            lastName,
+                            phone,
+                            email
                     );
 
             RequestDTO request =

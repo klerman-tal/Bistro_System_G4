@@ -45,7 +45,7 @@
                         <TextField fx:id="txtSubscriberNumber" editable="false" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
 
                         <Label text="Username:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-                        <TextField fx:id="txtUserName" editable="false" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                        <TextField fx:id="txtUserName"  GridPane.columnIndex="1" GridPane.rowIndex="1"/>
 
                         <Label text="First name:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
                         <TextField fx:id="txtFirstName" promptText="Enter first name" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
