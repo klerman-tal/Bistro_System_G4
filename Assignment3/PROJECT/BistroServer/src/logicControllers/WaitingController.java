@@ -390,4 +390,14 @@ public class WaitingController {
             return 0;
         }
     }
+    
+    public ArrayList<Integer> getLockedTableNumbersNow() {
+        try {
+            return db.getLockedTableNumbersNow();
+        } catch (Exception e) {
+            server.log("ERROR: getLockedTableNumbersNow failed. " + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
 }

@@ -762,7 +762,11 @@ public class ReservationController {
 
         Table table;
         try {
-            table = restaurantController.getOneAvailableTableAt(start, guests);
+        	ArrayList<Integer> lockedTables =
+        	        (waitingController == null) ? new ArrayList<>() : waitingController.getLockedTableNumbersNow();
+
+        	table = restaurantController.getOneAvailableTableAtExcludingTables(start, guests, lockedTables);
+
         } catch (Exception e) {
             server.log("ERROR: Waiting -> check availability failed. " + e.getMessage());
             return null;
