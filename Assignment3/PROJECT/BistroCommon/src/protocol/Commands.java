@@ -84,5 +84,6 @@ public enum Commands {
     UPDATE_SUBSCRIBER,
     GET_WAITING_LIST,
     FIND_USER_BY_ID,
+    BARCODE_LOGIN,
     CREATE_GUEST_BY_PHONE
 }
