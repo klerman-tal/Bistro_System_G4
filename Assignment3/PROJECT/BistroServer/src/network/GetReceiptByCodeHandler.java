@@ -80,7 +80,7 @@ public class GetReceiptByCodeHandler implements RequestHandler {
         }
 
         // ✅ Subscriber discount 10% (return discounted amount to client only)
-        if (r.getCreatedByRole() == Enums.UserRole.Subscriber) {
+        if (r.getCreatedByRole() != Enums.UserRole.RandomClient) {
             Receipt copy = new Receipt();
             copy.setReceiptId(receipt.getReceiptId());
             copy.setReservationId(receipt.getReservationId());
