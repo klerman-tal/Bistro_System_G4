@@ -1,9 +1,8 @@
 package guiControllers;
 
-import java.io.IOException;
 import application.ChatClient;
+import application.ClientSession;
 import dto.ResponseDTO;
-import entities.Subscriber;
 import entities.User;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
@@ -11,19 +10,20 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import network.ClientAPI;
 import network.ClientResponseHandler;
 
-/**
- * Controller for the Subscriber Login screen.
- * Handles standard login and simulated barcode scanning.
- */
+import java.io.IOException;
+
 public class SubscriberLoginController implements ClientResponseHandler {
 
     @FXML private TextField subscriberIdField;
@@ -32,44 +32,48 @@ public class SubscriberLoginController implements ClientResponseHandler {
     @FXML private Button btnBarcodeSim;
 
     private ChatClient chatClient;
-    private ClientAPI clientAPI;
-    private User loggedInUser;
+    private ClientAPI api;
 
-    /**
-     * Initializes the controller with the ChatClient and sets up the API.
-     */
     public void setClient(ChatClient chatClient) {
         this.chatClient = chatClient;
-        this.clientAPI = new ClientAPI(chatClient);
-        this.chatClient.setResponseHandler(this);
+        if (chatClient != null) {
+            this.api = new ClientAPI(chatClient);
+            chatClient.setResponseHandler(this);
+        }
     }
 
-    /**
-     * Handles the standard manual login button click.
-     */
+    @FXML
+    public void initialize() {
+        if (subscriberIdField != null) {
+            subscriberIdField.textProperty().addListener((obs, oldVal, newVal) -> {
+                if (!newVal.matches("\\d*")) {
+                    subscriberIdField.setText(newVal.replaceAll("[^\\d]", ""));
+                }
+                if (newVal.length() > 10) {
+                    subscriberIdField.setText(oldVal);
+                }
+            });
+        }
+    }
+
     @FXML
     private void handleSubscriberLogin(ActionEvent event) {
+        hideMessage();
         String idStr = subscriberIdField.getText().trim();
-        String username = usernameField.getText().trim();
+        String user = usernameField.getText().trim();
 
-        if (idStr.isEmpty() || username.isEmpty()) {
-            showError("Please enter both Subscriber ID and Username.");
+        if (idStr.isEmpty() || user.isEmpty()) {
+            showError("Please fill in all fields.");
             return;
         }
 
         try {
-            int subscriberId = Integer.parseInt(idStr);
-            clientAPI.loginSubscriber(subscriberId, username);
-        } catch (NumberFormatException e) {
-            showError("Subscriber ID must be a number.");
-        } catch (IOException e) {
-            showError("Server connection error.");
+            api.loginSubscriber(Integer.parseInt(idStr), user);
+        } catch (Exception e) {
+            showError("Subscriber ID must be numeric.");
         }
     }
 
-    /**
-     * Opens the External Barcode Scanner Simulation window.
-     */
     @FXML
     private void onBarcodeSimClicked(ActionEvent event) {
         Stage simStage = new Stage();
@@ -80,102 +84,109 @@ public class SubscriberLoginController implements ClientResponseHandler {
         root.setPadding(new Insets(25));
         root.setStyle("-fx-background-color: white; -fx-border-color: #800000; -fx-border-width: 3; -fx-border-radius: 10;");
 
-        Label title = new Label("Place Card on Scanner");
+        Label title = new Label("Place Card on Scanner (Enter Subscriber ID)");
         title.setStyle("-fx-font-weight: bold; -fx-text-fill: #800000; -fx-font-size: 14px;");
+        title.setWrapText(true);
+        title.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
 
         TextField txtId = new TextField();
-        txtId.setPromptText("Subscriber ID...");
+        txtId.setPromptText("e.g. 12345");
 
         Button btnScan = new Button("SCAN");
-        btnScan.setStyle("-fx-background-color: #800000; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
+        btnScan.setStyle("-fx-background-color: #800000; -fx-text-fill: white; -fx-font-weight: bold;");
         
         btnScan.setOnAction(e -> {
             String id = txtId.getText().trim();
-            if (id.isEmpty()) return;
-            try {
-                // קריאה ל-API שהוספנו
-                clientAPI.loginByBarcode(id);
-                simStage.close();
-            } catch (IOException ex) {
-                ex.printStackTrace();
+            if (!id.isEmpty()) {
+                try {
+                    api.loginByBarcode(id);
+                    simStage.close();
+                } catch (IOException ex) { ex.printStackTrace(); }
             }
         });
 
         root.getChildren().addAll(title, txtId, btnScan);
-        simStage.setScene(new Scene(root, 320, 180));
+        simStage.setScene(new Scene(root, 450, 200));
         simStage.initModality(Modality.APPLICATION_MODAL);
         simStage.show();
     }
 
-    /**
-     * Handles the response from the server.
-     */
     @Override
     public void handleResponse(ResponseDTO response) {
         Platform.runLater(() -> {
-        	System.out.println("Response received: Success=" + response.isSuccess() + ", Data=" + response.getData());
-            if (response.isSuccess() && response.getData() instanceof User) {
-                this.loggedInUser = (User) response.getData();
-                navigateToMainMenu();
+            if (response.isSuccess() && response.getData() instanceof User user) {
+                ClientSession.setLoggedInUser(user);
+                ClientSession.setActingUser(user);
+                // שימוש ב-navigate עבור כניסה לתפריט
+                navigateTo(null, "/gui/Menu_B.fxml", user);
             } else {
                 showError(response.getMessage());
             }
         });
     }
 
-    /**
-     * Navigates to the subscriber main menu after successful login.
-     */
-    /**
-     * Navigates to the main menu after successful login.
-     */
-    private void navigateToMainMenu() {
-        try {
-            // שינוי קריטי: שם הקובץ חייב להיות Menu_B.fxml כפי שמופיע בתיקיית ה-gui שלך
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
-            Parent root = loader.load();
-            
-            // השגת הקונטרולר של המסך הבא
-            Object controller = loader.getController();
-            
-            // העברת הנתונים (המשתמש והקליינט) לקונטרולר הבא
-            try {
-                controller.getClass()
-                    .getMethod("setClient", User.class, ChatClient.class)
-                    .invoke(controller, loggedInUser, chatClient);
-            } catch (Exception e) {
-                System.out.println("Note: Could not call setClient, check method signature on next controller.");
-            }
-
-            // החלפת הסצנה בחלון הקיים
-            Stage stage = (Stage) btnBarcodeSim.getScene().getWindow();
-            stage.setScene(new Scene(root));
-            stage.setTitle("Bistro - Main Menu");
-            stage.centerOnScreen(); // מומלץ כדי שהתפריט יפתח במרכז
-            stage.show();
-            
-        } catch (IOException e) {
-            e.printStackTrace();
-            showError("FXML Load Error: Could not find /gui/Menu_B.fxml");
-        }
-    }
-
     @FXML
     private void handleBackButton(ActionEvent event) {
-        // לוגיקה לחזרה למסך הפתיחה
+        navigateTo(event, "/gui/Login_B.fxml", null);
     }
 
     @FXML
     private void handleForgotCode(ActionEvent event) {
-        showError("Contact support to recover your code.");
+        // פתיחת פופ-אפ כפי שהיה במקור שלך
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/ForgotSubscriberCode.fxml"));
+            Parent root = loader.load();
+            Stage popupStage = new Stage();
+            popupStage.initModality(Modality.APPLICATION_MODAL);
+            popupStage.setScene(new Scene(root));
+            popupStage.showAndWait();
+        } catch (IOException e) { showError("Error opening recovery."); }
+    }
+
+    /**
+     * פונקציית הניווט המרכזית כפי שהייתה לך
+     */
+    private void navigateTo(ActionEvent event, String fxmlPath, User user) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
+            Parent root = loader.load();
+
+            // אם עוברים לתפריט ומעבירים משתמש
+            if (user != null) {
+                Object controller = loader.getController();
+                try {
+                    controller.getClass()
+                        .getMethod("setClient", User.class, ChatClient.class)
+                        .invoke(controller, user, chatClient);
+                } catch (Exception e) { System.out.println("No setClient method found."); }
+            }
+
+            // השגת ה-Stage
+            Stage currentStage;
+            if (event != null) {
+                currentStage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+            } else {
+                currentStage = (Stage) subscriberIdField.getScene().getWindow();
+            }
+
+            currentStage.setScene(new Scene(root));
+            currentStage.centerOnScreen();
+            currentStage.show();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            showError("Navigation failed.");
+        }
     }
 
     private void showError(String msg) {
         lblMessage.setText(msg);
+        lblMessage.setStyle("-fx-text-fill: #ff0000; -fx-font-weight: bold;");
         lblMessage.setVisible(true);
-        lblMessage.setManaged(true);
     }
 
-    @Override public void handleConnectionError(Exception e) { showError("Connection lost."); }
+    private void hideMessage() { lblMessage.setVisible(false); }
+
+    @Override public void handleConnectionError(Exception e) { Platform.runLater(() -> showError("Conn Error")); }
     @Override public void handleConnectionClosed() {}
 }
