@@ -1,6 +1,7 @@
 package dbControllers;
 
 import java.sql.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -35,6 +36,9 @@ public class Waiting_DB_Controller {
                 number_of_guests INT NOT NULL,
                 confirmation_code VARCHAR(20) NOT NULL,
 
+                -- ✅ NEW: when user joined waiting list
+                joined_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
                 table_freed_time DATETIME NULL,
                 table_number INT NULL,
 
@@ -47,6 +51,7 @@ public class Waiting_DB_Controller {
                 UNIQUE (confirmation_code),
                 INDEX (created_by),
                 INDEX (waiting_status),
+                INDEX (joined_at),
                 INDEX (table_freed_time),
                 INDEX (table_number)
             );
@@ -59,8 +64,23 @@ public class Waiting_DB_Controller {
         }
     }
 
+    public ArrayList<Waiting> getAllWaitings() throws SQLException {
+        // מביא הכל (כולל cancelled/seated), הכי חדש למעלה
+        String sql = "SELECT * FROM waiting_list ORDER BY waiting_id DESC;";
+
+        ArrayList<Waiting> list = new ArrayList<>();
+        try (PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                list.add(mapRowToWaiting(rs));
+            }
+        }
+        return list;
+    }
+
     // Inserts waiting entry
     public int addToWaitingList(int guests, String confirmationCode, int userId, UserRole role) throws SQLException {
+        // joined_at מקבל DEFAULT CURRENT_TIMESTAMP אוטומטית
         String sql = """
             INSERT INTO waiting_list
             (number_of_guests, confirmation_code, created_by, created_by_role, waiting_status, table_freed_time, table_number)
@@ -152,7 +172,7 @@ public class Waiting_DB_Controller {
         }
     }
 
-    // NEW: get expired confirmation codes (for cancelling reservations too)
+    // get expired confirmation codes (for cancelling reservations too)
     public ArrayList<String> getExpiredWaitingCodes(LocalDateTime now) throws SQLException {
         String sql = """
             SELECT confirmation_code
@@ -208,17 +228,40 @@ public class Waiting_DB_Controller {
         return null;
     }
 
-    // ===== Mapping =====
+    // ✅ NEW: get active waitings for a specific date by joined_at
+    public ArrayList<Waiting> getActiveWaitingsByDate(LocalDate date) throws SQLException {
+        String sql = """
+            SELECT *
+            FROM waiting_list
+            WHERE waiting_status = 'Waiting'
+              AND DATE(joined_at) = ?
+            ORDER BY waiting_id DESC;
+            """;
+
+        ArrayList<Waiting> list = new ArrayList<>();
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDate(1, Date.valueOf(date));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRowToWaiting(rs));
+                }
+            }
+        }
+        return list;
+    }
+
     private Waiting mapRowToWaiting(ResultSet rs) throws SQLException {
         Waiting w = new Waiting();
 
         w.setWaitingId(rs.getInt("waiting_id"));
-        w.setConfirmationCode(rs.getString("confirmation_code"));
-
         w.setGuestAmount(rs.getInt("number_of_guests"));
-
+        w.setConfirmationCode(rs.getString("confirmation_code"));
         w.setCreatedByUserId(rs.getInt("created_by"));
-        w.setCreatedByRole(UserRole.valueOf(rs.getString("created_by_role")));
+
+        String roleStr = rs.getString("created_by_role");
+        if (roleStr != null) {
+            w.setCreatedByRole(UserRole.valueOf(roleStr));
+        }
 
         Timestamp freed = rs.getTimestamp("table_freed_time");
         w.setTableFreedTime(freed == null ? null : freed.toLocalDateTime());
@@ -226,11 +269,20 @@ public class Waiting_DB_Controller {
         int tableNum = rs.getInt("table_number");
         w.setTableNumber(rs.wasNull() ? null : tableNum);
 
-        w.setWaitingStatus(WaitingStatus.valueOf(rs.getString("waiting_status")));
+        String statusStr = rs.getString("waiting_status");
+        if (statusStr != null) {
+            try {
+                String formattedStatus =
+                        statusStr.substring(0, 1).toUpperCase() + statusStr.substring(1).toLowerCase();
+                w.setWaitingStatus(WaitingStatus.valueOf(formattedStatus));
+            } catch (Exception e) {
+                w.setWaitingStatus(WaitingStatus.Waiting);
+            }
+        }
 
         return w;
     }
-    
+
     public boolean markWaitingAsSeatedWithTable(String confirmationCode, Integer tableNumber) throws SQLException {
         String sql = """
             UPDATE waiting_list
@@ -250,46 +302,96 @@ public class Waiting_DB_Controller {
             return ps.executeUpdate() > 0;
         }
     }
-    
- // =====================================================
- // REPORTS – WAITING LIST
- // =====================================================
 
- /**
-  * Returns waiting list entries count per day for a given role.
-  */
- public Map<Integer, Integer> getWaitingCountPerDayByRole(
-         UserRole role, int year, int month) throws SQLException {
+    // =====================================================
+    // REPORTS – WAITING LIST
+    // =====================================================
 
-     String sql = """
-         SELECT DAY(table_freed_time) AS day, COUNT(*) AS cnt
-         FROM waiting_list
-         WHERE created_by_role = ?
-           AND table_freed_time IS NOT NULL
-           AND YEAR(table_freed_time) = ?
-           AND MONTH(table_freed_time) = ?
-         GROUP BY DAY(table_freed_time)
-         ORDER BY day;
-         """;
+    public Map<Integer, Integer> getWaitingCountPerDayByRole(
+            UserRole role, int year, int month) throws SQLException {
 
-     Map<Integer, Integer> map = new HashMap<>();
+        String sql = """
+            SELECT DAY(table_freed_time) AS day, COUNT(*) AS cnt
+            FROM waiting_list
+            WHERE created_by_role = ?
+              AND table_freed_time IS NOT NULL
+              AND YEAR(table_freed_time) = ?
+              AND MONTH(table_freed_time) = ?
+            GROUP BY DAY(table_freed_time)
+            ORDER BY day;
+            """;
 
-     try (PreparedStatement ps = conn.prepareStatement(sql)) {
-         ps.setString(1, role.name());
-         ps.setInt(2, year);
-         ps.setInt(3, month);
+        Map<Integer, Integer> map = new HashMap<>();
 
-         try (ResultSet rs = ps.executeQuery()) {
-             while (rs.next()) {
-                 map.put(
-                         rs.getInt("day"),
-                         rs.getInt("cnt")
-                 );
-             }
-         }
-     }
-     return map;
- }
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, role.name());
+            ps.setInt(2, year);
+            ps.setInt(3, month);
 
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    map.put(rs.getInt("day"), rs.getInt("cnt"));
+                }
+            }
+        }
+        return map;
+    }
 
+    public ArrayList<Waiting> getActiveWaitingsForToday(LocalDate today) throws SQLException {
+        // ⚠️ השארתי כמו שהיה אצלך כדי לא לשבור תלות קיימת,
+        // אבל ה-End Of Day החדש כבר לא משתמש בזה.
+        String sql = """
+            SELECT *
+            FROM waiting_list
+            WHERE waiting_status = 'Waiting'
+              AND DATE(table_freed_time) IS NULL
+            """;
+
+        ArrayList<Waiting> list = new ArrayList<>();
+
+        try (PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                list.add(mapRowToWaiting(rs));
+            }
+        }
+        return list;
+    }
+
+    public ArrayList<Waiting> getActiveWaitingsByUser(int userId) throws SQLException {
+        String sql = """
+            SELECT *
+            FROM waiting_list
+            WHERE created_by = ?
+              AND waiting_status = 'Waiting'
+            ORDER BY waiting_id DESC;
+            """;
+
+        ArrayList<Waiting> list = new ArrayList<>();
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRowToWaiting(rs));
+                }
+            }
+        }
+        return list;
+    }
+
+    // ✅ End of day: cancel by joined_at date (no delete)
+    public int cancelAllWaitingsByDate(LocalDate date) throws SQLException {
+        String sql = """
+            UPDATE waiting_list
+            SET waiting_status = 'Cancelled'
+            WHERE waiting_status = 'Waiting'
+              AND DATE(joined_at) = ?;
+            """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDate(1, Date.valueOf(date));
+            return ps.executeUpdate();
+        }
+    }
 }

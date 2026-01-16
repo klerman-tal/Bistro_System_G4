@@ -32,8 +32,18 @@ public class JoinWaitingListHandler implements RequestHandler {
         u.setUserId(dto.getUserId());
         u.setUserRole(dto.getRole() == null ? UserRole.RandomClient : dto.getRole());
 
-        Waiting w = waitingController.joinWaitingListNow(dto.getGuests(), u);
-        if (w == null) {
+        Waiting w;
+
+        try {
+            // Accurate reason (restaurant closed) comes from controller exception
+            w = waitingController.joinWaitingListNowOrThrow(dto.getGuests(), u);
+
+        } catch (WaitingController.JoinWaitingBlockedException e) {
+            client.sendToClient(new ResponseDTO(false, e.getMessage(), null));
+            return;
+
+        } catch (Exception e) {
+            // Any other failure (DB/network/etc.)
             client.sendToClient(new ResponseDTO(false, "Failed to join waiting list", null));
             return;
         }

@@ -1,5 +1,5 @@
 package application;
-
+//test
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Optional;
@@ -15,7 +15,7 @@ import javafx.scene.control.TextInputDialog;
 import javafx.stage.Stage;
 
 import javafx.scene.image.Image;
-
+//TEST
 
 public class ClientUI extends Application implements ChatIF, ClientActions {
 
@@ -27,7 +27,8 @@ public class ClientUI extends Application implements ChatIF, ClientActions {
     public static void setActiveController(ChatIF controller) {
         activeController = controller;
     }
-
+    //
+//test
     @Override 
     public void start(Stage primaryStage) throws Exception {
         TextInputDialog dialog = new TextInputDialog("localhost");

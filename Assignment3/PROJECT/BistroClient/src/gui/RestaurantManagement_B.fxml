@@ -13,7 +13,6 @@
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="guiControllers.RestaurantManagement_BController">
 
-    <!-- HEADER -->
     <top>
         <HBox fx:id="header" alignment="CENTER_LEFT">
             <padding>
@@ -25,7 +24,6 @@
         </HBox>
     </top>
 
-    <!-- CENTER CONTENT -->
     <center>
         <VBox alignment="TOP_CENTER" spacing="20">
             <padding>
@@ -55,7 +53,18 @@
                         styleClass="btnSecondary"
                         onAction="#onManageReservationClicked"/>
 
-                <!-- NEW -->
+                <!-- ✅ NEW BUTTON -->
+                <Button text="Manage Current Diners"
+                        maxWidth="300" prefWidth="260"
+                        styleClass="btnSecondary"
+                        onAction="#onManageCurrentDinersClicked"/>
+
+                <Button fx:id="btnWaitingList" 
+                        maxWidth="300" prefWidth="260"
+                        onAction="#onWaitingListClicked" 
+                        text="Manage Waiting List" 
+                        styleClass="btnSecondary"/> 
+
                 <Button text="Reports"
                         maxWidth="300" prefWidth="260"
                         styleClass="btnSecondary"
@@ -69,7 +78,6 @@
         </VBox>
     </center>
 
-    <!-- FOOTER -->
     <bottom>
         <HBox alignment="CENTER_RIGHT" spacing="12">
             <padding>

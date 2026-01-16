@@ -58,6 +58,17 @@ public class CancelReservation_BController implements ClientResponseHandler {
             chatClient.setResponseHandler(this);
         }
     }
+    
+    /* גרסה נוספת שמאפשרת לקבל קוד אישור באופן אוטומטי מהטבלה */
+    public void setClient(User user, ChatClient chatClient, String confirmationCode) {
+        // קריאה למתודה המקורית שכבר כתבת כדי לשמור על הלוגיקה הקיימת
+        setClient(user, chatClient); 
+        
+        // מילוי אוטומטי של שדה הטקסט בקוד שהגיע מהטבלה
+        if (confirmationCode != null && txtConfirmationCode != null) {
+            txtConfirmationCode.setText(confirmationCode);
+        }
+    }
 
     public void setBackFxml(String backFxml) {
         this.backFxml = backFxml;

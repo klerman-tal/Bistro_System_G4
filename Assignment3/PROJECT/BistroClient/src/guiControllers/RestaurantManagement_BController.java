@@ -30,35 +30,17 @@ public class RestaurantManagement_BController {
             Parent root = loader.load();
 
             Object controller = loader.getController();
+            System.out.println("Loaded controller: " + controller.getClass().getName());
 
-            // ✅ Update Tables
-            if (controller instanceof UpdateTablesController utc) {
-                utc.setClient(user, chatClient); // ✅ היה רק chatClient
-            }
-
-            // ✅ Opening Hours
-            if (controller instanceof OpeningHoursController ohc) {
-                ohc.setClient(user, chatClient);
-            }
-
-            // ✅ Select user menu
-            if (controller instanceof SelectUser_BController suc) {
-                suc.setClient(user, chatClient);
-            }
-
-            // ✅ Manage reservations
-            if (controller instanceof ManageReservationController mrc) {
-                mrc.setClient(user, chatClient);
-            }
-            
-            // ✅ ⭐⭐ THIS WAS MISSING ⭐⭐
-            if (controller instanceof ReportsMenuController rmc) {
-                rmc.setClient(user, chatClient);
-            }
-            
-            // ✅ Back to Menu
-            if (controller instanceof Menu_BController menu) {
-                menu.setClient(user, chatClient);
+            // Try to call setClient(User, ChatClient)
+            try {
+                var m = controller.getClass().getDeclaredMethod("setClient", User.class, ChatClient.class);
+                m.setAccessible(true);
+                m.invoke(controller, user, chatClient);
+                System.out.println("setClient(User, ChatClient) invoked successfully");
+            } catch (Exception e) {
+                System.out.println("Failed to call setClient(User, ChatClient)");
+                e.printStackTrace();
             }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
@@ -78,18 +60,28 @@ public class RestaurantManagement_BController {
     }
 
     @FXML
+    private void onWaitingListClicked() {
+        openWindow("ManageWaitingList.fxml", "Waiting List");
+    }
+
+    @FXML
     private void onUpdateOpeningHoursClicked() {
         openWindow("opening.fxml", "Opening Hours");
     }
 
     @FXML
     private void onManageUsersClicked() {
-        openWindow("selectUser.fxml", "Select User Menu");
+        openWindow("manageSubscriber.fxml", "Manage Subscribers");
     }
 
     @FXML
     private void onManageReservationClicked() {
         openWindow("ManageReservation.fxml", "Manage Reservations");
+    }
+
+    @FXML
+    private void onManageCurrentDinersClicked() {
+        openWindow("ManageCurrentDiners.fxml", "Current Diners");
     }
 
     @FXML

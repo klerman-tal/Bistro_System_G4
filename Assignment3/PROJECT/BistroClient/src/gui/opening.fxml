@@ -1,16 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.control.TableColumn?>
-<?import javafx.scene.control.TableView?>
-<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.*?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
 <VBox id="rootPane"
-      prefHeight="520.0" prefWidth="700.0"
+      prefHeight="820.0" prefWidth="700.0"
       spacing="18.0"
       stylesheets="@Style.css"
       xmlns="http://javafx.com/javafx/25"
@@ -30,7 +26,7 @@
         </children>
     </VBox>
 
-    <!-- ===== TABLE CARD ===== -->
+    <!-- ===== WEEKLY TABLE CARD (UNCHANGED) ===== -->
     <VBox styleClass="card30" spacing="10" prefHeight="320.0">
         <padding>
             <Insets top="18" right="18" bottom="18" left="18"/>
@@ -47,7 +43,7 @@
         </children>
     </VBox>
 
-    <!-- ===== UPDATE AREA CARD ===== -->
+    <!-- ===== UPDATE WEEKLY AREA (UNCHANGED) ===== -->
     <VBox styleClass="card" spacing="12">
         <padding>
             <Insets top="14" right="14" bottom="14" left="14"/>
@@ -61,6 +57,57 @@
                     <Label text="New Time:" styleClass="subtitle"/>
                     <TextField fx:id="openTimeField" prefWidth="110" promptText="HH:MM"/>
                     <Button fx:id="updateButton" text="Update" styleClass="btnPrimary"/>
+                </children>
+            </HBox>
+        </children>
+    </VBox>
+
+    <!-- ===== SPECIAL DATES TABLE ===== -->
+    <VBox styleClass="card30" spacing="10">
+        <padding>
+            <Insets top="18" right="18" bottom="18" left="18"/>
+        </padding>
+
+        <children>
+            <Label text="Special Opening Dates" styleClass="field-label"/>
+
+            <TableView fx:id="specialHoursTable" prefHeight="180.0">
+                <columns>
+                    <TableColumn fx:id="specialDateColumn" prefWidth="220.0" text="Date"/>
+                    <TableColumn fx:id="specialOpenColumn" prefWidth="180.0" text="Open"/>
+                    <TableColumn fx:id="specialCloseColumn" prefWidth="180.0" text="Close"/>
+                </columns>
+            </TableView>
+        </children>
+    </VBox>
+
+    <!-- ===== ADD SPECIAL DATE ===== -->
+    <VBox styleClass="card" spacing="12">
+        <padding>
+            <Insets top="14" right="14" bottom="14" left="14"/>
+        </padding>
+
+        <children>
+            <Label text="Add / Update Special Date" styleClass="field-label"/>
+
+            <HBox alignment="CENTER_LEFT" spacing="10">
+                <children>
+                    <Label text="Date:" styleClass="subtitle"/>
+                    <DatePicker fx:id="specialDatePicker"/>
+
+                    <CheckBox fx:id="specialClosedCheck" text="Closed"/>
+                </children>
+            </HBox>
+
+            <HBox alignment="CENTER_LEFT" spacing="10">
+                <children>
+                    <Label text="Open:" styleClass="subtitle"/>
+                    <TextField fx:id="specialOpenField" prefWidth="110" promptText="HH:MM"/>
+
+                    <Label text="Close:" styleClass="subtitle"/>
+                    <TextField fx:id="specialCloseField" prefWidth="110" promptText="HH:MM"/>
+
+                    <Button fx:id="addSpecialButton" text="Save" styleClass="btnPrimary"/>
                 </children>
             </HBox>
         </children>

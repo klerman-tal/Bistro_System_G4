@@ -531,5 +531,23 @@ public class User_DB_Controller {
         }
     }
 
+    public int getRestaurantManagerId() throws SQLException {
+        String sql = """
+            SELECT subscriber_id
+            FROM subscribers
+            WHERE role = 'RestaurantManager'
+            LIMIT 1
+        """;
+
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            if (rs.next()) {
+                return rs.getInt("subscriber_id");
+            }
+        }
+
+        throw new SQLException("RestaurantManager not found");
+    }
 
 }

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane fx:id="rootPane" stylesheets="@Style.css"
+    xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+    fx:controller="guiControllers.GetTableFromReservation_BController">
+
+    <top>
+        <BorderPane fx:id="header">
+            <padding>
+                <Insets bottom="18" left="25" right="25" top="18"/>
+            </padding>
+
+            <left>
+                <Label styleClass="title" text="Get Table" textFill="WHITE"/>
+            </left>
+
+            <right>
+                <Button text="Back" onAction="#onBackClicked"
+                        style="-fx-background-color: yellow; -fx-text-fill: black; -fx-font-size: 13px;" />
+            </right>
+        </BorderPane>
+    </top>
+
+    <center>
+        <VBox alignment="TOP_CENTER" spacing="14">
+            <padding>
+                <Insets bottom="20" left="40" right="40" top="30" />
+            </padding>
+
+            <children>
+                <Label styleClass="section" text="Get table from reservation" />
+
+                <Label text="Enter your confirmation code:" />
+                <TextField fx:id="txtCode" maxWidth="220" promptText="e.g., 123456" />
+
+                <Button fx:id="btnGetTable" text="Get Table"
+                        prefWidth="220"
+                        styleClass="btnPrimary"
+                        onAction="#onGetTableClicked"/>
+
+                <Label fx:id="lblInfo" managed="false" visible="false"
+                       style="-fx-text-fill: #2e7d32; -fx-font-size: 12px;" text=""/>
+
+                <Label fx:id="lblError" managed="false" visible="false"
+                       styleClass="errorMsg" text=""/>
+
+                <!-- ✅ Subscriber-only -->
+                <VBox fx:id="boxMyActive" spacing="8" managed="false" visible="false" maxWidth="520">
+                    <Separator />
+                    <Label text="My active reservations (click to fill the code):"
+                           style="-fx-font-weight: bold; -fx-font-size: 12px;" />
+
+                    <TableView fx:id="tblMyActive" prefHeight="150" maxWidth="520">
+                        <columns>
+                            <TableColumn fx:id="colDate" text="Date" prefWidth="160"/>
+                            <TableColumn fx:id="colTime" text="Time" prefWidth="120"/>
+                            <TableColumn fx:id="colCode" text="Code" prefWidth="220"/>
+                        </columns>
+                    </TableView>
+                </VBox>
+
+            </children>
+        </VBox>
+    </center>
+
+</BorderPane>
