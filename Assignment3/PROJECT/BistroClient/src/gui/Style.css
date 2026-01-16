@@ -186,12 +186,12 @@
 }
 
 .arrival-minor-delay {
-    -fx-text-fill: #F2AA37;
+    -fx-text-fill: #f7a028;
     -fx-font-weight: 800;
 }
 
 .arrival-major-delay {
-    -fx-text-fill: #E86B3D;
+    -fx-text-fill: #bf2424;
     -fx-font-weight: 800;
 }
 
@@ -210,3 +210,26 @@
     -fx-text-fill: #555555;
     -fx-text-alignment: center;
 }
+
+/* =========================================================
+   CHARTS – GLOBAL & STABLE COLORS
+   ========================================================= */
+
+/* ===== PIE CHARTS ===== */
+/* data0 = first slice, data1 = second, etc.
+   לכן הסדר בקוד חייב להיות קבוע */
+
+.chart-pie.data0 {
+    -fx-pie-color: #53A953; /* green – On Time / Active */
+}
+
+.chart-pie.data1 {
+    -fx-pie-color: #bf2424; /* red – Major / Inactive */
+}
+
+.chart-pie.data2 {
+    -fx-pie-color: #f7a028; /* amber – Minor / Medium */
+}
+
+
+
