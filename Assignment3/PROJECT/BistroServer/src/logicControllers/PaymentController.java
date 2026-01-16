@@ -35,7 +35,7 @@ public class PaymentController {
 
         // 1️⃣ Calculate final amount
         double finalAmount;
-        if (reservation.getCreatedByRole() == Enums.UserRole.Subscriber) {
+        if (reservation.getCreatedByRole() != Enums.UserRole.RandomClient ) {
             finalAmount = ORDER_PRICE * 0.9;
         } else {
             finalAmount = ORDER_PRICE;
