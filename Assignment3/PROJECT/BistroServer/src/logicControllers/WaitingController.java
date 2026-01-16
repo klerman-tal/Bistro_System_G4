@@ -228,26 +228,17 @@ public class WaitingController {
         }
     }
 
-    public int cancelExpiredWaitingsAndReservations() {
+    public int cancelExpiredWaitings() {
         try {
             LocalDateTime now = LocalDateTime.now();
 
             ArrayList<String> expiredCodes = db.getExpiredWaitingCodes(now);
             int count = db.cancelExpiredWaitings(now);
 
-            for (String code : expiredCodes) {
-                if (code == null) continue;
-                try { reservationController.CancelReservation(code); } catch (Exception ignore) {}
-            }
-
-            // 🔽⬇️⬇️ הוסף כאן ⬇️⬇️🔽
-            int cancelledReservations =
-                    reservationController.cancelReservationsWithoutCheckinAfterGracePeriod();
-
-            return count + cancelledReservations;
+            return count;
 
         } catch (Exception e) {
-            server.log("ERROR: cancelExpiredWaitingsAndReservations failed. Msg=" + e.getMessage());
+            server.log("ERROR: cancelExpiredWaitings failed. Msg=" + e.getMessage());
             return 0;
         }
     }
