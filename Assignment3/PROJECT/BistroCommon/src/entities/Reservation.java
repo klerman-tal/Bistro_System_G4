@@ -7,7 +7,16 @@ import java.util.Random;
 import entities.Enums.UserRole;
 import entities.Enums.ReservationStatus;
 
-public class Reservation implements Serializable { // ✨ הוספת הממשק
+/**
+ * Entity representing a restaurant reservation.
+ * <p>
+ * This class stores all reservation-related data, including timing,
+ * guest count, table assignment, status, and lifecycle events such as
+ * check-in and check-out. It is persisted in the database and used
+ * throughout the reservation management flow.
+ * </p>
+ */
+public class Reservation implements Serializable {
     private static final long serialVersionUID = 1L;
 
 	// ===== Fields =====
@@ -22,11 +31,16 @@ public class Reservation implements Serializable { // ✨ הוספת הממשק
 	private boolean isActive; // from DB is_active
 	private UserRole createdByRole; // from DB created_by_role
 
-	// ✅ NEW
 	private LocalDateTime checkinTime;
 	private LocalDateTime checkoutTime;
 
-	// ===== Constructor =====
+	/**
+	 * Default constructor.
+	 * <p>
+	 * Initializes a reservation with default values and an active status.
+	 * Typically used for database mapping or framework initialization.
+	 * </p>
+	 */
 	public Reservation() {
 		createdByUserId = -1;
 		reservationTime = null;
@@ -39,7 +53,6 @@ public class Reservation implements Serializable { // ✨ הוספת הממשק
 		tableNumber = null;
 		createdByRole = null;
 
-		// ✅ NEW
 		checkinTime = null;
 		checkoutTime = null;
 	}
@@ -60,7 +73,6 @@ public class Reservation implements Serializable { // ✨ הוספת הממשק
 	public void setConfirmationCode(String code) {
 	    this.confirmationCode = code;
 	}
-
 
 	public int getCreatedByUserId() {
 		return createdByUserId;
@@ -126,7 +138,7 @@ public class Reservation implements Serializable { // ✨ הוספת הממשק
 		this.createdByRole = createdByRole;
 	}
 
-	// ===== ✅ Check-in / Check-out =====
+	// ===== Check-in / Check-out =====
 	public LocalDateTime getCheckinTime() {
 		return checkinTime;
 	}
@@ -144,13 +156,23 @@ public class Reservation implements Serializable { // ✨ הוספת הממשק
 	}
 
 	// ===== Utils =====
+
+	/**
+	 * Generates a random numeric confirmation code.
+	 * <p>
+	 * The generated code consists of six digits and is intended to uniquely
+	 * identify a reservation from the user's perspective.
+	 * </p>
+	 */
 	private String createConfirmationCode() {
 		int code = new Random().nextInt(900000) + 100000;
 		return String.valueOf(code);
 	}
-	
+
+	/**
+	 * Generates and assigns a confirmation code to this reservation.
+	 */
 	public void generateAndSetConfirmationCode() {
 	    this.confirmationCode = createConfirmationCode();
 	}
-
 }

@@ -9,14 +9,34 @@ import entities.User;
 import logicControllers.UserController;
 import ocsf.server.ConnectionToClient;
 
+/**
+ * Server-side request handler responsible for retrieving
+ * user information by user ID.
+ * <p>
+ * This handler is restricted to restaurant staff roles
+ * (RestaurantAgent or RestaurantManager) and allows them
+ * to search for a user using a unique identifier.
+ * </p>
+ */
 public class FindUserByIdHandler implements RequestHandler {
 
     private final UserController userController;
 
+    /**
+     * Constructs a handler with the required user controller dependency.
+     */
     public FindUserByIdHandler(UserController userController) {
         this.userController = userController;
     }
 
+    /**
+     * Handles a find-user-by-id request received from the client.
+     * <p>
+     * The method verifies that the requesting user is authenticated
+     * and authorized, validates the provided user ID, and retrieves
+     * the corresponding user information from the system.
+     * </p>
+     */
     @Override
     public void handle(RequestDTO request, ConnectionToClient client) throws Exception {
 
@@ -26,7 +46,6 @@ public class FindUserByIdHandler implements RequestHandler {
             return;
         }
 
-        // Only RestaurantAgent / RestaurantManager
         if (performer.getUserRole() != Enums.UserRole.RestaurantAgent &&
             performer.getUserRole() != Enums.UserRole.RestaurantManager) {
             client.sendToClient(new ResponseDTO(false, "Permission denied", null));
@@ -45,8 +64,10 @@ public class FindUserByIdHandler implements RequestHandler {
             return;
         }
 
-        // Reuse existing logic: currently you can fetch subscribers by id
-        Subscriber s = userController.getSubscriberById(id, (Subscriber) performerObj /* performer is a User but must be Subscriber subtype */);
+        Subscriber s = userController.getSubscriberById(
+                id,
+                (Subscriber) performerObj
+        );
 
         if (s == null) {
             client.sendToClient(new ResponseDTO(false, "User not found", null));

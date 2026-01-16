@@ -8,14 +8,34 @@ import entities.User;
 import logicControllers.UserController;
 import ocsf.server.ConnectionToClient;
 
+/**
+ * Server-side request handler responsible for creating
+ * a guest user based on a phone number.
+ * <p>
+ * This handler is restricted to restaurant staff roles
+ * (RestaurantAgent or RestaurantManager) and allows them
+ * to create or log in a guest user using a phone number.
+ * </p>
+ */
 public class CreateGuestByPhoneHandler implements RequestHandler {
 
     private final UserController userController;
 
+    /**
+     * Constructs a handler with the required user controller dependency.
+     */
     public CreateGuestByPhoneHandler(UserController userController) {
         this.userController = userController;
     }
 
+    /**
+     * Handles a create-guest-by-phone request received from the client.
+     * <p>
+     * The method verifies that the requesting user is authenticated and
+     * authorized, validates the input data, and delegates the guest
+     * creation logic to the {@link UserController}.
+     * </p>
+     */
     @Override
     public void handle(RequestDTO request, ConnectionToClient client) throws Exception {
 
@@ -25,7 +45,6 @@ public class CreateGuestByPhoneHandler implements RequestHandler {
             return;
         }
 
-        // Only RestaurantAgent / RestaurantManager
         if (performer.getUserRole() != Enums.UserRole.RestaurantAgent &&
             performer.getUserRole() != Enums.UserRole.RestaurantManager) {
             client.sendToClient(new ResponseDTO(false, "Permission denied", null));
@@ -45,7 +64,6 @@ public class CreateGuestByPhoneHandler implements RequestHandler {
             return;
         }
 
-        // We intentionally ignore email here (acting guest by phone)
         User guest = userController.loginGuest(phone.trim(), null);
 
         if (guest == null) {

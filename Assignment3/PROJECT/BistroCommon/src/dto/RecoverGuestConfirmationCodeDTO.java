@@ -3,6 +3,14 @@ package dto;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
+/**
+ * Data Transfer Object (DTO) used to recover a guest's confirmation code
+ * between the client and the server.
+ * <p>
+ * This object contains the phone number, email, and reservation date and time
+ * of the guest.
+ * </p>
+ */
 public class RecoverGuestConfirmationCodeDTO implements Serializable {
     private static final long serialVersionUID = 1L;
 

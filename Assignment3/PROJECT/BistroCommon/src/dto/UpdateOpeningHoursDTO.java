@@ -3,8 +3,11 @@ package dto;
 import java.io.Serializable;
 
 /**
- * DTO for updating opening hours of a specific day.
- * openTime / closeTime can be null -> means CLOSED.
+ * Data Transfer Object (DTO) used to update the opening hours of a specific day.
+ * <p>
+ * This object contains the day of the week, opening time, and closing time.
+ * If the opening or closing time is null, it indicates that the restaurant is closed.
+ * </p>
  */
 public class UpdateOpeningHoursDTO implements Serializable {
 

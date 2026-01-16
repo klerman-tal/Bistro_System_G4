@@ -3,7 +3,11 @@ package dto;
 import java.io.Serializable;
 
 /**
- * DTO למחיקת שולחן לפי מספר שולחן.
+ * Data Transfer Object (DTO) used to transfer table deletion data
+ * between the client and the server.
+ * <p>
+ * This object contains the table number to be deleted.
+ * </p>
  */
 public class DeleteTableDTO implements Serializable {
 

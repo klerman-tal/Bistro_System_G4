@@ -10,19 +10,37 @@ import entities.User;
 import logicControllers.UserController;
 import ocsf.server.ConnectionToClient;
 
+/**
+ * Server-side request handler responsible for deleting a subscriber account.
+ * <p>
+ * This handler verifies that the request is performed by an authenticated
+ * subscriber, delegates the deletion logic to the {@link UserController},
+ * and returns a success or failure response to the client.
+ * </p>
+ */
 public class DeleteSubscriberHandler implements RequestHandler {
 
     private final UserController userController;
 
+    /**
+     * Constructs a handler with the required user controller dependency.
+     */
     public DeleteSubscriberHandler(UserController userController) {
         this.userController = userController;
     }
 
+    /**
+     * Handles a delete subscriber request received from the client.
+     * <p>
+     * The method checks the session user for authorization, performs the
+     * deletion using the user controller, and sends a response indicating
+     * whether the operation succeeded.
+     * </p>
+     */
     @Override
     public void handle(RequestDTO request, ConnectionToClient client) {
 
         try {
-            // 🔒 שליפת המשתמש מה-session + בדיקה
             Object userObj = client.getInfo("user");
 
             if (!(userObj instanceof Subscriber performedBy)) {

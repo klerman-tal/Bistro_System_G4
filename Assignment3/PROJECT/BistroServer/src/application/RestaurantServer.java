@@ -68,6 +68,8 @@ public class RestaurantServer extends AbstractServer {
 	// ===== Schedulers =====
 	private ScheduledExecutorService waitingScheduler;
 	private final ScheduledExecutorService idleScheduler = Executors.newSingleThreadScheduledExecutor();
+	private ScheduledExecutorService gridDailyScheduler;
+
 
 
     private ScheduledExecutorService closingScheduler;
@@ -262,6 +264,20 @@ public class RestaurantServer extends AbstractServer {
 			} catch (Exception e) {
 				log("⚠️ Grid init failed: " + e.getMessage());
 			}
+			gridDailyScheduler = Executors.newSingleThreadScheduledExecutor();
+
+			gridDailyScheduler.scheduleAtFixedRate(() -> {
+			    try {
+			        restaurantController.initAvailabilityGridNext30Days();
+			        log("📅 Daily availability grid refresh completed.");
+			    } catch (Exception e) {
+			        log("❌ Daily grid refresh failed: " + e.getMessage());
+			    }
+			}, 
+			1,              // דיליי ראשון (דקה אחרי עליית שרת)
+			24 * 60,        // כל 24 שעות
+			TimeUnit.MINUTES);
+
 
 
 			log("✅ Server fully initialized.");
@@ -404,6 +420,9 @@ public class RestaurantServer extends AbstractServer {
 
 		if (notificationScheduler != null)
 			notificationScheduler.stop();
+		if (gridDailyScheduler != null)
+		    gridDailyScheduler.shutdownNow();
+
 
 		log("Server stopped.");
 	}

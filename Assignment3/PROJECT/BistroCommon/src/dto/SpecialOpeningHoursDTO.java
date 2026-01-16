@@ -5,7 +5,12 @@ import java.time.LocalDate;
 import java.sql.Time;
 
 /**
- * DTO for transferring special opening hours between Client and Server.
+ * Data Transfer Object (DTO) used to transfer special opening hours data
+ * between the client and the server.
+ * <p>
+ * This object contains details about the special date, opening time,
+ * closing time, and whether the restaurant is closed on that date.
+ * </p>
  * Implements Serializable to allow network transfer.
  */
 public class SpecialOpeningHoursDTO implements Serializable {
