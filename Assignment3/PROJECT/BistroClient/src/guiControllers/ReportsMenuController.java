@@ -54,13 +54,7 @@ public class ReportsMenuController {
                         .atDay(1)
                         .format(dateFmt);
 
-        lblReportsSummaryTitle.setText(
-                "Reports Summary: " + reportMonth.format(monthFmt)
-        );
-
         txtReportsSummaryText.setText(
-                "All reports present data for " +
-                reportMonth.format(monthFmt) + ".\n" +
                 "The " + nextReportMonth.format(monthFmt) +
                 " reports will be available starting " + publishDate + "."
         );

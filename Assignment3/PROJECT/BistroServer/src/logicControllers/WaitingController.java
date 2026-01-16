@@ -243,7 +243,7 @@ public class WaitingController {
                 if (code == null) continue;
 
                 server.log(
-                    "Waiting auto-cancelled (no arrival after 15 min): " + code
+                    "Waiting auto-cancelled (no check-in after 15 min): " + code
                 );
             }
 

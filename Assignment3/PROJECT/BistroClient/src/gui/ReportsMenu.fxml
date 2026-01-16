@@ -9,68 +9,75 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Text?>
 
-
 <BorderPane fx:id="rootPane" stylesheets="@Style.css"
-	xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-	fx:controller="guiControllers.ReportsMenuController">
+            xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="guiControllers.ReportsMenuController">
 
-	<!-- HEADER -->
-	<top>
-		<HBox fx:id="header" alignment="CENTER_LEFT">
-			<padding>
-				<Insets top="18" right="25" bottom="18" left="25" />
-			</padding>
-			<children>
-				<Label styleClass="title" text="Reports" textFill="WHITE" />
-				<Region HBox.hgrow="ALWAYS" />
-			</children>
-		</HBox>
-	</top>
+    <!-- HEADER -->
+    <top>
+        <HBox fx:id="header" alignment="CENTER_LEFT">
+            <padding>
+                <Insets top="18" right="25" bottom="18" left="25"/>
+            </padding>
+            <children>
+                <Label styleClass="title" text="Reports" textFill="WHITE"/>
+                <Region HBox.hgrow="ALWAYS"/>
+            </children>
+        </HBox>
+    </top>
 
-	<!-- CENTER CONTENT -->
-	<center>
-		<VBox alignment="TOP_CENTER" spacing="22">
-			<padding>
-				<Insets top="30" right="40" bottom="20" left="40" />
-			</padding>
+    <!-- CENTER CONTENT -->
+    <center>
+        <VBox alignment="TOP_CENTER" spacing="22">
+            <padding>
+                <Insets top="30" right="40" bottom="20" left="40"/>
+            </padding>
 
-			<!-- Buttons area -->
-			<Label styleClass="section" text="Choose report type" />
+            <!-- Title -->
+            <Label styleClass="section" text="Choose report type"/>
 
-			<Button fx:id="btnTimeReport" text="Time Report"
-				maxWidth="300" prefWidth="260" styleClass="btnSecondary"
-				onAction="#onTimeReportClicked" />
+            <!-- Buttons -->
+            <Button fx:id="btnTimeReport"
+                    text="Time Report"
+                    prefWidth="260"
+                    styleClass="btnSecondary"
+                    onAction="#onTimeReportClicked"/>
 
-			<Button fx:id="btnSubscribersReport" text="Subscribers Report"
-				maxWidth="300" prefWidth="260" styleClass="btnSecondary"
-				onAction="#onSubscribersReportClicked" />
+            <Button fx:id="btnSubscribersReport"
+                    text="Subscribers Report"
+                    prefWidth="260"
+                    styleClass="btnSecondary"
+                    onAction="#onSubscribersReportClicked"/>
 
-			<Label fx:id="lblMessage" visible="false" managed="false"
-				styleClass="errorMsg" />
+            <Label fx:id="lblMessage"
+                   visible="false"
+                   managed="false"
+                   styleClass="errorMsg"/>
 
-			<!-- ✅ SUMMARY BOX -->
-			<VBox styleClass="summary-box" maxWidth="900" spacing="6">
+            <!-- ✅ SUMMARY – centered EXACTLY like the title -->
+            <VBox alignment="CENTER"
+                  maxWidth="900"
+                  styleClass="summary-box">
+                <Text fx:id="txtReportsSummaryText"
+                      wrappingWidth="880"
+                      styleClass="summary-text"/>
+            </VBox>
 
-				<Label fx:id="lblReportsSummaryTitle"
-					styleClass="summary-title" />
+        </VBox>
+    </center>
 
-				<Text fx:id="txtReportsSummaryText" wrappingWidth="880"
-					styleClass="summary-text" />
-			</VBox>
-		</VBox>
-	</center>
-
-	<!-- FOOTER BACK BUTTON -->
-	<bottom>
-		<HBox alignment="CENTER_RIGHT" spacing="12">
-			<padding>
-				<Insets top="10" right="40" bottom="20" left="40" />
-			</padding>
-			<children>
-				<Button fx:id="btnBack" text="Back" styleClass="btnSecondary"
-					onAction="#onBackClicked" />
-			</children>
-		</HBox>
-	</bottom>
+    <!-- FOOTER -->
+    <bottom>
+        <HBox alignment="CENTER_RIGHT">
+            <padding>
+                <Insets top="10" right="40" bottom="20" left="40"/>
+            </padding>
+            <Button fx:id="btnBack"
+                    text="Back"
+                    styleClass="btnSecondary"
+                    onAction="#onBackClicked"/>
+        </HBox>
+    </bottom>
 
 </BorderPane>
