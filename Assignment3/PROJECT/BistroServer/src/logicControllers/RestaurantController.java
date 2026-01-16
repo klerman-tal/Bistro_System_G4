@@ -1,5 +1,6 @@
 package logicControllers;
 
+import dbControllers.Reservation_DB_Controller;
 import dbControllers.Restaurant_DB_Controller;
 import dbControllers.SpecialOpeningHours_DB_Controller;
 import entities.OpeningHouers;
@@ -17,6 +18,17 @@ public class RestaurantController {
     private final Restaurant_DB_Controller db;
     private final Restaurant restaurant;
     private ReservationController reservationController;
+    private Reservation_DB_Controller reservationDB;
+
+    public void setReservationDB(Reservation_DB_Controller reservationDB) {
+        this.reservationDB = reservationDB;
+        
+    }
+    public void setReservationController(ReservationController reservationController) {
+        this.reservationController = reservationController;
+    }
+
+
 
     // ✅ NEW
     private SpecialOpeningHours_DB_Controller specialDB;
@@ -62,29 +74,54 @@ public class RestaurantController {
         List<Table> tables = getSortedTablesEnsured();
         db.ensureAvailabilityGridSchema(tables);
     }
-
     public boolean removeTable(int tableNumber) throws SQLException {
         List<Table> tables = getSortedTablesEnsured();
         db.ensureAvailabilityGridSchema(tables);
 
-        Table toRemove = null;
-        if (restaurant.getTables() != null) {
-            for (Table t : restaurant.getTables()) {
-                if (t.getTableNumber() == tableNumber) { toRemove = t; break; }
-            }
+        // ✅ חדש: קודם לטפל בכל ההזמנות העתידיות על השולחן
+        if (reservationController != null) {
+            reservationController.relocateOrCancelReservationsForDeletedTable(tableNumber, 30);
         }
-        if (toRemove == null) return false;
 
+        // עכשיו המחיקה תעבור כי או שהעברנו או שביטלנו ושחררנו את הסלוטים
         boolean deleted = db.deleteTable(tableNumber);
         if (!deleted) return false;
 
-        restaurant.getTables().remove(toRemove);
+        // להסיר מה-cache
+        Table toRemove = null;
+        for (Table t : restaurant.getTables()) {
+            if (t.getTableNumber() == tableNumber) { toRemove = t; break; }
+        }
+        if (toRemove != null) restaurant.getTables().remove(toRemove);
 
-        List<Table> remaining = getSortedTablesEnsured();
-        db.ensureAvailabilityGridSchema(remaining);
+         db.dropTableColumnFromGrid(tableNumber);
 
         return true;
     }
+
+    public Table getOneAvailableTableAtExcluding(LocalDateTime slot, int peopleCount, int excludeTableNumber) throws Exception {
+        if (slot == null || peopleCount <= 0) return null;
+
+        List<Table> tables = getSortedTablesEnsured();
+        db.ensureAvailabilityGridSchema(tables);
+
+        List<Table> candidates = new ArrayList<>();
+        for (Table t : tables) {
+            if (t.getTableNumber() == excludeTableNumber) continue;
+            if (t.getSeatsAmount() >= peopleCount) candidates.add(t);
+        }
+        if (candidates.isEmpty()) return null;
+
+        Integer freeTableNumber = db.findOneFreeTableNumberAtSlot(slot, candidates);
+        if (freeTableNumber == null) return null;
+
+        for (Table t : candidates) {
+            if (t.getTableNumber() == freeTableNumber) return t;
+        }
+        return null;
+    }
+
+
 
     // =========================
     // OPENING HOURS
