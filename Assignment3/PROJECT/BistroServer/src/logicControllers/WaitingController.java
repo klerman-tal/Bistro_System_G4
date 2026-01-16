@@ -2,6 +2,7 @@ package logicControllers;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 
 import application.RestaurantServer;
@@ -10,10 +11,11 @@ import dbControllers.Waiting_DB_Controller;
 import entities.Enums;
 import entities.Enums.UserRole;
 import entities.Enums.WaitingStatus;
+import entities.Notification;
+import entities.OpeningHouers;
 import entities.Table;
 import entities.User;
 import entities.Waiting;
-import entities.Notification;
 
 public class WaitingController {
 
@@ -38,7 +40,57 @@ public class WaitingController {
         this.reservationController = reservationController;
     }
 
+    // ✅ NEW: exception to pass accurate reason to handler
+    public static class JoinWaitingBlockedException extends Exception {
+        private static final long serialVersionUID = 1L;
+
+        public JoinWaitingBlockedException(String message) {
+            super(message);
+        }
+    }
+
+    // ✅ NEW: Handler will call this to get accurate message
+    public Waiting joinWaitingListNowOrThrow(int guestsNumber, User user) throws JoinWaitingBlockedException {
+        Waiting w = joinWaitingListNow(guestsNumber, user);
+        if (w == null) {
+            throw new JoinWaitingBlockedException("Restaurant is closed. Cannot join waiting list.");
+        }
+        return w;
+    }
+
     public Waiting joinWaitingListNow(int guestsNumber, User user) {
+
+        // ===== Block join if restaurant is closed =====
+        try {
+            LocalDate today = LocalDate.now();
+
+            OpeningHouers oh =
+                    restaurantController.getEffectiveOpeningHoursForDate(today);
+
+            // If closed / missing hours -> block
+            if (oh == null || oh.getOpenTime() == null || oh.getCloseTime() == null) {
+                server.log("JOIN_WAITING blocked: restaurant closed (no opening hours).");
+                return null;
+            }
+
+            // times like "HH:mm" or "HH:mm:ss" -> take first 5 chars
+            LocalTime open = LocalTime.parse(oh.getOpenTime().substring(0, 5));
+            LocalTime close = LocalTime.parse(oh.getCloseTime().substring(0, 5));
+            LocalTime now = LocalTime.now();
+
+            // Outside business hours -> block
+            if (now.isBefore(open) || now.isAfter(close)) {
+                server.log("JOIN_WAITING blocked: outside business hours. now=" + now + ", open=" + open + ", close=" + close);
+                return null;
+            }
+
+        } catch (Exception e) {
+            // Safest: if we cannot determine hours -> block
+            server.log("JOIN_WAITING blocked: failed checking opening hours. " + e.getMessage());
+            return null;
+        }
+
+        // ===== Existing validation =====
         if (user == null || guestsNumber <= 0) return null;
 
         Waiting w = new Waiting();
@@ -277,7 +329,7 @@ public class WaitingController {
             // 2) cancel in DB (no delete)
             int count = db.cancelAllWaitingsByDate(date);
 
-            // 3) notify each user (safe text)
+            // 3) notify each user
             if (count > 0 && notificationDB != null && toCancel != null) {
                 LocalDateTime now = LocalDateTime.now();
 
