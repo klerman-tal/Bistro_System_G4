@@ -299,6 +299,11 @@ public class UserController {
         int max = userDB.getMaxUserIdFromGuestsAndSubscribers();
         return max + 1;
     }
+    
+    
+ // בתוך UserController.java
+
+
 
     
 

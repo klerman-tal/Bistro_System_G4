@@ -549,5 +549,38 @@ public class User_DB_Controller {
 
         throw new SQLException("RestaurantManager not found");
     }
+    
+    
+ // פונקציה לייצור סשן חדש עבור הברקוד שיופיע על המסך
+    public String createLoginSession() {
+        String sessionId = java.util.UUID.randomUUID().toString().substring(0, 8); // מייצר קוד קצר
+        String query = "INSERT INTO login_sessions (session_id) VALUES (?)";
+        try {
+            // כאן תשתמש בחיבור ל-DB שכבר קיים לך בקלאס
+            PreparedStatement ps = conn.prepareStatement(query);
+            ps.setString(1, sessionId);
+            ps.executeUpdate();
+            return sessionId;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    // פונקציה שבודקת אם מנוי כבר סרק את הקוד הזה בטלפון שלו
+    public Integer checkSessionStatus(String sessionId) {
+        String query = "SELECT subscriber_id FROM login_sessions WHERE session_id = ? AND subscriber_id IS NOT NULL";
+        try {
+            PreparedStatement ps = conn.prepareStatement(query);
+            ps.setString(1, sessionId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("subscriber_id");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null; // עדיין לא נסרק
+    }
 
 }
