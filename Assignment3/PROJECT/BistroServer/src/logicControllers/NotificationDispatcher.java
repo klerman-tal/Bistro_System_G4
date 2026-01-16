@@ -89,6 +89,10 @@ public class NotificationDispatcher {
 
             case MONTHLY_REPORT_READY:
                 return "Monthly report for the previous month is now available.";
+                
+            case RESERVATION_CANCELLED:
+                return "Your reservation was cancelled.";
+
 
 
             default:

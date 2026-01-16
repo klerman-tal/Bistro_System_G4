@@ -465,15 +465,14 @@ public class ReservationController {
             boolean cancelled = db.cancelReservationByConfirmationCode(confirmationCode);
 
             if (cancelled) {
+                scheduleReservationCancelledPopupForLogin(r, "Your reservation was cancelled.");
                 server.log("Reservation canceled. Code=" + confirmationCode);
 
-                // ✅ NEW: after cancel -> try to notify waiting list
                 notifyWaitingTableFreed(tableNum);
                 notifyPendingReservationCheckins(tableNum);
-
-
                 return true;
             }
+
 
             server.log("WARN: Cancel DB update did not affect row. Code=" + confirmationCode);
             return false;
@@ -482,6 +481,50 @@ public class ReservationController {
             server.log("ERROR: Failed to cancel reservation. Code=" + confirmationCode + ", Message=" + e.getMessage());
             return false;
         }
+    }
+    private void scheduleReservationCancelledPopupForLogin(Reservation r, String reason) {
+        if (notificationDB == null || r == null) return;
+
+        try {
+            LocalDateTime now = LocalDateTime.now();
+
+            String smsBody =
+                    "Your reservation was cancelled. Confirmation code: " + r.getConfirmationCode() +
+                    (reason != null && !reason.isBlank() ? " Reason: " + reason : "");
+
+            notificationDB.addNotification(new Notification(
+                    r.getCreatedByUserId(),
+                    Enums.Channel.SMS,
+                    Enums.NotificationType.RESERVATION_CANCELLED, // תוסיפי ENUM כזה
+                    smsBody,
+                    now
+            ));
+
+        } catch (Exception e) {
+            server.log("ERROR: scheduleReservationCancelledPopupForLogin failed: " + e.getMessage());
+        }
+    }
+
+
+    private void notifyUserReservationCancelledIfOnline(Reservation r, String reason) {
+        if (r == null) return;
+
+        int userId = r.getCreatedByUserId();
+        if (userId <= 0) return;
+
+        String display = "Your reservation was cancelled.";
+        String smsBody = "Your reservation was cancelled. Confirmation code: " + r.getConfirmationCode();
+        if (reason != null && !reason.isBlank()) {
+            smsBody += " Reason: " + reason;
+        }
+
+        // ✅ Popup only if user is connected
+        server.pushPopupToUserIfOnline(userId, new dto.NotificationDTO(
+                dto.NotificationDTO.Type.INFO,
+                "SMS",
+                display,
+                smsBody
+        ));
     }
 
     private void rollbackReservation(LocalDateTime requested, int tableNumber) {
