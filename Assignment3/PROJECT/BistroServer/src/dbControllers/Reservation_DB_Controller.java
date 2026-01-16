@@ -361,6 +361,67 @@ public class Reservation_DB_Controller {
 
         return list;
     }
+    
+    public boolean hasActiveReservationForTableInNextDays(int tableNumber, int days) throws SQLException {
+        String sql = """
+            SELECT 1
+            FROM reservations
+            WHERE table_number = ?
+              AND is_active = 1
+              AND reservation_status = 'Active'
+              AND reservation_datetime >= NOW()
+              AND reservation_datetime < (NOW() + INTERVAL ? DAY)
+            LIMIT 1;
+            """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, tableNumber);
+            ps.setInt(2, days);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+    
+    public ArrayList<Reservation> getActiveReservationsForTableInNextDays(int tableNumber, int days) throws SQLException {
+        String sql = """
+            SELECT *
+            FROM reservations
+            WHERE table_number = ?
+              AND is_active = 1
+              AND reservation_status = 'Active'
+              AND reservation_datetime >= NOW()
+              AND reservation_datetime < (NOW() + INTERVAL ? DAY)
+            ORDER BY reservation_datetime;
+            """;
+
+        ArrayList<Reservation> list = new ArrayList<>();
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, tableNumber);
+            ps.setInt(2, days);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) list.add(mapRowToReservation(rs));
+            }
+        }
+        return list;
+    }
+    public boolean updateReservationTableNumber(int reservationId, int newTableNumber) throws SQLException {
+        String sql = """
+            UPDATE reservations
+            SET table_number = ?
+            WHERE reservation_id = ?
+              AND is_active = 1
+              AND reservation_status = 'Active';
+            """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, newTableNumber);
+            ps.setInt(2, reservationId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+
 
     // =====================================================
     // UPDATE

@@ -11,7 +11,7 @@ import ocsf.server.ConnectionToClient;
  * reservation cancellation requests.
  * <p>
  * This handler validates the cancellation request, delegates
- * the cancellation logic to the {@link ReservationController},
+ * the cancellation logic to the {@link ReservationController}
  * and returns an appropriate response to the client.
  * </p>
  */

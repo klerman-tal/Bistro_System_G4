@@ -315,6 +315,83 @@ public class ReservationController {
 
         return res;
     }
+    public int relocateOrCancelReservationsForDeletedTable(int tableNumber, int days) {
+        int affected = 0;
+
+        try {
+            ArrayList<Reservation> list =
+                    db.getActiveReservationsForTableInNextDays(tableNumber, days);
+
+            for (Reservation r : list) {
+                if (r == null || r.getReservationTime() == null) continue;
+
+                LocalDateTime start = r.getReservationTime();
+                int guests = r.getGuestAmount();
+
+                // 1) מצא שולחן חלופי (לא כולל השולחן שנמחק)
+                Table newTable = restaurantController.getOneAvailableTableAtExcluding(start, guests, tableNumber);
+
+                // 2) אם אין חלופי -> בטל
+                if (newTable == null) {
+                    server.log("DELETE TABLE: Cancelling reservation (no alternative table). Code=" +
+                            r.getConfirmationCode() + " Time=" + start + " OldTable=" + tableNumber);
+
+                    CancelReservation(r.getConfirmationCode()); // משחרר סלוטים + מעדכן DB
+                    affected++;
+                    continue;
+                }
+
+                int newTableNum = newTable.getTableNumber();
+
+                // 3) ודא 2 שעות פנויות + נעל
+                boolean locked = tryReserveForTwoHours(start, newTableNum);
+                if (!locked) {
+                    server.log("DELETE TABLE: Cancelling reservation (failed locking new table). Code=" +
+                            r.getConfirmationCode() + " Time=" + start + " NewTable=" + newTableNum);
+
+                    CancelReservation(r.getConfirmationCode());
+                    affected++;
+                    continue;
+                }
+
+                // 4) שחרר 2 שעות מהשולחן הישן
+                for (int i = 0; i < 4; i++) {
+                    try { restaurantController.releaseSlot(start.plusMinutes(30L * i), tableNumber); }
+                    catch (Exception ignore) {}
+                }
+
+                // 5) עדכן DB לשולחן החדש
+                boolean updated = db.updateReservationTableNumber(r.getReservationId(), newTableNum);
+                if (!updated) {
+                    // אם נכשל עדכון DB: rollback לוגי
+                    for (int i = 0; i < 4; i++) {
+                        try { restaurantController.releaseSlot(start.plusMinutes(30L * i), newTableNum); }
+                        catch (Exception ignore) {}
+                    }
+                    // ואת הישנה נחזיר לתפוס כדי לא “לשחרר בטעות”
+                    for (int i = 0; i < 4; i++) {
+                        try { restaurantController.tryReserveSlot(start.plusMinutes(30L * i), tableNumber); }
+                        catch (Exception ignore) {}
+                    }
+
+                    server.log("DELETE TABLE: Failed updating reservation table_number -> kept original. Code=" +
+                            r.getConfirmationCode());
+                    continue;
+                }
+
+                server.log("DELETE TABLE: Reservation relocated. Code=" + r.getConfirmationCode() +
+                        " Time=" + start + " " + tableNumber + " -> " + newTableNum);
+
+                affected++;
+            }
+
+        } catch (Exception e) {
+            server.log("ERROR: relocateOrCancelReservationsForDeletedTable failed. " + e.getMessage());
+        }
+
+        return affected;
+    }
+
 
     public boolean createReservationFromWaiting(
             String confirmationCode,
@@ -388,15 +465,14 @@ public class ReservationController {
             boolean cancelled = db.cancelReservationByConfirmationCode(confirmationCode);
 
             if (cancelled) {
+                scheduleReservationCancelledPopupForLogin(r, "Your reservation was cancelled.");
                 server.log("Reservation canceled. Code=" + confirmationCode);
 
-                // ✅ NEW: after cancel -> try to notify waiting list
                 notifyWaitingTableFreed(tableNum);
                 notifyPendingReservationCheckins(tableNum);
-
-
                 return true;
             }
+
 
             server.log("WARN: Cancel DB update did not affect row. Code=" + confirmationCode);
             return false;
@@ -406,6 +482,31 @@ public class ReservationController {
             return false;
         }
     }
+    private void scheduleReservationCancelledPopupForLogin(Reservation r, String reason) {
+        if (notificationDB == null || r == null) return;
+
+        try {
+            LocalDateTime now = LocalDateTime.now();
+
+            String smsBody =
+                    "Your reservation was cancelled. Confirmation code: " + r.getConfirmationCode() +
+                    (reason != null && !reason.isBlank() ? " Reason: " + reason : "");
+
+            notificationDB.addNotification(new Notification(
+                    r.getCreatedByUserId(),
+                    Enums.Channel.SMS,
+                    Enums.NotificationType.RESERVATION_CANCELLED, // תוסיפי ENUM כזה
+                    smsBody,
+                    now
+            ));
+
+        } catch (Exception e) {
+            server.log("ERROR: scheduleReservationCancelledPopupForLogin failed: " + e.getMessage());
+        }
+    }
+
+
+   
 
     private void rollbackReservation(LocalDateTime requested, int tableNumber) {
         server.log("Rolling back: releasing 2 hours (4 slots) for table " + tableNumber);
