@@ -415,6 +415,20 @@ public class ReservationController {
             } catch (Exception ignore) {}
         }
     }
+    
+    
+    /**
+     * Returns current diners (checked-in but not checked-out).
+     */
+    public ArrayList<Reservation> getCurrentDiners() {
+        try {
+            return db.getCurrentDiners();
+        } catch (SQLException e) {
+            server.log("ERROR: Failed to load current diners. Msg=" + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
 
     // =====================================================
     // READ (QUERIES)

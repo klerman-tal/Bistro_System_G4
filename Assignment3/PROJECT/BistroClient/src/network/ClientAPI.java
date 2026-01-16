@@ -266,6 +266,16 @@ public class ClientAPI {
         client.sendToServer(request);
     }
     
+
+    public void getCurrentDiners() throws IOException {
+        System.out.println("Sending GET_CURRENT_DINERS...");
+        RequestDTO request = new RequestDTO(Commands.GET_CURRENT_DINERS, null);
+        client.sendToServer(request);
+        
+    }
+    
+    
+
     public void findUserById(int userId) throws IOException {
         FindUserByIdDTO data = new FindUserByIdDTO(userId);
         RequestDTO request = new RequestDTO(Commands.FIND_USER_BY_ID, data);
@@ -290,6 +300,7 @@ public class ClientAPI {
         RequestDTO request = new RequestDTO(Commands.GET_MY_ACTIVE_WAITINGS, data);
         client.sendToServer(request);
     }
+
 
 
 

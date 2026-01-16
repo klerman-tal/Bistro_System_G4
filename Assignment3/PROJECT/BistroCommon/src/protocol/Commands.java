@@ -5,6 +5,7 @@ public enum Commands {
     CREATE_RESERVATION,
     GET_RESERVATION_HISTORY,
     CANCEL_RESERVATION,
+    GET_CURRENT_DINERS,
 
     // ✅ Special Opening Hours
     UPDATE_SPECIAL_OPENING_HOURS,
