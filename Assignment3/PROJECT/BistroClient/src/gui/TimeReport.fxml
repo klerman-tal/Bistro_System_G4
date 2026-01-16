@@ -14,111 +14,119 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Text?>
 <?import javafx.scene.text.TextFlow?>
+<?import javafx.scene.control.ComboBox?>
 
-<BorderPane
-        fx:id="rootPane"
-        stylesheets="@Style.css"
-        xmlns="http://javafx.com/javafx/21"
-        xmlns:fx="http://javafx.com/fxml/1"
-        fx:controller="guiControllers.TimeReportController">
+<BorderPane fx:id="rootPane" stylesheets="@Style.css"
+	xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+	fx:controller="guiControllers.TimeReportController">
 
-    <!-- Header -->
-    <top>
-        <HBox alignment="CENTER_LEFT">
-            <padding>
-                <Insets top="18" right="25" bottom="18" left="25"/>
-            </padding>
-            <children>
-                <Label text="Time Report" styleClass="title"/>
-            </children>
-        </HBox>
-    </top>
+	<!-- Header -->
+	<top>
+		<HBox alignment="CENTER_LEFT">
+			<padding>
+				<Insets top="18" right="25" bottom="18" left="25" />
+			</padding>
+			<children>
+				<Label text="Time Report" styleClass="title" />
+			</children>
 
-    <!-- Content -->
-    <center>
-        <VBox alignment="TOP_CENTER" spacing="15">
-            <padding>
-                <Insets top="20" right="30" bottom="20" left="30"/>
-            </padding>
 
-            <TabPane prefWidth="900" prefHeight="700">
+		</HBox>
+	</top>
 
-                <!-- TAB: Arrival Status -->
-                <Tab text="Arrival Status" closable="false">
-                    <VBox alignment="TOP_CENTER" spacing="18">
-                        <padding>
-                            <Insets top="25" right="30" bottom="20" left="30"/>
-                        </padding>
+	<!-- Content -->
+	<center>
+		<VBox alignment="TOP_CENTER" spacing="15">
+			<padding>
+				<Insets top="20" right="30" bottom="20" left="30" />
+			</padding>
 
-                        <VBox prefWidth="700" maxWidth="700" spacing="6" styleClass="summary-box">
-                            <Label fx:id="lblSummaryTitle" styleClass="summary-title"/>
-                            <TextFlow>
-                                <Text fx:id="txtSummaryText" styleClass="summary-text"/>
-                            </TextFlow>
-                        </VBox>
+			<HBox spacing="10" alignment="CENTER_LEFT">
+				<Label text="Select report month:" />
+				<ComboBox fx:id="cmbReportMonth" prefWidth="180" />
+			</HBox>
 
-                        <PieChart fx:id="arrivalPieChart" prefWidth="500" prefHeight="350"/>
 
-                        <VBox prefWidth="500" spacing="6">
-                            <Label fx:id="lblOnTime" styleClass="arrival-on-time"/>
-                            <Label fx:id="lblMinorDelay" styleClass="arrival-minor-delay"/>
-                            <Label fx:id="lblMajorDelay" styleClass="arrival-major-delay"/>
-                        </VBox>
-                    </VBox>
-                </Tab>
+			
+			<TabPane prefWidth="900" prefHeight="700">
 
-                <!-- TAB: Stay Duration -->
-                <Tab text="Stay Duration" closable="false">
-                    <VBox alignment="TOP_CENTER" spacing="18">
-                        <padding>
-                            <Insets top="25" right="30" bottom="20" left="30"/>
-                        </padding>
+				<!-- TAB: Arrival Status -->
+				<Tab text="Arrival Status" closable="false">
+					<VBox alignment="TOP_CENTER" spacing="18">
+						<padding>
+							<Insets top="25" right="30" bottom="20" left="30" />
+						</padding>
 
-                        <VBox prefWidth="700" maxWidth="700" spacing="6" styleClass="summary-box">
-                            <Label fx:id="lblStaySummaryTitle" styleClass="summary-title"/>
-                            <TextFlow>
-                                <Text fx:id="txtStaySummaryText" styleClass="summary-text"/>
-                            </TextFlow>
-                        </VBox>
+						<VBox prefWidth="700" maxWidth="700" spacing="6"
+							styleClass="summary-box">
+							<Label fx:id="lblSummaryTitle" styleClass="summary-title" />
+							<TextFlow>
+								<Text fx:id="txtSummaryText" styleClass="summary-text" />
+							</TextFlow>
+						</VBox>
 
-                        <BarChart
-                                fx:id="timesChart"
-                                prefWidth="850"
-                                prefHeight="420"
-                                animated="false">
-                            <xAxis>
-                                <CategoryAxis label="Day of Month"/>
-                            </xAxis>
-                            <yAxis>
-                                <NumberAxis label="Minutes"/>
-                            </yAxis>
-                        </BarChart>
+						<PieChart fx:id="arrivalPieChart" prefWidth="500"
+							prefHeight="350" />
 
-                        <VBox prefWidth="850" spacing="6">
-                            <Label fx:id="lblMonthlyAvg"/>
-                            <Label fx:id="lblMaxDay"/>
-                            <Label fx:id="lblMinDay"/>
-                        </VBox>
-                    </VBox>
-                </Tab>
+						<VBox prefWidth="500" spacing="6">
+							<Label fx:id="lblOnTime" styleClass="arrival-on-time" />
+							<Label fx:id="lblMinorDelay"
+								styleClass="arrival-minor-delay" />
+							<Label fx:id="lblMajorDelay"
+								styleClass="arrival-major-delay" />
+						</VBox>
+					</VBox>
+				</Tab>
 
-            </TabPane>
-        </VBox>
-    </center>
+				<!-- TAB: Stay Duration -->
+				<Tab text="Stay Duration" closable="false">
+					<VBox alignment="TOP_CENTER" spacing="18">
+						<padding>
+							<Insets top="25" right="30" bottom="20" left="30" />
+						</padding>
 
-    <!-- Footer -->
-    <bottom>
-        <HBox alignment="CENTER_RIGHT">
-            <padding>
-                <Insets top="10" right="40" bottom="20" left="40"/>
-            </padding>
-            <children>
-                <Button
-                        text="Back"
-                        styleClass="btnSecondary"
-                        onAction="#onBackClicked"/>
-            </children>
-        </HBox>
-    </bottom>
+						<VBox prefWidth="700" maxWidth="700" spacing="6"
+							styleClass="summary-box">
+							<Label fx:id="lblStaySummaryTitle"
+								styleClass="summary-title" />
+							<TextFlow>
+								<Text fx:id="txtStaySummaryText" styleClass="summary-text" />
+							</TextFlow>
+						</VBox>
+
+						<BarChart fx:id="timesChart" prefWidth="850"
+							prefHeight="420" animated="false">
+							<xAxis>
+								<CategoryAxis label="Day of Month" />
+							</xAxis>
+							<yAxis>
+								<NumberAxis label="Minutes" />
+							</yAxis>
+						</BarChart>
+
+						<VBox prefWidth="850" spacing="6">
+							<Label fx:id="lblMonthlyAvg" />
+							<Label fx:id="lblMaxDay" />
+							<Label fx:id="lblMinDay" />
+						</VBox>
+					</VBox>
+				</Tab>
+
+			</TabPane>
+		</VBox>
+	</center>
+
+	<!-- Footer -->
+	<bottom>
+		<HBox alignment="CENTER_RIGHT">
+			<padding>
+				<Insets top="10" right="40" bottom="20" left="40" />
+			</padding>
+			<children>
+				<Button text="Back" styleClass="btnSecondary"
+					onAction="#onBackClicked" />
+			</children>
+		</HBox>
+	</bottom>
 
 </BorderPane>

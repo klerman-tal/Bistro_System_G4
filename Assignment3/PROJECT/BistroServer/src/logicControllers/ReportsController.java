@@ -166,9 +166,6 @@ public class ReportsController {
 		dto.setActiveSubscribersCount(activeSubscribers);
 		dto.setInactiveSubscribersCount(inactiveSubscribers);
 
-		dto.setActiveSubscribersCount(activeSubscribers);
-		dto.setInactiveSubscribersCount(inactiveSubscribers);
-
 		// ================= TAB 2: Waiting List Activity =================
 
 		Map<Integer, Integer> waitingPerDay = waitingDB.getWaitingCountPerDayByRole(UserRole.Subscriber, year, month);
