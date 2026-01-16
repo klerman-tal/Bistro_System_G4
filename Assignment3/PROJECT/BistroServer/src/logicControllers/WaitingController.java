@@ -18,7 +18,7 @@ import entities.Notification;
 public class WaitingController {
 
     private final Waiting_DB_Controller db;
-    private final Notification_DB_Controller notificationDB; // ✅ NEW
+    private final Notification_DB_Controller notificationDB;
     private final RestaurantServer server;
 
     private final RestaurantController restaurantController;
@@ -95,18 +95,15 @@ public class WaitingController {
         w.setWaitingStatus(WaitingStatus.Waiting);
         return w;
     }
-    
+
     public ArrayList<Waiting> getActiveWaitingList() {
-        try { 
+        try {
             return db.getAllWaitings();
         } catch (Exception e) {
             server.log("ERROR: Failed to fetch waiting list: " + e.getMessage());
             return new ArrayList<>();
         }
     }
-    
-    
-    
 
     public boolean leaveWaitingList(String confirmationCode) {
         if (confirmationCode == null || confirmationCode.isBlank()) return false;
@@ -200,17 +197,6 @@ public class WaitingController {
         }
     }
 
-    /**
-     * handleTableFreed (scenario 2B):
-     * - assigns table to next waiting (FIFO)
-     * - updates waiting row with freed time + table number
-     * - schedules notifications (EMAIL + SMS) immediately (scheduled_for = NOW)
-     * - DOES NOT create reservation here
-     *
-     * English texts:
-     * - Popup (safe, no code): "A table is now available. Please confirm your arrival within 15 minutes."
-     * - SMS/Email (includes code): "A table is now available. Your waiting code is: <CODE>. Please confirm your arrival within 15 minutes."
-     */
     public boolean handleTableFreed(Table freedTable) {
         if (freedTable == null) return false;
 
@@ -228,7 +214,6 @@ public class WaitingController {
 
             if (!updated) return false;
 
-            // ✅ schedule SMS + EMAIL notifications (immediate)
             if (notificationDB != null) {
                 String smsEmailBody =
                         "A table is now available. Your waiting code is: " + next.getConfirmationCode() +
@@ -271,30 +256,40 @@ public class WaitingController {
             return null;
         }
     }
-    
-    public int cancelAllWaitingDueToClosing(LocalDate today) {
 
-        int count = 0;
+    public ArrayList<Waiting> getActiveWaitingsForUser(int userId) {
+        try {
+            return db.getActiveWaitingsByUser(userId);
+        } catch (Exception e) {
+            server.log("ERROR: getActiveWaitingsForUser failed. UserId=" + userId + ", Msg=" + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    // ✅ End of day: cancel by joined_at date + send SMS/EMAIL
+    public int cancelAllWaitingsEndOfDay(LocalDate date) {
+        if (date == null) return 0;
 
         try {
-            ArrayList<Waiting> waitings = db.getActiveWaitingsForToday(today);
+            // 1) take snapshot of who is going to be cancelled (for notifications)
+            ArrayList<Waiting> toCancel = db.getActiveWaitingsByDate(date);
 
-            for (Waiting w : waitings) {
+            // 2) cancel in DB (no delete)
+            int count = db.cancelAllWaitingsByDate(date);
 
-                db.cancelWaiting(w.getConfirmationCode());
-                count++;
+            // 3) notify each user (safe text)
+            if (count > 0 && notificationDB != null && toCancel != null) {
+                LocalDateTime now = LocalDateTime.now();
 
-                if (notificationDB != null) {
+                for (Waiting w : toCancel) {
+                    if (w == null) continue;
 
-                    LocalDateTime now = LocalDateTime.now();
-
-                    String msg =
-                        "The restaurant is now closed. Your waiting request was cancelled.";
+                    String msg = "The restaurant is now closed. Your waiting request was cancelled.";
 
                     notificationDB.addNotification(new Notification(
                             w.getCreatedByUserId(),
                             Enums.Channel.SMS,
-                            Enums.NotificationType.TABLE_AVAILABLE, // או להוסיף enum חדש אם תרצי
+                            Enums.NotificationType.TABLE_AVAILABLE,
                             msg,
                             now
                     ));
@@ -310,24 +305,14 @@ public class WaitingController {
             }
 
             if (count > 0) {
-                server.log("🌙 Waiting cancelled due to closing hour. Count=" + count);
+                server.log("🌙 End of day: cancelled waitings + notifications sent. Date=" + date + ", Count=" + count);
             }
 
-        } catch (Exception e) {
-            server.log("❌ cancelAllWaitingDueToClosing failed: " + e.getMessage());
-        }
+            return count;
 
-        return count;
-    }
-    
-    public ArrayList<Waiting> getActiveWaitingsForUser(int userId) {
-        try {
-            return db.getActiveWaitingsByUser(userId);
         } catch (Exception e) {
-            server.log("ERROR: getActiveWaitingsForUser failed. UserId=" + userId + ", Msg=" + e.getMessage());
-            return new ArrayList<>();
+            server.log("❌ cancelAllWaitingsEndOfDay failed. Date=" + date + ", Msg=" + e.getMessage());
+            return 0;
         }
     }
-
-
 }

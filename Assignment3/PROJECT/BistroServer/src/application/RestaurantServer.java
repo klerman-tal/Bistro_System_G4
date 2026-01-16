@@ -223,6 +223,8 @@ public class RestaurantServer extends AbstractServer {
             }, 10, 10, TimeUnit.SECONDS);
             closingScheduler = Executors.newSingleThreadScheduledExecutor();
 
+         // ... בתוך serverStarted() איפה שיש closingScheduler.scheduleAtFixedRate ...
+
             closingScheduler.scheduleAtFixedRate(() -> {
                 try {
                     LocalDate today = LocalDate.now();
@@ -240,7 +242,10 @@ public class RestaurantServer extends AbstractServer {
                     );
 
                     if (LocalTime.now().isAfter(closeTime)) {
-                        waitingController.cancelAllWaitingDueToClosing(today);
+
+                        // ✅ NEW: server talks only to controller (clean architecture)
+                        waitingController.cancelAllWaitingsEndOfDay(today);
+
                         lastClosingHandledDate = today;
                     }
 
@@ -248,6 +253,7 @@ public class RestaurantServer extends AbstractServer {
                     log("❌ Closing scheduler error: " + e.getMessage());
                 }
             }, 10, 60, TimeUnit.SECONDS);
+
 
 
 			try {
