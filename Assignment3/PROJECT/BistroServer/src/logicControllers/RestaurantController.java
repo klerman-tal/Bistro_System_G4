@@ -269,6 +269,34 @@ public class RestaurantController {
         }
         return null;
     }
+    
+    public Table getOneAvailableTableAtExcludingTables(LocalDateTime slot, int peopleCount, ArrayList<Integer> excludedTableNumbers) throws Exception {
+        if (slot == null) return null;
+        if (peopleCount <= 0) return null;
+
+        Set<Integer> excluded = new HashSet<>();
+        if (excludedTableNumbers != null) excluded.addAll(excludedTableNumbers);
+
+        List<Table> tables = getSortedTablesEnsured();
+        db.ensureAvailabilityGridSchema(tables);
+
+        List<Table> candidates = new ArrayList<>();
+        for (Table t : tables) {
+            if (t.getSeatsAmount() >= peopleCount && !excluded.contains(t.getTableNumber())) {
+                candidates.add(t);
+            }
+        }
+        if (candidates.isEmpty()) return null;
+
+        Integer freeTableNumber = db.findOneFreeTableNumberAtSlot(slot, candidates);
+        if (freeTableNumber == null) return null;
+
+        for (Table t : candidates) {
+            if (t.getTableNumber() == freeTableNumber) return t;
+        }
+        return null;
+    }
+
 
     public Map<LocalDateTime, Table> getOneAvailableTablePerSlot(LocalDate date, int peopleCount) throws Exception {
         Map<LocalDateTime, Table> result = new LinkedHashMap<>();
