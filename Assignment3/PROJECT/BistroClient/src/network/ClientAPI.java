@@ -278,6 +278,21 @@ public class ClientAPI {
         RequestDTO request = new RequestDTO(Commands.CREATE_GUEST_BY_PHONE, data);
         client.sendToServer(request);
     }
+    
+    public void getMyActiveReservations(int userId) throws IOException {
+        dto.GetMyActiveReservationsDTO data = new dto.GetMyActiveReservationsDTO(userId);
+        RequestDTO request = new RequestDTO(Commands.GET_MY_ACTIVE_RESERVATIONS, data);
+        client.sendToServer(request);
+    }
+
+    public void getMyActiveWaitings(int userId) throws IOException {
+        dto.GetMyActiveWaitingsDTO data = new dto.GetMyActiveWaitingsDTO(userId);
+        RequestDTO request = new RequestDTO(Commands.GET_MY_ACTIVE_WAITINGS, data);
+        client.sendToServer(request);
+    }
+
+
+
 
 
 }

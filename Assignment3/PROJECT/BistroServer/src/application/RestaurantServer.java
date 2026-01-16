@@ -330,11 +330,6 @@ public class RestaurantServer extends AbstractServer {
 		router.register(Commands.PAY_RECEIPT,
 				new PayReceiptHandler(reservationController, receiptController, userController));
 
-		router.register(Commands.GET_RECEIPT_BY_CODE,
-				new GetReceiptByCodeHandler(reservationController, receiptController));
-
-		router.register(Commands.CHECKIN_RESERVATION, new CheckinReservationHandler(reservationController));
-
 
         router.register(
                 Commands.GET_RECEIPT_BY_CODE,
@@ -362,6 +357,13 @@ public class RestaurantServer extends AbstractServer {
 
         router.register(Commands.FIND_USER_BY_ID, new FindUserByIdHandler(userController));
         router.register(Commands.CREATE_GUEST_BY_PHONE, new CreateGuestByPhoneHandler(userController));
+        router.register(Commands.GET_MY_ACTIVE_RESERVATIONS,
+                new GetMyActiveReservationsHandler(reservationController));
+
+        router.register(Commands.GET_MY_ACTIVE_WAITINGS,
+                new GetMyActiveWaitingsHandler(waitingController));
+
+
 
 	}
 
