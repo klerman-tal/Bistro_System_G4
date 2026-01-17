@@ -16,6 +16,7 @@
             <padding>
                 <Insets top="18" right="25" bottom="18" left="25"/>
             </padding>
+
             <children>
                 <Label text="Table Reservation"
                        styleClass="mainTitle"
@@ -24,52 +25,53 @@
         </HBox>
     </top>
 
-    <!-- ===== CENTER ===== -->
+    <!-- ===== CONTENT ===== -->
     <center>
-        <VBox alignment="CENTER" spacing="15">
+        <VBox alignment="CENTER"
+              spacing="15">
             <padding>
                 <Insets top="30" right="40" bottom="20" left="40"/>
             </padding>
 
             <children>
 
+                <!-- ===== SECTION ===== -->
                 <Label text="Reservation Details"
                        styleClass="section"/>
 
-                <!-- Date -->
+                <!-- ===== DATE ===== -->
                 <DatePicker fx:id="datePicker"
-                            onAction="#onDateSelected"
-                            maxWidth="260"/>
+                            maxWidth="260"
+                            onAction="#onDateSelected"/>
 
-                <!-- Hour -->
+                <!-- ===== HOUR ===== -->
                 <ComboBox fx:id="cmbHour"
                           promptText="Select Hour"
                           maxWidth="260"/>
 
-                <!-- Guests -->
+                <!-- ===== GUESTS ===== -->
                 <TextField fx:id="txtGuests"
                            promptText="Number of guests"
                            maxWidth="260"/>
 
-                <!-- Message -->
+                <!-- ===== MESSAGE ===== -->
                 <Label fx:id="lblMessage"
                        visible="false"
                        managed="false"
                        styleClass="errorMsg"/>
 
-                <!-- Create -->
+                <!-- ===== ACTIONS ===== -->
                 <Button fx:id="btnCreate"
                         text="Create Reservation"
-                        onAction="#onCreateClicked"
                         prefWidth="260"
-                        styleClass="btnSecondary"/>
+                        styleClass="btnSecondary"
+                        onAction="#onCreateClicked"/>
 
-                <!-- Back -->
                 <Button fx:id="btnBack"
                         text="Back"
-                        onAction="#onBackClicked"
                         prefWidth="260"
-                        styleClass="btnPrimary"/>
+                        styleClass="btnPrimary"
+                        onAction="#onBackClicked"/>
 
             </children>
         </VBox>

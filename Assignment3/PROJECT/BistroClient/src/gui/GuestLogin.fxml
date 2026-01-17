@@ -18,64 +18,90 @@
             fx:controller="guiControllers.GuestLoginController">
 
     <children>
-        <VBox alignment="TOP_CENTER" spacing="15.0"
+
+        <!-- ===== MAIN CONTAINER ===== -->
+        <VBox alignment="TOP_CENTER" spacing="25.0"
               AnchorPane.topAnchor="20.0"
               AnchorPane.leftAnchor="0.0"
               AnchorPane.rightAnchor="0.0">
 
             <children>
 
-                <ImageView fitHeight="100.0" fitWidth="100.0"
-                           pickOnBounds="true" preserveRatio="true"
-                           styleClass="logo-shadow">
-                    <image>
-                        <Image url="@../images/bistro_logo.png" />
-                    </image>
-                </ImageView>
-
-                <VBox alignment="CENTER" spacing="2.0">
+                <!-- ===== LOGO & TITLE ===== -->
+                <VBox alignment="CENTER" spacing="12.0">
                     <children>
-                        <Label text="LOGIN AS GUEST" styleClass="title" />
-                        <Label text="Please enter your contact details to continue" styleClass="subtitle" />
+
+                        <ImageView fitHeight="130.0"
+                                   preserveRatio="true"
+                                   styleClass="logo-shadow">
+                            <VBox.margin>
+                                <Insets top="10.0"/>
+                            </VBox.margin>
+                            <image>
+                                <Image url="@BistroLogo.png"/>
+                            </image>
+                        </ImageView>
+
+                        <VBox alignment="CENTER" spacing="4.0">
+                            <children>
+                                <Label text="LOGIN AS GUEST"
+                                       styleClass="title"/>
+                                <Label text="Please enter your contact details to continue"
+                                       styleClass="subtitle"/>
+                            </children>
+                        </VBox>
+
                     </children>
                 </VBox>
 
-                <VBox alignment="CENTER" spacing="20.0" maxWidth="400.0"
+                <!-- ===== LOGIN CARD ===== -->
+                <VBox alignment="CENTER"
+                      spacing="20.0"
+                      maxWidth="400.0"
                       styleClass="card">
                     <padding>
-                        <Insets top="40.0" bottom="30.0" left="40.0" right="40.0" />
+                        <Insets top="40.0" bottom="30.0" left="40.0" right="40.0"/>
                     </padding>
 
                     <children>
 
+                        <!-- ===== PHONE ===== -->
                         <VBox spacing="5.0" alignment="CENTER_LEFT">
                             <children>
-                                <Label text="PHONE NUMBER" styleClass="field-label" />
-                                <TextField fx:id="phoneField" promptText="e.g. 050-1234567" />
+                                <Label text="PHONE NUMBER"
+                                       styleClass="field-label"/>
+                                <TextField fx:id="phoneField"
+                                           promptText="e.g. 050-1234567"/>
                             </children>
                         </VBox>
 
+                        <!-- ===== EMAIL ===== -->
                         <VBox spacing="5.0" alignment="CENTER_LEFT">
                             <children>
-                                <Label text="EMAIL ADDRESS" styleClass="field-label" />
-                                <TextField fx:id="emailField" promptText="name@example.com" />
+                                <Label text="EMAIL ADDRESS"
+                                       styleClass="field-label"/>
+                                <TextField fx:id="emailField"
+                                           promptText="name@example.com"/>
                             </children>
                         </VBox>
 
+                        <!-- ===== MESSAGE ===== -->
                         <Label fx:id="lblMessage"
-                               visible="false" managed="false"
-                               styleClass="errorMsg" />
+                               visible="false"
+                               managed="false"
+                               styleClass="errorMsg"/>
 
+                        <!-- ===== ACTION ===== -->
                         <Button text="CONTINUE"
                                 mnemonicParsing="false"
                                 onAction="#handleGuestLogin"
                                 styleClass="btnPrimary">
                             <VBox.margin>
-                                <Insets top="10.0" />
+                                <Insets top="10.0"/>
                             </VBox.margin>
                         </Button>
 
-                        <!-- ✅ NEW: Forgot confirmation code -->
+                        <!-- ===== LINKS ===== -->
                         <Hyperlink text="Forgot confirmation code?"
                                    onAction="#handleForgotConfirmationCode"
                                    styleClass="linkBlue"/>
@@ -89,5 +115,6 @@
 
             </children>
         </VBox>
+
     </children>
 </AnchorPane>

@@ -9,61 +9,94 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<StackPane id="rootPane" stylesheets="@Style.css" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="guiControllers.Login_BController">
+<StackPane id="rootPane"
+           stylesheets="@Style.css"
+           xmlns="http://javafx.com/javafx/25"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="guiControllers.Login_BController">
 
     <children>
-        <VBox alignment="CENTER" maxWidth="857.0" prefHeight="858.0" prefWidth="857.0" spacing="40.0">
+
+        <!-- ===== MAIN CONTAINER ===== -->
+        <VBox alignment="CENTER"
+              maxWidth="857.0"
+              prefHeight="858.0"
+              prefWidth="857.0"
+              spacing="40.0">
 
             <children>
 
-                <!-- ===== LOGO + HEADER (הוספה בלבד) ===== -->
+                <!-- ===== LOGO & HEADER ===== -->
                 <VBox alignment="CENTER" spacing="15.0">
                     <children>
 
                         <!-- LOGO -->
-                        <ImageView fitHeight="237.0" fitWidth="268.0" preserveRatio="true">
-                            <VBox.margin>	
-       							 <Insets top="25.0" />
-   							</VBox.margin>
+                        <ImageView fitHeight="237.0"
+                                   fitWidth="268.0"
+                                   preserveRatio="true">
+                            <VBox.margin>
+                                <Insets top="25.0"/>
+                            </VBox.margin>
                             <image>
-                                <Image url="@BistroLogo.png" />
+                                <Image url="@BistroLogo.png"/>
                             </image>
                         </ImageView>
 
-                        <!-- ORIGINAL WELCOME TEXT -->
+                        <!-- TITLE -->
                         <VBox alignment="CENTER" spacing="5.0">
                             <children>
-                                <Label styleClass="welcomeTitle" text="WELCOME" />
-                                <Label styleClass="subtitleItalic" text="Bistro Restaurant Management System" />
+                                <Label text="WELCOME"
+                                       styleClass="welcomeTitle"/>
+                                <Label text="Bistro Restaurant Management System"
+                                       styleClass="subtitleItalic"/>
                             </children>
                         </VBox>
 
                     </children>
                 </VBox>
 
-                <!-- ===== ORIGINAL CHOICE CARDS (לא נגעתי) ===== -->
+                <!-- ===== USER TYPE SELECTION ===== -->
                 <HBox alignment="CENTER" spacing="40.0">
                     <children>
 
-                        <!-- Subscriber -->
-                        <VBox alignment="CENTER" prefHeight="260.0" prefWidth="300.0" spacing="20.0" styleClass="card30">
+                        <!-- ===== SUBSCRIBER CARD ===== -->
+                        <VBox alignment="CENTER"
+                              prefHeight="260.0"
+                              prefWidth="300.0"
+                              spacing="20.0"
+                              styleClass="card30">
                             <children>
-                                <Label styleClass="emojiBig" text="👤" />
-                                <Label styleClass="cardTitle" text="Subscriber" />
-                                <Label styleClass="cardHint" text="Login to your account" />
+                                <Label text="👤"
+                                       styleClass="emojiBig"/>
+                                <Label text="Subscriber"
+                                       styleClass="cardTitle"/>
+                                <Label text="Login to your account"
+                                       styleClass="cardHint"/>
 
-                                <Button onAction="#handleSubscriberChoice" prefWidth="177.0" styleClass="btnDanger" text="LOGIN" />
+                                <Button text="LOGIN"
+                                        prefWidth="177.0"
+                                        styleClass="btnDanger"
+                                        onAction="#handleSubscriberChoice"/>
                             </children>
                         </VBox>
 
-                        <!-- Guest -->
-                        <VBox alignment="CENTER" prefHeight="392.0" prefWidth="300.0" spacing="20.0" styleClass="card30">
+                        <!-- ===== GUEST CARD ===== -->
+                        <VBox alignment="CENTER"
+                              prefHeight="392.0"
+                              prefWidth="300.0"
+                              spacing="20.0"
+                              styleClass="card30">
                             <children>
-                                <Label styleClass="emojiBig" text="🔑" />
-                                <Label styleClass="cardTitle" text="Guest" />
-                                <Label styleClass="cardHint" text="Quick access without ID" />
+                                <Label text="🔑"
+                                       styleClass="emojiBig"/>
+                                <Label text="Guest"
+                                       styleClass="cardTitle"/>
+                                <Label text="Quick access without ID"
+                                       styleClass="cardHint"/>
 
-                                <Button onAction="#handleGuestChoice" styleClass="btnWide25" text="CONTINUE" />
+                                <Button text="CONTINUE"
+                                        styleClass="btnWide25"
+                                        onAction="#handleGuestChoice"/>
                             </children>
                         </VBox>
 
@@ -72,5 +105,6 @@
 
             </children>
         </VBox>
+
     </children>
 </StackPane>

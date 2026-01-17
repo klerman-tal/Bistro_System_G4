@@ -11,12 +11,14 @@
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="guiControllers.RestaurantManagement_BController">
 
-    <!-- ================= HEADER ================= -->
+    <!-- ===== HEADER ===== -->
     <top>
-        <HBox fx:id="header" alignment="CENTER">
+        <HBox fx:id="header"
+              alignment="CENTER">
             <padding>
                 <Insets top="25" right="25" bottom="25" left="25"/>
             </padding>
+
             <children>
                 <Label text="Restaurant Management"
                        styleClass="mainTitle">
@@ -28,74 +30,74 @@
         </HBox>
     </top>
 
-    <!-- ================= CENTER ================= -->
+    <!-- ===== CONTENT ===== -->
     <center>
-        <VBox alignment="TOP_CENTER" spacing="22">
+        <VBox alignment="TOP_CENTER"
+              spacing="22">
             <padding>
                 <Insets top="35" right="40" bottom="20" left="40"/>
             </padding>
 
             <children>
 
-                <!-- Section title -->
+                <!-- ===== SECTION ===== -->
                 <Label text="Management actions"
                        styleClass="section"/>
 
-                <!-- Actions -->
+                <!-- ===== MANAGEMENT ACTIONS ===== -->
                 <Button text="Update Tables"
-                        onAction="#onUpdateTablesClicked"
                         prefWidth="720"
                         prefHeight="72"
-                        styleClass="btnSecondary"/>
+                        styleClass="btnSecondary"
+                        onAction="#onUpdateTablesClicked"/>
 
                 <Button text="Update Opening Hours"
-                        onAction="#onUpdateOpeningHoursClicked"
                         prefWidth="720"
                         prefHeight="72"
-                        styleClass="btnSecondary"/>
+                        styleClass="btnSecondary"
+                        onAction="#onUpdateOpeningHoursClicked"/>
 
                 <Button text="Manage Users"
-                        onAction="#onManageUsersClicked"
                         prefWidth="720"
                         prefHeight="72"
-                        styleClass="btnSecondary"/>
+                        styleClass="btnSecondary"
+                        onAction="#onManageUsersClicked"/>
 
                 <Button text="Manage Reservations"
-                        onAction="#onManageReservationClicked"
                         prefWidth="720"
                         prefHeight="72"
-                        styleClass="btnSecondary"/>
+                        styleClass="btnSecondary"
+                        onAction="#onManageReservationClicked"/>
 
                 <Button text="Manage Waiting List"
-                        onAction="#onWaitingListClicked"
                         prefWidth="720"
                         prefHeight="72"
-                        styleClass="btnSecondary"/>
+                        styleClass="btnSecondary"
+                        onAction="#onWaitingListClicked"/>
 
-                <!-- NEW BUTTON -->
                 <Button text="Manage Current Diners"
-                        onAction="#onManageCurrentDinersClicked"
                         prefWidth="720"
                         prefHeight="72"
-                        styleClass="btnSecondary"/>
+                        styleClass="btnSecondary"
+                        onAction="#onManageCurrentDinersClicked"/>
 
                 <Button fx:id="btnReports"
                         text="Reports"
-                        onAction="#onReportsClicked"
                         prefWidth="720"
                         prefHeight="72"
-                        styleClass="btnSecondary"/>
+                        styleClass="btnSecondary"
+                        onAction="#onReportsClicked"/>
 
-                <!-- Message -->
+                <!-- ===== MESSAGE ===== -->
                 <Label fx:id="lblMessage"
                        visible="false"
                        managed="false"
                        styleClass="errorMsg"/>
 
-                <!-- Back -->
+                <!-- ===== BACK ===== -->
                 <Button text="Back"
-                        onAction="#onBackToMenuClicked"
-                        styleClass="btnBack"/>
+                        styleClass="btnBack"
+                        onAction="#onBackToMenuClicked"/>
 
             </children>
         </VBox>

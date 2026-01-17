@@ -12,12 +12,14 @@
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="guiControllers.ReportsMenuController">
 
-    <!-- ================= HEADER ================= -->
+    <!-- ===== HEADER ===== -->
     <top>
-        <HBox fx:id="header" alignment="CENTER">
+        <HBox fx:id="header"
+              alignment="CENTER">
             <padding>
                 <Insets top="25" right="25" bottom="25" left="25"/>
             </padding>
+
             <children>
                 <Label text="Reports"
                        styleClass="mainTitle">
@@ -29,42 +31,42 @@
         </HBox>
     </top>
 
-    <!-- ================= CENTER ================= -->
+    <!-- ===== CONTENT ===== -->
     <center>
-        <VBox alignment="TOP_CENTER" spacing="22">
+        <VBox alignment="TOP_CENTER"
+              spacing="22">
             <padding>
                 <Insets top="35" right="40" bottom="20" left="40"/>
             </padding>
 
             <children>
 
-                <!-- Section title -->
+                <!-- ===== SECTION ===== -->
                 <Label text="Choose report type"
                        styleClass="section"/>
 
-                <!-- Actions -->
+                <!-- ===== REPORT ACTIONS ===== -->
                 <Button fx:id="btnTimeReport"
                         text="Time Report"
-                        onAction="#onTimeReportClicked"
                         prefWidth="720"
                         prefHeight="72"
-                        styleClass="btnSecondary"/>
+                        styleClass="btnSecondary"
+                        onAction="#onTimeReportClicked"/>
 
                 <Button fx:id="btnSubscribersReport"
                         text="Subscribers Report"
-                        onAction="#onSubscribersReportClicked"
                         prefWidth="720"
                         prefHeight="72"
-                        styleClass="btnSecondary"/>
+                        styleClass="btnSecondary"
+                        onAction="#onSubscribersReportClicked"/>
 
-                <!-- Message -->
+                <!-- ===== MESSAGE ===== -->
                 <Label fx:id="lblMessage"
                        visible="false"
                        managed="false"
                        styleClass="errorMsg"/>
 
                 <!-- ===== SUMMARY ===== -->
-                <!-- Centered exactly like section title (inside same VBox) -->
                 <VBox alignment="CENTER"
                       maxWidth="900"
                       styleClass="summary-box">
@@ -73,11 +75,11 @@
                           styleClass="summary-text"/>
                 </VBox>
 
-                <!-- Back -->
+                <!-- ===== BACK ===== -->
                 <Button fx:id="btnBack"
                         text="Back"
-                        onAction="#onBackClicked"
-                        styleClass="btnBack"/>
+                        styleClass="btnBack"
+                        onAction="#onBackClicked"/>
 
             </children>
         </VBox>
