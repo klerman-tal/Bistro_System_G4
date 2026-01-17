@@ -154,6 +154,10 @@ public class SubscriberLoginController implements ClientResponseHandler {
                     new FXMLLoader(getClass().getResource("/gui/ForgotSubscriberCode.fxml"));
             Parent root = loader.load();
 
+            // 🔴 זה החסר
+            ForgotCodeController controller = loader.getController();
+            controller.setClient(chatClient);
+
             Stage popup = new Stage();
             popup.initModality(Modality.APPLICATION_MODAL);
             popup.setScene(new Scene(root));
