@@ -46,9 +46,9 @@
 					prefWidth="260" styleClass="btnSecondary"
 					onAction="#onManageReservationClicked" />
 
-				<Button fx:id="btnManageWaitingList"
-					text="Manage Waiting List" maxWidth="300" prefWidth="260"
-					styleClass="btnSecondary" onAction="#onWaitingListClicked" />
+				<Button text="Manage Waiting List" maxWidth="300"
+					prefWidth="260" styleClass="btnSecondary"
+					onAction="#onWaitingListClicked" />
 
 
 				<!-- ✅ NEW BUTTON -->

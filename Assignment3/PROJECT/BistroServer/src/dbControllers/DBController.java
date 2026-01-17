@@ -1,33 +1,53 @@
 package dbControllers;
 
 import java.sql.Connection;
-import java.sql.Date;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
 
 import application.RestaurantServer;
 
+/**
+ * Manages the application's JDBC connection to the MySQL database.
+ * <p>
+ * This class is responsible for establishing and holding a single {@link Connection} instance
+ * used by the different DB controller classes. It also provides lightweight diagnostics/logging
+ * to verify connectivity and basic schema presence.
+ * </p>
+ * <p>
+ * Logging is routed through {@link RestaurantServer} when available; otherwise it falls back
+ * to standard output.
+ * </p>
+ */
 public class DBController {
 
-    // User-provided MySQL password (set in ServerUI)
+    /**
+     * MySQL password configured externally (e.g., via Server UI) before connecting.
+     */
     public static String MYSQL_PASSWORD = "";
 
     private Connection conn;
 
-    // Reference to the server to enable logging into the server UI
+    /**
+     * Server reference used for logging to the server UI.
+     */
     private RestaurantServer server;
 
-    // Link this DBController instance to a specific server instance
+    /**
+     * Links this DBController instance to a specific server instance for logging.
+     *
+     * @param server server instance used for UI logging
+     */
     public void setServer(RestaurantServer server) {
         this.server = server;
     }
 
-    // Central logging function:
-    // If server exists -> log to UI, otherwise log to console
+    /**
+     * Logs a message to the server UI if available; otherwise prints to console.
+     *
+     * @param msg message to log
+     */
     private void log(String msg) {
         if (server != null) {
             server.log(msg);
@@ -36,7 +56,20 @@ public class DBController {
         }
     }
 
-    // Establish a connection to the MySQL database
+    /**
+     * Establishes a JDBC connection to the application's MySQL database.
+     * <p>
+     * On successful connection, this method runs diagnostic helpers that log:
+     * <ul>
+     *   <li>Which database is currently selected</li>
+     *   <li>Whether the {@code restaurant_tables} table exists</li>
+     *   <li>The row count of {@code restaurant_tables} (if the table exists)</li>
+     * </ul>
+     * </p>
+     * <p>
+     * On failure, connection error details are logged (message, SQL state, vendor code).
+     * </p>
+     */
     public void ConnectToDb() {
         try {
             conn = DriverManager.getConnection(
@@ -47,11 +80,9 @@ public class DBController {
  
             log("SQL connection succeed");
 
-            // ===== DEBUG / VERIFY (new) =====
-            logCurrentDatabase();                 // prints which DB we're connected to
-            logIfRestaurantTablesExists();        // prints YES/NO
-            //ensureRestaurantTablesTableExists();  // creates only if missing
-            logRestaurantTablesRowCount();        // prints row count
+            logCurrentDatabase();
+            logIfRestaurantTablesExists();
+            logRestaurantTablesRowCount();
 
         } catch (SQLException ex) {
             log("SQLException: " + ex.getMessage());
@@ -60,13 +91,18 @@ public class DBController {
         }
     }
 
+    /**
+     * Returns the currently active JDBC connection.
+     *
+     * @return active {@link Connection} instance, or {@code null} if not connected
+     */
     public Connection getConnection() {
         return conn;
     }
 
-    // ==========================
-    // NEW HELPERS (diagnostics)
-    // ==========================
+    /**
+     * Logs the currently selected database name using {@code SELECT DATABASE()}.
+     */
     private void logCurrentDatabase() {
         if (conn == null) return;
         try (Statement st = conn.createStatement();
@@ -79,6 +115,9 @@ public class DBController {
         }
     }
 
+    /**
+     * Logs whether the {@code restaurant_tables} table exists in the current database.
+     */
     private void logIfRestaurantTablesExists() {
         if (conn == null) return;
         try (Statement st = conn.createStatement();
@@ -89,6 +128,12 @@ public class DBController {
         }
     }
 
+    /**
+     * Logs the row count of the {@code restaurant_tables} table.
+     * <p>
+     * If the table does not exist yet, this query may fail and will be logged as a non-fatal diagnostic.
+     * </p>
+     */
     private void logRestaurantTablesRowCount() {
         if (conn == null) return;
         try (Statement st = conn.createStatement();
@@ -97,11 +142,8 @@ public class DBController {
                 log("restaurant_tables row count: " + rs.getInt("c"));
             }
         } catch (SQLException e) {
-            // If table doesn't exist yet, this can fail. That's ok.
             log("Could not read restaurant_tables row count: " + e.getMessage());
         }
     }
 
-	
 }
-

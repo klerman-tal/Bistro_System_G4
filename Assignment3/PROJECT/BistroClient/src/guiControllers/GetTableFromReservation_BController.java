@@ -1,19 +1,28 @@
 package guiControllers;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.ArrayList;
+
 import application.ChatClient;
 import dto.GetTableResultDTO;
 import dto.ResponseDTO;
+import entities.Enums.UserRole;
+import entities.Reservation;
 import entities.User;
 import interfaces.ClientActions;
 import javafx.application.Platform;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import network.ClientAPI;
 import network.ClientResponseHandler;
@@ -26,6 +35,15 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
     @FXML private Label lblInfo;
     @FXML private Label lblError;
 
+    // ✅ Table (visible for: Subscriber/Agent/Manager; hidden for: RandomClient)
+    @FXML private VBox boxMyActive;
+    @FXML private TableView<Reservation> tblMyActive;
+    @FXML private TableColumn<Reservation, LocalDate> colDate;
+    @FXML private TableColumn<Reservation, LocalTime> colTime;
+    @FXML private TableColumn<Reservation, String> colCode;
+
+    private final ObservableList<Reservation> myActiveReservations = FXCollections.observableArrayList();
+
     private User user;
     private ChatClient chatClient;
     private ClientActions clientActions;
@@ -36,12 +54,60 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
         this.chatClient = chatClient;
         this.api = new ClientAPI(chatClient);
 
-        // this screen handles responses
         this.chatClient.setResponseHandler(this);
+
+        initMyActiveTable();
+        loadMyActiveIfAllowed();
     }
 
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
+    }
+
+    private void initMyActiveTable() {
+        if (tblMyActive == null) return;
+
+        colDate.setCellValueFactory(cd -> {
+            if (cd.getValue() == null || cd.getValue().getReservationTime() == null) {
+                return new SimpleObjectProperty<>(null);
+            }
+            return new SimpleObjectProperty<>(cd.getValue().getReservationTime().toLocalDate());
+        });
+
+        colTime.setCellValueFactory(cd -> {
+            if (cd.getValue() == null || cd.getValue().getReservationTime() == null) {
+                return new SimpleObjectProperty<>(null);
+            }
+            return new SimpleObjectProperty<>(cd.getValue().getReservationTime().toLocalTime());
+        });
+
+        colCode.setCellValueFactory(cd ->
+                new SimpleStringProperty(cd.getValue() == null ? "" : cd.getValue().getConfirmationCode()));
+
+        tblMyActive.setItems(myActiveReservations);
+
+        tblMyActive.getSelectionModel().selectedItemProperty().addListener((obs, oldV, selected) -> {
+            if (selected != null && selected.getConfirmationCode() != null) {
+                txtCode.setText(selected.getConfirmationCode());
+            }
+        });
+    }
+
+    private void loadMyActiveIfAllowed() {
+        boolean show = user != null && user.getUserRole() != UserRole.RandomClient;
+
+        if (boxMyActive != null) {
+            boxMyActive.setVisible(show);
+            boxMyActive.setManaged(show);
+        }
+
+        if (!show) return;
+
+        try {
+            api.getMyActiveReservations(user.getUserId());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @FXML
@@ -81,10 +147,20 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
                 return;
             }
 
+            // ✅ List for the table
+            if (response.isSuccess() && response.getData() instanceof ArrayList<?> list) {
+                myActiveReservations.clear();
+                for (Object o : list) {
+                    if (o instanceof Reservation r) {
+                        myActiveReservations.add(r);
+                    }
+                }
+                return;
+            }
+
+            // ✅ Check-in result
             GetTableResultDTO res = null;
-            try {
-                res = (GetTableResultDTO) response.getData();
-            } catch (Exception ignored) {}
+            try { res = (GetTableResultDTO) response.getData(); } catch (Exception ignored) {}
 
             if (res != null) {
 
@@ -152,16 +228,16 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
             }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setTitle("Bistro - " + title);
-
-            // ✅ תצוגה בלבד – בלי Scene חדשה
             Scene scene = stage.getScene();
+
+            // ✅ ניווט למסך גדול – בלי Scene חדשה
             if (scene == null) {
                 stage.setScene(new Scene(root));
             } else {
                 scene.setRoot(root);
             }
 
+            stage.setTitle("Bistro - " + title);
             stage.setMaximized(true);
             stage.show();
 
@@ -169,6 +245,7 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
             e.printStackTrace();
         }
     }
+
 
     private void hideMessages() {
         lblError.setText("");
@@ -201,8 +278,7 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
     }
 
     private void showSuccessAlert(String title, String content) {
-        javafx.scene.control.Alert alert =
-                new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(content);
