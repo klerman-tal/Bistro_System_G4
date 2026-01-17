@@ -324,6 +324,8 @@ public class RestaurantServer extends AbstractServer {
                 new FindUserByIdHandler(userController));
         router.register(Commands.CREATE_GUEST_BY_PHONE,
                 new CreateGuestByPhoneHandler(userController));
+        router.register(Commands.BARCODE_LOGIN, 
+                new BarcodeLoginHandler(userController, onlineUsersRegistry));
 
         // ===== Reports =====
         router.register(Commands.GET_TIME_REPORT,
@@ -344,6 +346,8 @@ public class RestaurantServer extends AbstractServer {
                 new UpdateOpeningHoursHandler(
                         restaurantController,
                         reservationController));
+        
+        
 
         // ===== Special Opening Hours =====
         router.register(Commands.GET_SPECIAL_OPENING_HOURS,
@@ -485,6 +489,26 @@ public class RestaurantServer extends AbstractServer {
         } catch (Exception e) {
             log("❌ Failed to create monthly report notification: " + e.getMessage());
         }
+    }
+    
+ // =====================================================
+    // טיפול במקרים של סגירת חלון (X) או שגיאות חיבור
+    // =====================================================
+    @Override
+    protected synchronized void clientException(ConnectionToClient client, Throwable exception) {
+        touchActivity();
+
+        String ip = (client.getInetAddress() != null) 
+                    ? client.getInetAddress().getHostAddress() 
+                    : "UNKNOWN";
+
+        // הסרת הלקוח מהרישום כדי שלא יישאר "תקוע" כמחובר בשרת
+        if (onlineUsersRegistry != null) {
+            onlineUsersRegistry.removeClient(client);
+        }
+
+        // הדפסה ללוג - זה מה שיופיע כשאתה סוגר את הקליינט בלי Logout מסודר
+        log("⚠️ Client connection lost (Window closed or crash) | IP: " + ip);
     }
 
     // ================= Main =================

@@ -2,7 +2,7 @@ package logicControllers;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
+import entities.User; // וודא שהאימפורט הזה קיים
 import ocsf.server.ConnectionToClient;
 
 /**
@@ -19,6 +19,13 @@ public class OnlineUsersRegistry {
         }
     }
 
+    // מתודת נוחות חדשה שתעזור לנו ב-Handler
+    public void registerUser(User user, ConnectionToClient client) {
+        if (user != null && client != null) {
+            setOnline(user.getUserId(), client);
+        }
+    }
+
     public void setOffline(int userId) {
         userIdToClient.remove(userId);
     }
@@ -31,13 +38,8 @@ public class OnlineUsersRegistry {
         return userIdToClient.containsKey(userId);
     }
 
-    /**
-     * Removes a client from registry (when disconnected).
-     */
     public void removeClient(ConnectionToClient client) {
         if (client == null) return;
-
-        // remove any userId that points to this client instance
         userIdToClient.entrySet().removeIf(e -> e.getValue() == client);
     }
 }

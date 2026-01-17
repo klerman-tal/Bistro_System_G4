@@ -300,6 +300,21 @@ public class ClientAPI {
         RequestDTO request = new RequestDTO(Commands.GET_MY_ACTIVE_WAITINGS, data);
         client.sendToServer(request);
     }
+    
+    public void loginByBarcode(String subscriberId) throws IOException {
+        if (subscriberId == null || subscriberId.isBlank()) {
+            throw new IllegalArgumentException("Scanned ID cannot be empty");
+        }
+
+        // יצירת ה-DTO מה-Common שבו הגדרנו את המבנה
+        dto.BarcodeScanDTO data = new dto.BarcodeScanDTO(subscriberId);
+        
+        // אריזה בתוך RequestDTO עם הפקודה החדשה
+        RequestDTO request = new RequestDTO(Commands.BARCODE_LOGIN, data);
+        
+        // שליחה לשרת דרך ה-ChatClient
+        client.sendToServer(request);
+    }
 
 
 

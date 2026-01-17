@@ -9,93 +9,76 @@
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
 
-<StackPane id="rootPane"
-           stylesheets="@Style.css"
-           xmlns="http://javafx.com/javafx/21"
-           xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="guiControllers.SubscriberLoginController">
+<StackPane id="rootPane" stylesheets="@Style.css"
+	xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+	fx:controller="guiControllers.SubscriberLoginController">
 
-    <children>
+	<children>
+		<VBox alignment="CENTER" spacing="30.0" maxWidth="600.0">
+			<children>
 
-        <VBox alignment="CENTER" spacing="40.0" maxWidth="600.0">
+				<VBox alignment="CENTER" spacing="15.0">
+					<children>
+						<ImageView fitHeight="130.0" preserveRatio="true">
+							<VBox.margin>
+								<Insets top="10.0" />
+							</VBox.margin>
+							<image>
+								<Image url="@BistroLogo.png" />
+							</image>
+						</ImageView>
 
-            <children>
+						<VBox alignment="CENTER" spacing="5.0">
+							<children>
+								<Label text="LOGIN AS SUBSCRIBER" styleClass="welcomeTitle" />
+								<Label text="Please enter details or scan your card" styleClass="subtitleItalic" />
+							</children>
+						</VBox>
+					</children>
+				</VBox>
 
-                <!-- ===== LOGO + HEADER ===== -->
-                <VBox alignment="CENTER" spacing="15.0">
-                    <children>
+				<VBox alignment="CENTER" spacing="18.0" prefWidth="400.0" prefHeight="480.0" styleClass="card30">
+					<padding>
+						<Insets bottom="20.0" left="30.0" right="30.0" top="20.0" />
+					</padding>
 
-                        <ImageView fitHeight="140.0" preserveRatio="true">
-                            <VBox.margin>
-                                <Insets top="25.0"/>
-                            </VBox.margin>
-                            <image>
-                                <Image url="@BistroLogo.png"/>
-                            </image>
-                        </ImageView>
+					<children>
+						<VBox spacing="5.0" alignment="CENTER_LEFT">
+							<children>
+								<Label text="SUBSCRIBER ID" styleClass="cardHint" />
+								<TextField fx:id="subscriberIdField" promptText="e.g. 12345" />
+							</children>
+						</VBox>
 
-                        <VBox alignment="CENTER" spacing="5.0">
-                            <children>
-                                <Label text="LOGIN AS SUBSCRIBER"
-                                       styleClass="welcomeTitle"/>
-                                <Label text="Please enter your subscription details"
-                                       styleClass="subtitleItalic"/>
-                            </children>
-                        </VBox>
+						<VBox spacing="5.0" alignment="CENTER_LEFT">
+							<children>
+								<Label text="USERNAME" styleClass="cardHint" />
+								<TextField fx:id="usernameField" promptText="Enter your name" />
+							</children>
+						</VBox>
 
-                    </children>
-                </VBox>
+						<Button text="SIGN IN" onAction="#handleSubscriberLogin" 
+						        styleClass="btnDanger" prefWidth="250.0" />
 
-                <!-- ===== LOGIN CARD ===== -->
-                <VBox alignment="CENTER"
-                      spacing="20.0"
-                      prefWidth="400.0"
-                      styleClass="card30">
+						<Label text="— OR USE CARD —" style="-fx-text-fill: gray; -fx-font-size: 11px; -fx-font-weight: bold;" />
 
-                    <children>
+						<Button fx:id="btnBarcodeSim" text="💳 SCAN MEMBER CARD"
+							onAction="#onBarcodeSimClicked" 
+							style="-fx-background-color: #2c3e50; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;"
+							prefWidth="250.0" prefHeight="40.0" />
 
-                        <VBox spacing="5.0" alignment="CENTER_LEFT">
-                            <children>
-                                <Label text="SUBSCRIBER ID" styleClass="cardHint"/>
-                                <TextField fx:id="subscriberIdField"
-                                           promptText="e.g. 12345"/>
-                            </children>
-                        </VBox>
+						<Label fx:id="lblMessage" visible="false" managed="false" styleClass="errorText" />
 
-                        <VBox spacing="5.0" alignment="CENTER_LEFT">
-                            <children>
-                                <Label text="USERNAME" styleClass="cardHint"/>
-                                <TextField fx:id="usernameField"
-                                           promptText="Enter your name"/>
-                            </children>
-                        </VBox>
+						<VBox alignment="CENTER" spacing="8.0">
+							<children>
+								<Hyperlink text="Forgot Subscriber Code?" onAction="#handleForgotCode" styleClass="linkBlue" />
+								<Hyperlink text="← Back to Welcome" onAction="#handleBackButton" styleClass="linkGray" />
+							</children>
+						</VBox>
+					</children>
+				</VBox>
 
-                        <Label fx:id="lblMessage"
-                               visible="false"
-                               managed="false"
-                               styleClass="errorText"/>
-
-                        <Button text="SIGN IN"
-                                onAction="#handleSubscriberLogin"
-                                styleClass="btnDanger"/>
-
-                        <VBox alignment="CENTER" spacing="5.0">
-                            <children>
-                                <Hyperlink text="Forgot Subscriber Code?"
-                                           onAction="#handleForgotCode"
-                                           styleClass="linkBlue"/>
-
-                                <Hyperlink text="← Back to Welcome"
-                                           onAction="#handleBackButton"
-                                           styleClass="linkGray"/>
-                            </children>
-                        </VBox>
-
-                    </children>
-                </VBox>
-
-            </children>
-        </VBox>
-
-    </children>
+			</children>
+		</VBox>
+	</children>
 </StackPane>

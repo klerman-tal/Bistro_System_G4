@@ -1,27 +1,19 @@
 package guiControllers;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.util.ArrayList;
-
 import application.ChatClient;
 import dto.ResponseDTO;
-import entities.Enums.UserRole;
 import entities.User;
 import entities.Waiting;
 import interfaces.ClientActions;
 import javafx.application.Platform;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import network.ClientAPI;
 import network.ClientResponseHandler;
@@ -34,15 +26,6 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
     @FXML private Label lblInfo;
     @FXML private Label lblError;
 
-    // ✅ Table (visible for: Subscriber / Agent / Manager; hidden only for RandomClient)
-    @FXML private VBox boxMyActive;
-    @FXML private TableView<Waiting> tblMyActive;
-    @FXML private TableColumn<Waiting, LocalDate> colDate;
-    @FXML private TableColumn<Waiting, LocalTime> colTime;
-    @FXML private TableColumn<Waiting, String> colCode;
-
-    private final ObservableList<Waiting> myActiveWaitings = FXCollections.observableArrayList();
-
     private User user;
     private ChatClient chatClient;
     private ClientActions clientActions;
@@ -53,70 +36,12 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
         this.chatClient = chatClient;
         this.api = new ClientAPI(chatClient);
 
+        // This screen handles responses
         this.chatClient.setResponseHandler(this);
-
-        initMyActiveTable();
-        loadMyActiveIfAllowed();
     }
 
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
-    }
-
-    private void initMyActiveTable() {
-        if (tblMyActive == null) return;
-
-        colDate.setCellValueFactory(cd -> {
-            if (cd.getValue() == null || cd.getValue().getTableFreedTime() == null) {
-                return new SimpleObjectProperty<>(null);
-            }
-            return new SimpleObjectProperty<>(cd.getValue().getTableFreedTime().toLocalDate());
-        });
-
-        colTime.setCellValueFactory(cd -> {
-            if (cd.getValue() == null || cd.getValue().getTableFreedTime() == null) {
-                return new SimpleObjectProperty<>(null);
-            }
-            return new SimpleObjectProperty<>(cd.getValue().getTableFreedTime().toLocalTime());
-        });
-
-        colCode.setCellValueFactory(cd ->
-                new SimpleStringProperty(cd.getValue() == null ? "" : cd.getValue().getConfirmationCode()));
-
-        tblMyActive.setItems(myActiveWaitings);
-
-        // ✅ click row → fill confirmation code
-        tblMyActive.getSelectionModel().selectedItemProperty().addListener((obs, oldV, selected) -> {
-            if (selected != null && selected.getConfirmationCode() != null) {
-                txtCode.setText(selected.getConfirmationCode());
-            }
-        });
-    }
-
-    /**
-     * ✅ SHOW TABLE FOR:
-     * Subscriber / RestaurantAgent / RestaurantManager
-     * ❌ HIDE ONLY FOR:
-     * RandomClient
-     */
-    private void loadMyActiveIfAllowed() {
-        boolean show =
-                user != null &&
-                user.getUserRole() != UserRole.RandomClient;
-
-        if (boxMyActive != null) {
-            boxMyActive.setVisible(show);
-            boxMyActive.setManaged(show);
-        }
-
-        if (!show) return;
-
-        try {
-            api.getMyActiveWaitings(user.getUserId());
-        } catch (Exception e) {
-            // table is optional – do not break screen
-            e.printStackTrace();
-        }
     }
 
     @FXML
@@ -153,32 +78,19 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
 
             if (response == null) return;
 
-            // ✅ Case 1: list for table
-            if (response.isSuccess() && response.getData() instanceof ArrayList<?> list) {
-                myActiveWaitings.clear();
-                for (Object o : list) {
-                    if (o instanceof Waiting w) {
-                        myActiveWaitings.add(w);
-                    }
-                }
-                return;
-            }
-
-            // ✅ Case 2: confirm arrival
             if (response.isSuccess()) {
 
                 Waiting w = null;
-                try { w = (Waiting) response.getData(); } catch (Exception ignored) {}
+                try {
+                    w = (Waiting) response.getData();
+                } catch (Exception ignored) {}
 
                 String tableMsg = "";
                 if (w != null && w.getTableNumber() != null) {
                     tableMsg = "Your table number is: " + w.getTableNumber();
                 }
 
-                showSuccessAlert(
-                        "You are seated!",
-                        "Welcome 🎉\n" + (tableMsg.isEmpty() ? "" : tableMsg)
-                );
+                showSuccessAlert("You are seated!", "Welcome 🎉\n" + (tableMsg.isEmpty() ? "" : tableMsg));
 
                 showInfo(tableMsg.isEmpty() ? "You are seated." : tableMsg);
                 return;
@@ -198,8 +110,11 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
     }
 
     @Override
-    public void handleConnectionClosed() {}
+    public void handleConnectionClosed() { }
 
+    // =========================
+    // Back navigation (preserve user + chatClient)
+    // =========================
     @FXML
     private void onBackClicked() {
         if (chatClient != null) chatClient.setResponseHandler(null);
@@ -213,6 +128,7 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
 
             Object controller = loader.getController();
 
+            // Pass clientActions if exists
             if (controller != null && clientActions != null) {
                 try {
                     controller.getClass()
@@ -221,6 +137,7 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
                 } catch (Exception ignored) {}
             }
 
+            // Pass user + chatClient to preserve session
             if (controller != null && user != null && chatClient != null) {
                 try {
                     controller.getClass()
@@ -239,8 +156,9 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
         }
     }
 
-    // ================= UI helpers =================
-
+    // =========================
+    // UI helpers
+    // =========================
     private void hideMessages() {
         lblError.setVisible(false);
         lblError.setManaged(false);
@@ -261,7 +179,8 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
     }
 
     private void showSuccessAlert(String title, String content) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        javafx.scene.control.Alert alert =
+                new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(content);
