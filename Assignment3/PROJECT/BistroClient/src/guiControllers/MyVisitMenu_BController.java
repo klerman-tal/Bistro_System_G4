@@ -20,7 +20,8 @@ public class MyVisitMenu_BController {
 
     @FXML private BorderPane rootPane;
 
-    // כמו כל שאר החלונות אצלך
+    // ================= SESSION =================
+
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
@@ -30,9 +31,10 @@ public class MyVisitMenu_BController {
         this.clientActions = clientActions;
     }
 
+    // ================= ACTIONS =================
+
     @FXML
     private void onGetTable() {
-        // ✅ במקום Checkin_B.fxml (שלא קיים) -> למסך הבחירה החדש
         openWindow("GetTableChoice_B.fxml", "Get Table");
     }
 
@@ -50,7 +52,8 @@ public class MyVisitMenu_BController {
 
     private void openWindow(String fxmlName, String title) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
             Parent root = loader.load();
 
             Object controller = loader.getController();
@@ -64,7 +67,7 @@ public class MyVisitMenu_BController {
                 } catch (Exception ignored) {}
             }
 
-            // ✅ Preserve logged-in user + chatClient/session
+            // preserve user + chatClient
             if (controller != null && user != null && chatClient != null) {
                 try {
                     controller.getClass()
@@ -74,9 +77,16 @@ public class MyVisitMenu_BController {
             }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
+            Scene scene = stage.getScene();
+
+            if (scene == null) {
+                stage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
             stage.setTitle("Bistro - " + title);
-            stage.setScene(new Scene(root));
-            stage.centerOnScreen();
+            stage.setMaximized(true);
             stage.show();
 
         } catch (IOException e) {

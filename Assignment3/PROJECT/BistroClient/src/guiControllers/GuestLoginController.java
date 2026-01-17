@@ -93,7 +93,6 @@ public class GuestLoginController implements ClientResponseHandler {
             if (response.isSuccess()) {
                 User guestUser = (User) response.getData();
 
-                // ✅ Session: logged in = guest, acting = guest
                 ClientSession.setLoggedInUser(guestUser);
                 ClientSession.setActingUser(guestUser);
 
@@ -104,24 +103,38 @@ public class GuestLoginController implements ClientResponseHandler {
         });
     }
 
+    // =========================
+    // MAIN SCREEN navigation
+    // =========================
     private void goToMenu(User loggedInUser) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
             Parent root = loader.load();
             Menu_BController menu = loader.getController();
-
-            // ✅ Always open menu with LOGGED IN user
             menu.setClient(loggedInUser, chatClient);
 
             Stage stage = (Stage) phoneField.getScene().getWindow();
-            stage.setScene(new Scene(root));
+
+            // ✅ תצוגה בלבד – בלי Scene חדשה
+            Scene scene = stage.getScene();
+            if (scene == null) {
+                stage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
+            stage.setMaximized(true);
             stage.show();
+
         } catch (IOException e) {
             e.printStackTrace();
             showError("Failed to open menu.");
         }
     }
 
+    // =========================
+    // POPUP – לא נוגעים
+    // =========================
     @FXML
     private void handleForgotConfirmationCode(ActionEvent event) {
         try {
@@ -146,6 +159,9 @@ public class GuestLoginController implements ClientResponseHandler {
         }
     }
 
+    // =========================
+    // MAIN SCREEN navigation
+    // =========================
     @FXML
     private void handleBackButton(ActionEvent event) {
         navigateTo(event, "/gui/Login_B.fxml");
@@ -156,9 +172,18 @@ public class GuestLoginController implements ClientResponseHandler {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
             Parent root = loader.load();
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-            stage.setScene(new Scene(root));
-            stage.centerOnScreen();
+
+            // ✅ תצוגה בלבד – בלי Scene חדשה
+            Scene scene = stage.getScene();
+            if (scene == null) {
+                stage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
+            stage.setMaximized(true);
             stage.show();
+
         } catch (IOException e) {
             e.printStackTrace();
         }

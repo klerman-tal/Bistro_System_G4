@@ -30,7 +30,6 @@ public class ManageReservationController implements Initializable {
     @FXML private BorderPane rootPane;
     @FXML private Label lblStatus;
 
-    // ===== TABLE =====
     @FXML private TableView<Reservation> tblReservations;
     @FXML private TableColumn<Reservation, Integer> colReservationId;
     @FXML private TableColumn<Reservation, LocalDateTime> colDateTime;
@@ -44,7 +43,6 @@ public class ManageReservationController implements Initializable {
     @FXML private Button btnDelete;
     @FXML private Button btnBack;
 
-    // ===== SESSION =====
     private ClientActions clientActions;
     private User user;
     private ChatClient chatClient;
@@ -86,7 +84,7 @@ public class ManageReservationController implements Initializable {
 
     @Override
     public void initialize(java.net.URL location, java.util.ResourceBundle resources) {
-        // המתודה נשארת ריקה כי מחקנו את ה-ComboBox שגרם לשגיאה
+        // intentionally empty
     }
 
     private void initializeTableBehavior() {
@@ -99,8 +97,6 @@ public class ManageReservationController implements Initializable {
         colTableNumber.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
 
         tblReservations.setItems(reservationsList);
-        
-        // הסרנו את ה-Listener שקרא ל-fillForm כי השדות נמחקו
     }
 
     private void loadReservationsOnEnter() {
@@ -146,7 +142,16 @@ public class ManageReservationController implements Initializable {
             }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setScene(new Scene(root));
+
+            // ✅ תצוגה בלבד
+            Scene scene = stage.getScene();
+            if (scene == null) {
+                stage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
+            stage.setMaximized(true);
             stage.show();
 
         } catch (Exception e) {
@@ -176,7 +181,16 @@ public class ManageReservationController implements Initializable {
             controller.setBackFxml("/gui/ManageReservation.fxml");
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setScene(new Scene(root));
+
+            // ✅ תצוגה בלבד
+            Scene scene = stage.getScene();
+            if (scene == null) {
+                stage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
+            stage.setMaximized(true);
             stage.show();
 
         } catch (Exception e) {
@@ -206,7 +220,16 @@ public class ManageReservationController implements Initializable {
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setTitle("Bistro - " + title);
-            stage.setScene(new Scene(root));
+
+            // ✅ תצוגה בלבד
+            Scene scene = stage.getScene();
+            if (scene == null) {
+                stage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
+            stage.setMaximized(true);
             stage.show();
 
         } catch (Exception e) {

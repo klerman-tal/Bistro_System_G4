@@ -28,10 +28,7 @@ public class Menu_BController implements ClientResponseHandler {
     @FXML private Button btnPersonalDetails;
     @FXML private Button btnRestaurantManagement;
 
-    // ✅ Acting box container (was missing -> stayed hidden forever)
     @FXML private BorderPane actAsBox;
-
-    // ✅ Acting user controls
     @FXML private TextField txtIdForRegistered;
     @FXML private TextField txtPhoneForNewGuest;
     @FXML private Button btnOk;
@@ -44,49 +41,39 @@ public class Menu_BController implements ClientResponseHandler {
     private ClientActions clientActions;
     private ClientAPI api;
 
-    /* =======================
-       SETTERS
-       ======================= */
+    /* ===================== SETUP ===================== */
 
     public void setClient(User user, ChatClient chatClient) {
         this.loggedInUser = user;
         this.chatClient = chatClient;
         this.api = new ClientAPI(chatClient);
 
-        // keep session
         ClientSession.setLoggedInUser(user);
         ClientSession.setChatClient(chatClient);
 
-        // ✅ לא לאפס אם כבר יש acting user (כדי שישאר עד Reset)
         if (ClientSession.getActingUser() == null) {
             ClientSession.resetActingUser();
         }
 
-
-        // menu can receive OK responses
-        if (this.chatClient != null) {
-            this.chatClient.setResponseHandler(this);
+        if (chatClient != null) {
+            chatClient.setResponseHandler(this);
         }
 
-        boolean isRestaurantStaff =
+        boolean isStaff =
                 user != null &&
                 (user.getUserRole() == Enums.UserRole.RestaurantAgent
               || user.getUserRole() == Enums.UserRole.RestaurantManager);
 
-        // ✅ Restaurant Management visible ONLY for Agent/Manager
-        btnRestaurantManagement.setVisible(isRestaurantStaff);
-        btnRestaurantManagement.setManaged(isRestaurantStaff);
+        btnRestaurantManagement.setVisible(isStaff);
+        btnRestaurantManagement.setManaged(isStaff);
 
-        // Personal Details hidden for RandomClient
         boolean showPersonal =
                 user != null && user.getUserRole() != Enums.UserRole.RandomClient;
 
         btnPersonalDetails.setVisible(showPersonal);
         btnPersonalDetails.setManaged(showPersonal);
 
-        // ✅ Acting controls visible ONLY for staff
-        setActingControlsVisible(isRestaurantStaff);
-
+        setActingControlsVisible(isStaff);
         clearOkFields();
         updateActingUserLabel();
         hideMessage();
@@ -97,12 +84,10 @@ public class Menu_BController implements ClientResponseHandler {
     }
 
     private void setActingControlsVisible(boolean visible) {
-        // ✅ THIS is what you were missing
         if (actAsBox != null) {
             actAsBox.setVisible(visible);
             actAsBox.setManaged(visible);
         }
-
         if (txtIdForRegistered != null) {
             txtIdForRegistered.setVisible(visible);
             txtIdForRegistered.setManaged(visible);
@@ -121,9 +106,109 @@ public class Menu_BController implements ClientResponseHandler {
         }
     }
 
-    /* =======================
-       OK (Act as)
-       ======================= */
+    /* ===================== MENU BUTTONS ===================== */
+
+    @FXML
+    private void onSelectReservationsClicked() {
+        openWindow("ReservationMenu_B.fxml", "Reservations", false);
+    }
+
+    @FXML
+    private void onSelectMyVisitClicked() {
+        openWindow("MyVisitMenu_B.fxml", "My Visit", false);
+    }
+
+    @FXML
+    private void onSelectPersonalDetailsClicked() {
+        openWindow("ClientDetails_B.fxml", "Personal Details", false);
+    }
+
+    @FXML
+    private void onSelectRestaurantManagementClicked() {
+        openWindow("RestaurantManagement_B.fxml", "Restaurant Management", true);
+    }
+
+    @FXML
+    private void onResetToMyselfClicked() {
+        ClientSession.setActingUser(ClientSession.getLoggedInUser());
+        clearOkFields();
+        updateActingUserLabel();
+        showMessage("Back to logged-in user.", "blue");
+    }
+
+    @FXML
+    private void onLogoutClicked() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Login_B.fxml"));
+            Parent root = loader.load();
+
+            ClientSession.setLoggedInUser(null);
+            ClientSession.setActingUser(null);
+
+            Stage stage = (Stage) rootPane.getScene().getWindow();
+            Scene scene = stage.getScene();
+
+            if (scene == null) {
+                stage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
+            stage.setTitle("Bistro - Login");
+            stage.setMaximized(true);
+            stage.show();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /* ===================== NAVIGATION ===================== */
+
+    private void openWindow(String fxmlName, String title, boolean managementScreen) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
+            Parent root = loader.load();
+
+            Object controller = loader.getController();
+
+            if (controller != null && clientActions != null) {
+                try {
+                    controller.getClass()
+                            .getMethod("setClientActions", ClientActions.class)
+                            .invoke(controller, clientActions);
+                } catch (Exception ignored) {}
+            }
+
+            User userToPass = managementScreen
+                    ? ClientSession.getLoggedInUser()
+                    : ClientSession.getActingUser();
+
+            if (controller != null && userToPass != null && chatClient != null) {
+                try {
+                    controller.getClass()
+                            .getMethod("setClient", User.class, ChatClient.class)
+                            .invoke(controller, userToPass, chatClient);
+                } catch (Exception ignored) {}
+            }
+
+            Stage stage = (Stage) rootPane.getScene().getWindow();
+            Scene scene = stage.getScene();
+
+            if (scene == null) {
+                stage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
+            stage.setTitle("Bistro - " + title);
+            stage.setMaximized(true);
+            stage.show();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     @FXML
     private void onOkClicked() {
@@ -196,107 +281,7 @@ public class Menu_BController implements ClientResponseHandler {
         }
     }
 
-    /* =======================
-       BUTTON ACTIONS
-       ======================= */
-
-    @FXML
-    private void onSelectReservationsClicked() {
-        openWindow("ReservationMenu_B.fxml", "Reservations", false);
-    }
-
-    @FXML
-    private void onSelectMyVisitClicked() {
-        openWindow("MyVisitMenu_B.fxml", "My Visit", false);
-    }
-
-    @FXML
-    private void onSelectPersonalDetailsClicked() {
-        openWindow("ClientDetails_B.fxml", "Personal Details", false);
-    }
-
-    @FXML
-    private void onSelectRestaurantManagementClicked() {
-        openWindow("RestaurantManagement_B.fxml", "Restaurant Management", true);
-    }
-    
-    @FXML
-    private void onResetToMyselfClicked() {
-        hideMessage();
-
-        User me = ClientSession.getLoggedInUser();
-        ClientSession.setActingUser(me);   // ✅ השמה מפורשת
-
-        clearOkFields();
-        updateActingUserLabel();
-        showMessage("Back to logged-in user.", "blue");
-    }
-
-
-
-    @FXML
-    private void onLogoutClicked() {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Login_B.fxml"));
-            Parent root = loader.load();
-
-            ClientSession.setLoggedInUser(null);
-            ClientSession.setActingUser(null);
-
-            Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setTitle("Bistro - Login");
-            stage.setScene(new Scene(root));
-            stage.show();
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /* =======================
-       NAVIGATION
-       ======================= */
-
-    private void openWindow(String fxmlName, String title, boolean managementScreen) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
-            Parent root = loader.load();
-
-            Object controller = loader.getController();
-
-            if (controller != null && clientActions != null) {
-                try {
-                    controller.getClass()
-                            .getMethod("setClientActions", ClientActions.class)
-                            .invoke(controller, clientActions);
-                } catch (Exception ignored) {}
-            }
-
-            User userToPass = managementScreen
-                    ? ClientSession.getLoggedInUser()
-                    : ClientSession.getActingUser();
-
-            if (controller != null && userToPass != null && chatClient != null) {
-                try {
-                    controller.getClass()
-                            .getMethod("setClient", User.class, ChatClient.class)
-                            .invoke(controller, userToPass, chatClient);
-                } catch (Exception ignored) {}
-            }
-
-            Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setTitle("Bistro - " + title);
-            stage.setScene(new Scene(root));
-            stage.show();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    /* =======================
-       SERVER RESPONSE
-       ======================= */
+    /* ===================== SERVER ===================== */
 
     @Override
     public void handleResponse(ResponseDTO response) {
@@ -308,7 +293,6 @@ public class Menu_BController implements ClientResponseHandler {
                 return;
             }
 
-            // OK flows return a User
             if (response.getData() instanceof User u) {
                 ClientSession.setActingUser(u);
                 clearOkFields();
@@ -329,21 +313,15 @@ public class Menu_BController implements ClientResponseHandler {
         Platform.runLater(() -> showMessage("Connection closed.", "red"));
     }
 
-    /* =======================
-       UI HELPERS
-       ======================= */
+    /* ===================== UI HELPERS ===================== */
 
     private void updateActingUserLabel() {
         if (lblActingUser == null) return;
-
         User acting = ClientSession.getActingUser();
-        if (acting == null) {
-            lblActingUser.setText("Acting User: —");
-            return;
-        }
-
         lblActingUser.setText(
-                "Acting User: " + acting.getUserId() + " (" + acting.getUserRole() + ")"
+                acting == null
+                        ? "Acting User: —"
+                        : "Acting User: " + acting.getUserId() + " (" + acting.getUserRole() + ")"
         );
     }
 

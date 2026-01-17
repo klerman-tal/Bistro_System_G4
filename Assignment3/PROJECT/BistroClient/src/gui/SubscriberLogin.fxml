@@ -9,7 +9,7 @@
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
 
-<StackPane id="rootPane" stylesheets="@Style.css"
+<StackPane fx:id="rootPane" stylesheets="@Style.css"
 	xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
 	fx:controller="guiControllers.SubscriberLoginController">
 

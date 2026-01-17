@@ -72,9 +72,20 @@ public class CancelWaiting_BController implements ClientResponseHandler {
             Parent root = loader.load();
             ManageWaitingListController controller = loader.getController();
             controller.setClient(user, chatClient);
+
+            // ✅ תצוגה בלבד: לא יוצרים Scene חדש. מחליפים Root בתוך ה-Scene הקיים
             Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setScene(new Scene(root));
+            Scene scene = stage.getScene();
+
+            if (scene == null) {
+                stage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
+            stage.setMaximized(true);
             stage.show();
+
         } catch (Exception e) { e.printStackTrace(); }
     }
 

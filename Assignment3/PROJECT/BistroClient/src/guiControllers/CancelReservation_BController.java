@@ -131,8 +131,18 @@ public class CancelReservation_BController implements ClientResponseHandler {
                 } catch (Exception ignored) {}
             }
 
+            // ✅ תצוגה בלבד: לא פותחים Scene חדש אם כבר יש אחד.
             Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setScene(new Scene(root));
+            Scene scene = stage.getScene();
+
+            if (scene == null) {
+                stage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
+            // ✅ שומר על Maximized עקבי בכל מעבר מסך
+            stage.setMaximized(true);
             stage.show();
 
         } catch (Exception e) {

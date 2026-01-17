@@ -44,14 +44,25 @@ public class TableReservation_BController implements ClientResponseHandler {
         this.user = user;
         this.chatClient = chatClient;
         this.api = new ClientAPI(chatClient);
-        this.chatClient.setResponseHandler(this);
 
+        if (this.chatClient != null) {
+            this.chatClient.setResponseHandler(this);
+        }
+
+        // Date picker limits: today -> +1 month
         datePicker.setDayCellFactory(picker -> new DateCell() {
             @Override
             public void updateItem(LocalDate date, boolean empty) {
                 super.updateItem(date, empty);
+
+                if (empty || date == null) {
+                    setDisable(true);
+                    return;
+                }
+
                 LocalDate today = LocalDate.now();
                 LocalDate maxDate = today.plusMonths(1);
+
                 if (date.isBefore(today) || date.isAfter(maxDate)) {
                     setDisable(true);
                     setStyle("-fx-background-color: #eeeeee;");
@@ -60,7 +71,7 @@ public class TableReservation_BController implements ClientResponseHandler {
         });
 
         try {
-            api.getOpeningHours(); // נשאר – אולי את משתמשת בזה בעוד מקום
+            api.getOpeningHours(); // נשאר (כמו שהיה)
         } catch (IOException e) {
             showMessage("Failed to load opening hours", "red");
         }
@@ -80,7 +91,6 @@ public class TableReservation_BController implements ClientResponseHandler {
         int guests = parseGuestsOrDefault(1);
 
         try {
-            // ✅ העיקר: להביא רק שעות שיש בהן שולחן פנוי ל-2 שעות בגריד
             api.getAvailableTimesForDate(selected, guests);
         } catch (IOException e) {
             showMessage("Failed to load available times", "red");
@@ -121,8 +131,9 @@ public class TableReservation_BController implements ClientResponseHandler {
 
     @FXML
     private void onBackClicked() {
-        if (backFxml == null) return;
+        if (backFxml == null || backFxml.isBlank()) return;
 
+        // לא להשאיר את המסך הזה כ-handler פעיל
         if (chatClient != null) {
             chatClient.setResponseHandler(null);
         }
@@ -132,21 +143,22 @@ public class TableReservation_BController implements ClientResponseHandler {
             Parent root = loader.load();
 
             Object controller = loader.getController();
+
+            // תמיד להעביר את אותו user שהמסך הזה עובד איתו
             if (controller != null && user != null && chatClient != null) {
                 try {
                     controller.getClass()
                             .getMethod("setClient", User.class, ChatClient.class)
-                            .invoke(
-                            	    controller,
-                            	    application.ClientSession.getLoggedInUser(),
-                            	    chatClient
-                            	);
-
+                            .invoke(controller, user, chatClient);
                 } catch (Exception ignored) {}
             }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setScene(new Scene(root));
+            Scene scene = stage.getScene();
+
+            // ✅ לפי הכלל: לא Scene חדש
+            scene.setRoot(root);
+            stage.centerOnScreen();
             stage.show();
 
         } catch (Exception e) {
@@ -159,12 +171,11 @@ public class TableReservation_BController implements ClientResponseHandler {
     @Override
     public void handleResponse(ResponseDTO response) {
         Platform.runLater(() -> {
-
             if (response == null) return;
 
             Object data = response.getData();
 
-            // ✅ 1) OpeningHours list
+            // 1) OpeningHours list
             if (response.isSuccess() && data instanceof ArrayList<?> list && isOpeningHoursList(list)) {
                 @SuppressWarnings("unchecked")
                 ArrayList<OpeningHouers> oh = (ArrayList<OpeningHouers>) data;
@@ -172,7 +183,7 @@ public class TableReservation_BController implements ClientResponseHandler {
                 return;
             }
 
-            // ✅ 2) Available times list (success)
+            // 2) Available times list (success)
             if (response.isSuccess() && data instanceof ArrayList<?> list && isLocalTimeList(list)) {
                 @SuppressWarnings("unchecked")
                 ArrayList<LocalTime> times = (ArrayList<LocalTime>) data;
@@ -187,7 +198,7 @@ public class TableReservation_BController implements ClientResponseHandler {
                 return;
             }
 
-            // ✅ 3) Reservation created
+            // 3) Reservation created
             if (response.isSuccess()) {
                 String msg = "Reservation Confirmed";
                 if (response.getData() instanceof String) {
@@ -197,7 +208,7 @@ public class TableReservation_BController implements ClientResponseHandler {
                 return;
             }
 
-            // ✅ 4) Reservation failed but got suggested times (LocalTime list)
+            // 4) Reservation failed but got suggested times (LocalTime list)
             if (!response.isSuccess() && data instanceof ArrayList<?> list && isLocalTimeList(list)) {
                 @SuppressWarnings("unchecked")
                 ArrayList<LocalTime> times = (ArrayList<LocalTime>) data;
@@ -291,9 +302,11 @@ public class TableReservation_BController implements ClientResponseHandler {
         alert.showAndWait();
     }
 
-    @Override public void handleConnectionError(Exception e) {
+    @Override
+    public void handleConnectionError(Exception e) {
         Platform.runLater(() -> showMessage("Connection lost.", "red"));
     }
 
-    @Override public void handleConnectionClosed() {}
+    @Override
+    public void handleConnectionClosed() {}
 }

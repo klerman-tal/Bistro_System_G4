@@ -86,10 +86,8 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
                 res = (GetTableResultDTO) response.getData();
             } catch (Exception ignored) {}
 
-            // Prefer DTO if present
             if (res != null) {
 
-                // ✅ HARD GUARD: never show table number unless success=true AND tableNumber != null
                 if (res.isSuccess() && res.getTableNumber() != null) {
                     String msg = "Welcome 🎉\nYour table number is: " + res.getTableNumber();
                     showSuccessAlert("You are checked-in!", msg);
@@ -97,7 +95,6 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
                     return;
                 }
 
-                // shouldWait is not an error
                 if (res.isShouldWait()) {
                     showInfo(res.getMessage() != null
                             ? res.getMessage()
@@ -105,12 +102,10 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
                     return;
                 }
 
-                // ❌ Not success -> show only message (no table number even if mistakenly sent)
                 showError(res.getMessage() != null ? res.getMessage() : "Check-in failed.");
                 return;
             }
 
-            // Fallback: ResponseDTO only
             if (response.isSuccess()) {
                 showInfo(response.getMessage() != null ? response.getMessage() : "Done.");
             } else {
@@ -127,9 +122,6 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
     @Override
     public void handleConnectionClosed() {}
 
-    // =========================
-    // Back navigation (preserve user + chatClient)
-    // =========================
     @FXML
     private void onBackClicked() {
         if (chatClient != null) chatClient.setResponseHandler(null);
@@ -143,7 +135,6 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
 
             Object controller = loader.getController();
 
-            // Pass clientActions if exists
             if (controller != null && clientActions != null) {
                 try {
                     controller.getClass()
@@ -152,7 +143,6 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
                 } catch (Exception ignored) {}
             }
 
-            // Pass user + chatClient to preserve session
             if (controller != null && user != null && chatClient != null) {
                 try {
                     controller.getClass()
@@ -163,7 +153,16 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setTitle("Bistro - " + title);
-            stage.setScene(new Scene(root));
+
+            // ✅ תצוגה בלבד – בלי Scene חדשה
+            Scene scene = stage.getScene();
+            if (scene == null) {
+                stage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
+            stage.setMaximized(true);
             stage.show();
 
         } catch (Exception e) {
@@ -171,9 +170,6 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
         }
     }
 
-    // =========================
-    // UI helpers
-    // =========================
     private void hideMessages() {
         lblError.setText("");
         lblError.setVisible(false);
