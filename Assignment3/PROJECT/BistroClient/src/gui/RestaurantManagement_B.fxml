@@ -46,6 +46,11 @@
 					prefWidth="260" styleClass="btnSecondary"
 					onAction="#onManageReservationClicked" />
 
+				<Button text="Manage Waiting List" maxWidth="300"
+					prefWidth="260" styleClass="btnSecondary"
+					onAction="#onWaitingListClicked" />
+
+
 				<!-- ✅ NEW BUTTON -->
 				<Button text="Manage Current Diners" maxWidth="300"
 					prefWidth="260" styleClass="btnSecondary"
