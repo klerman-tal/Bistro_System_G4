@@ -12,19 +12,31 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
+/**
+ * JavaFX controller for the restaurant management main screen.
+ *
+ * <p>This screen serves as a hub for management operations such as updating tables,
+ * managing reservations, waiting list, opening hours, subscribers, and current diners.</p>
+ *
+ * <p>Access to reports is restricted to {@link Enums.UserRole#RestaurantManager} and is enforced
+ * both by UI visibility and by a runtime permission check.</p>
+ */
 public class RestaurantManagement_BController {
 
     @FXML private BorderPane rootPane;
     @FXML private Label lblMessage;
 
-    // 🔐 Reports button (exists in FXML)
     @FXML private Button btnReports;
 
     private User user;
     private ChatClient chatClient;
 
-    /* ===================== SETUP ===================== */
-
+    /**
+     * Injects the current session context and applies role-based UI rules.
+     *
+     * @param user       the current logged-in user
+     * @param chatClient the client used to communicate with the server
+     */
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
@@ -33,15 +45,19 @@ public class RestaurantManagement_BController {
                 user != null &&
                 user.getUserRole() == Enums.UserRole.RestaurantManager;
 
-        // 🔒 Reports – Manager ONLY
         if (btnReports != null) {
             btnReports.setVisible(isManager);
             btnReports.setManaged(isManager);
         }
     }
 
-    /* ===================== NAVIGATION ===================== */
-
+    /**
+     * Loads an FXML screen from {@code /gui/}, injects the session context if supported,
+     * and navigates by swapping the current scene root.
+     *
+     * @param fxmlName the FXML file name under {@code /gui/}
+     * @param title    the window title suffix
+     */
     private void openWindow(String fxmlName, String title) {
         try {
             FXMLLoader loader =
@@ -50,7 +66,6 @@ public class RestaurantManagement_BController {
 
             Object controller = loader.getController();
 
-            // Pass client if supported
             if (controller != null && user != null && chatClient != null) {
                 try {
                     controller.getClass()
@@ -62,7 +77,6 @@ public class RestaurantManagement_BController {
             Stage stage = (Stage) rootPane.getScene().getWindow();
             Scene scene = stage.getScene();
 
-            // Full screen navigation – reuse Scene
             if (scene == null) {
                 stage.setScene(new Scene(root));
             } else {
@@ -79,41 +93,61 @@ public class RestaurantManagement_BController {
         }
     }
 
-    /* ===================== BUTTONS ===================== */
-
+    /**
+     * Navigates to the "Update Tables" screen.
+     */
     @FXML
     private void onUpdateTablesClicked() {
         openWindow("UpdateTables.fxml", "Update Tables");
     }
 
+    /**
+     * Navigates to the "Waiting List" management screen.
+     */
     @FXML
     private void onWaitingListClicked() {
         openWindow("ManageWaitingList.fxml", "Waiting List");
     }
 
+    /**
+     * Navigates to the opening hours management screen.
+     */
     @FXML
     private void onUpdateOpeningHoursClicked() {
         openWindow("opening.fxml", "Opening Hours");
     }
 
+    /**
+     * Navigates to the subscribers management screen.
+     */
     @FXML
     private void onManageUsersClicked() {
         openWindow("manageSubscriber.fxml", "Manage Subscribers");
     }
 
+    /**
+     * Navigates to the reservations management screen.
+     */
     @FXML
     private void onManageReservationClicked() {
         openWindow("ManageReservation.fxml", "Manage Reservations");
     }
 
+    /**
+     * Navigates to the "Current Diners" management screen.
+     */
     @FXML
     private void onManageCurrentDinersClicked() {
         openWindow("ManageCurrentDiners.fxml", "Current Diners");
     }
 
+    /**
+     * Navigates to the reports menu screen.
+     *
+     * <p>Includes a defense-in-depth permission check to prevent access by non-managers.</p>
+     */
     @FXML
     private void onReportsClicked() {
-        // 🛑 Hard permission check (defense in depth)
         if (user == null ||
             user.getUserRole() != Enums.UserRole.RestaurantManager) {
 
@@ -124,13 +158,19 @@ public class RestaurantManagement_BController {
         openWindow("ReportsMenu.fxml", "Reports");
     }
 
+    /**
+     * Navigates back to the main menu screen.
+     */
     @FXML
     private void onBackToMenuClicked() {
         openWindow("Menu_B.fxml", "Main Menu");
     }
 
-    /* ===================== UI ===================== */
-
+    /**
+     * Displays a message on the screen.
+     *
+     * @param msg the message text to display
+     */
     private void showMessage(String msg) {
         if (lblMessage == null) return;
         lblMessage.setText(msg);

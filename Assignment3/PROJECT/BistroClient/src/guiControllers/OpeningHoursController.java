@@ -25,6 +25,21 @@ import java.sql.Time;
 import java.time.LocalDate;
 import java.util.ArrayList;
 
+/**
+ * JavaFX controller for managing restaurant opening hours.
+ *
+ * <p>This screen supports:</p>
+ * <ul>
+ *   <li>Viewing and updating weekly opening hours (per day of week).</li>
+ *   <li>Viewing and creating/updating special opening hours for specific dates.</li>
+ * </ul>
+ *
+ * <p>Data is retrieved and updated through {@link ClientAPI} / {@link ChatClient} requests, and the
+ * controller handles asynchronous server responses via {@link ClientResponseHandler}.</p>
+ *
+ * <p>Weekly editing uses a simple interaction model: clicking a cell determines whether the user
+ * is editing the open time or close time for the selected day.</p>
+ */
 public class OpeningHoursController implements ClientResponseHandler {
 
     @FXML private TableView<OpeningHouers> openingHoursTable;
@@ -52,9 +67,21 @@ public class OpeningHoursController implements ClientResponseHandler {
     private ChatClient chatClient;
     private ClientAPI api;
 
+    /**
+     * Internal marker for deciding whether the user edits the open time or close time
+     * in the weekly opening hours table.
+     */
     private enum EditTarget { OPEN_TIME, CLOSE_TIME }
+
     private EditTarget editTarget = EditTarget.OPEN_TIME;
 
+    /**
+     * Injects the current session context and triggers loading of both weekly and special opening hours.
+     * Also registers this controller as the response handler of the provided {@link ChatClient}.
+     *
+     * @param user       the current logged-in user
+     * @param chatClient the network client used to communicate with the server
+     */
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
@@ -70,6 +97,10 @@ public class OpeningHoursController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Initializes table bindings, UI listeners, and button actions.
+     * This method is called automatically by JavaFX after FXML injection.
+     */
     @FXML
     public void initialize() {
 
@@ -132,6 +163,10 @@ public class OpeningHoursController implements ClientResponseHandler {
         addSpecialButton.setOnAction(e -> onSaveSpecialClicked());
     }
 
+    /**
+     * Sends an update request for weekly opening hours for the currently selected day.
+     * The updated field (open/close) is determined by {@link #editTarget}.
+     */
     private void onUpdateClicked() {
 
         OpeningHouers selected = openingHoursTable.getSelectionModel().getSelectedItem();
@@ -171,6 +206,10 @@ public class OpeningHoursController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Validates inputs and sends a request to create/update special opening hours for a specific date.
+     * When "Closed" is selected, open/close times are sent as {@code null}.
+     */
     private void onSaveSpecialClicked() {
 
         LocalDate date = specialDatePicker.getValue();
@@ -194,6 +233,12 @@ public class OpeningHoursController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Handles server responses for weekly and special opening hours.
+     * Updates the relevant table and (for weekly hours) updates the {@link Restaurant} singleton cache.
+     *
+     * @param response the response received from the server
+     */
     @Override
     public void handleResponse(ResponseDTO response) {
 
@@ -216,8 +261,10 @@ public class OpeningHoursController implements ClientResponseHandler {
         }
     }
 
-    // ================= BACK (FIXED) =================
-
+    /**
+     * Navigates back to the restaurant management screen by swapping the current scene root.
+     * Clears the current response handler before leaving the screen.
+     */
     private void onBackClicked() {
 
         if (chatClient != null) {
@@ -251,8 +298,10 @@ public class OpeningHoursController implements ClientResponseHandler {
         }
     }
 
-    // ================= HELPERS =================
-
+    /**
+     * Determines whether the user clicked the open-time column or close-time column in the weekly table,
+     * and updates {@link #editTarget} accordingly.
+     */
     private void detectClickedColumn() {
         if (openingHoursTable.getSelectionModel().getSelectedCells().isEmpty()) return;
         TablePosition<?, ?> pos =
@@ -262,10 +311,21 @@ public class OpeningHoursController implements ClientResponseHandler {
                 : EditTarget.CLOSE_TIME;
     }
 
+    /**
+     * Converts a time string to HH:MM format.
+     *
+     * @param t a time string (expected at least HH:MM...) or {@code null}
+     * @return HH:MM if available; otherwise an empty string
+     */
     private String toHHMM(String t) {
         return (t == null || t.length() < 5) ? "" : t.substring(0, 5);
     }
 
+    /**
+     * Shows an informational alert dialog.
+     *
+     * @param msg the message to display
+     */
     private void showAlert(String msg) {
         Alert a = new Alert(Alert.AlertType.INFORMATION);
         a.setTitle("Opening Hours");
