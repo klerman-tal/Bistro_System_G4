@@ -51,10 +51,9 @@
                     </children>
                 </GridPane>
 
+                <!-- ✔ הודעת סטטוס כמו Reservation -->
                 <Label fx:id="lblMessage"
-                       managed="false"
-                       visible="false"
-                       styleClass="errorMsg"/>
+                       visible="false"/>
 
             </children>
         </VBox>
