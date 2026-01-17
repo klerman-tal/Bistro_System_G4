@@ -1,9 +1,9 @@
 package application;
-//test
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Optional;
-import guiControllers.Login_BController;
+
 import interfaces.ChatIF;
 import interfaces.ClientActions;
 import javafx.application.Application;
@@ -13,24 +13,26 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.TextInputDialog;
 import javafx.stage.Stage;
-
 import javafx.scene.image.Image;
-//TEST
 
 public class ClientUI extends Application implements ChatIF, ClientActions {
 
     public static final int DEFAULT_PORT = 5556;
-    // שונה ל-public כדי שיהיה נגיש בקלות מכל מקום כ- ClientUI.client
-    public static ChatClient client; 
+
+    public static ChatClient client;
     private static ChatIF activeController;
+
+    // ✅ Stage אחד לכל האפליקציה
+    public static Stage primaryStage;
 
     public static void setActiveController(ChatIF controller) {
         activeController = controller;
     }
-    //
-//test
-    @Override 
-    public void start(Stage primaryStage) throws Exception {
+
+    @Override
+    public void start(Stage stage) throws Exception {
+        primaryStage = stage;
+
         TextInputDialog dialog = new TextInputDialog("localhost");
         dialog.setTitle("Server IP Required");
         dialog.setHeaderText("Enter Bistro server IP");
@@ -45,7 +47,6 @@ public class ClientUI extends Application implements ChatIF, ClientActions {
         String host = result.get().trim();
 
         try {
-            // אתחול הלקוח
             client = new ChatClient(host, DEFAULT_PORT, this);
         } catch (IOException e) {
             e.printStackTrace();
@@ -53,20 +54,53 @@ public class ClientUI extends Application implements ChatIF, ClientActions {
             return;
         }
 
+        // ✅ נטען מסך ראשון פעם אחת, עם Scene אחת
+        Parent root = loadFxmlAndBindController("/gui/Login_B.fxml");
+
+        Scene scene = new Scene(root);
+        primaryStage.setScene(scene);
+
+        // ✅ סטנדרט תצוגה אחיד לכל המסכים
+        primaryStage.setTitle("Bistro Management System");
+        primaryStage.getIcons().add(new Image(getClass().getResourceAsStream("/gui/BistroLogo.PNG")));
+        primaryStage.setResizable(true);
+        primaryStage.setMinWidth(1200);
+        primaryStage.setMinHeight(700);
+        primaryStage.setMaximized(true);
+
+        primaryStage.show();
+    }
+
+    // ✅ מעבר מסך אחיד: מחליפים Root בלבד (בלי new Stage / בלי new Scene)
+    public static void switchTo(String fxmlPath) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Login_B.fxml"));
-            Parent root = loader.load();
-            primaryStage.setTitle("Bistro Management System");
-            primaryStage.setScene(new Scene(root));
-            
-            primaryStage.getIcons().add(
-                    new Image(getClass().getResourceAsStream("/gui/BistroLogo.PNG"))
-            );
-            primaryStage.centerOnScreen();
-            primaryStage.show();
+            Parent root = loadFxmlAndBindController(fxmlPath);
+
+            Scene scene = primaryStage.getScene();
+            if (scene == null) {
+                primaryStage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
+            // שומר על Maximized גם אם מישהו שיחק עם החלון
+            primaryStage.setMaximized(true);
+
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private static Parent loadFxmlAndBindController(String fxmlPath) throws IOException {
+        FXMLLoader loader = new FXMLLoader(ClientUI.class.getResource(fxmlPath));
+        Parent root = loader.load();
+
+        Object controller = loader.getController();
+        if (controller instanceof ChatIF chatIF) {
+            setActiveController(chatIF);
+        }
+
+        return root;
     }
 
     @Override
@@ -90,6 +124,7 @@ public class ClientUI extends Application implements ChatIF, ClientActions {
     }
 
     public static void main(String[] args) { launch(args); }
+
     @Override public boolean loginGuest(String p, String e) { return false; }
     @Override public boolean loginSubscriber(int id, String u) { return false; }
 }

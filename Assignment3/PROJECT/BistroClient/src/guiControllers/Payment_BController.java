@@ -220,17 +220,29 @@ public class Payment_BController implements ClientResponseHandler {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
             Parent root = loader.load();
+
             Object controller = loader.getController();
             if (controller != null && user != null && chatClient != null) {
                 try {
-                    controller.getClass().getMethod("setClient", User.class, ChatClient.class)
-                              .invoke(controller, user, chatClient);
+                    controller.getClass()
+                            .getMethod("setClient", User.class, ChatClient.class)
+                            .invoke(controller, user, chatClient);
                 } catch (Exception ignored) {}
             }
+
             Stage stage = (Stage) rootPane.getScene().getWindow();
+            Scene scene = stage.getScene();
+
+            if (scene == null) {
+                stage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
             stage.setTitle("Bistro - " + title);
-            stage.setScene(new Scene(root));
+            stage.setMaximized(true);
             stage.show();
+
         } catch (IOException e) {
             showMessage("Failed to open " + title);
         }

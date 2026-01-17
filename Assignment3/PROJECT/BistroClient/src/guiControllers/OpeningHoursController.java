@@ -89,19 +89,22 @@ public class OpeningHoursController implements ClientResponseHandler {
         openingHoursTable.addEventFilter(MouseEvent.MOUSE_CLICKED,
                 e -> detectClickedColumn());
 
-        openingHoursTable.getSelectionModel().selectedItemProperty().addListener((obs, oldV, selected) -> {
-            if (selected == null) return;
-            openTimeField.setText(
-                    editTarget == EditTarget.OPEN_TIME
-                            ? toHHMM(selected.getOpenTime())
-                            : toHHMM(selected.getCloseTime())
-            );
-        });
+        openingHoursTable.getSelectionModel()
+                .selectedItemProperty()
+                .addListener((obs, oldV, selected) -> {
+                    if (selected == null) return;
+                    openTimeField.setText(
+                            editTarget == EditTarget.OPEN_TIME
+                                    ? toHHMM(selected.getOpenTime())
+                                    : toHHMM(selected.getCloseTime())
+                    );
+                });
 
         updateButton.setOnAction(e -> onUpdateClicked());
         backButton.setOnAction(e -> onBackClicked());
 
-        // Special table
+        // ===== Special opening hours =====
+
         specialDateColumn.setCellValueFactory(c ->
                 new SimpleStringProperty(c.getValue().getSpecialDate().toString()));
 
@@ -156,15 +159,20 @@ public class OpeningHoursController implements ClientResponseHandler {
 
         try {
             chatClient.sendToServer(
-                    new RequestDTO(Commands.UPDATE_OPENING_HOURS,
+                    new RequestDTO(
+                            Commands.UPDATE_OPENING_HOURS,
                             new dto.UpdateOpeningHoursDTO(
-                                    selected.getDayOfWeek(), open, close)));
+                                    selected.getDayOfWeek(), open, close
+                            )
+                    )
+            );
         } catch (IOException e) {
             showAlert("Failed to update opening hours.");
         }
     }
 
     private void onSaveSpecialClicked() {
+
         LocalDate date = specialDatePicker.getValue();
         if (date == null) {
             showAlert("Please choose a date.");
@@ -202,27 +210,53 @@ public class OpeningHoursController implements ClientResponseHandler {
             }
 
             if (list.get(0) instanceof SpecialOpeningHours) {
-                specialHoursTable.getItems().setAll((ArrayList<SpecialOpeningHours>) list);
+                specialHoursTable.getItems()
+                        .setAll((ArrayList<SpecialOpeningHours>) list);
             }
         }
     }
 
+    // ================= BACK (FIXED) =================
+
     private void onBackClicked() {
-        chatClient.setResponseHandler(null);
+
+        if (chatClient != null) {
+            chatClient.setResponseHandler(null);
+        }
+
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/RestaurantManagement_B.fxml"));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/RestaurantManagement_B.fxml"));
             Parent root = loader.load();
-            ((RestaurantManagement_BController) loader.getController()).setClient(user, chatClient);
+
+            RestaurantManagement_BController controller =
+                    loader.getController();
+            controller.setClient(user, chatClient);
+
             Stage stage = (Stage) backButton.getScene().getWindow();
-            stage.setScene(new Scene(root));
+            Scene scene = stage.getScene();
+
+            if (scene == null) {
+                stage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
+            stage.setTitle("Bistro - Restaurant Management");
+            stage.setMaximized(true);
+            stage.show();
+
         } catch (IOException e) {
             showAlert("Failed to go back.");
         }
     }
 
+    // ================= HELPERS =================
+
     private void detectClickedColumn() {
         if (openingHoursTable.getSelectionModel().getSelectedCells().isEmpty()) return;
-        TablePosition<?, ?> pos = openingHoursTable.getSelectionModel().getSelectedCells().get(0);
+        TablePosition<?, ?> pos =
+                openingHoursTable.getSelectionModel().getSelectedCells().get(0);
         editTarget = pos.getTableColumn() == openTimeColumn
                 ? EditTarget.OPEN_TIME
                 : EditTarget.CLOSE_TIME;
@@ -240,15 +274,6 @@ public class OpeningHoursController implements ClientResponseHandler {
         a.showAndWait();
     }
 
-	@Override
-	public void handleConnectionError(Exception e) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void handleConnectionClosed() {
-		// TODO Auto-generated method stub
-		
-	}
+    @Override public void handleConnectionError(Exception e) {}
+    @Override public void handleConnectionClosed() {}
 }

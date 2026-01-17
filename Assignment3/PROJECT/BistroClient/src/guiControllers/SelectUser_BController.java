@@ -1,59 +1,66 @@
 package guiControllers;
 
-import java.io.IOException;
-
 import application.ChatClient;
 import entities.User;
 import interfaces.ClientActions;
-import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
 public class SelectUser_BController {
 
+    @FXML
+    private BorderPane rootPane;
+
     private ClientActions clientActions;
 
-    // ✅ session
+    // ===== SESSION =====
     private User user;
     private ChatClient chatClient;
+
+    /* ================= SETTERS ================= */
 
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
     }
 
-    // ✅ נקרא מ-RestaurantManagement_BController
+    // נקרא מ־RestaurantManagement_BController
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
     }
 
+    /* ================= BUTTONS ================= */
+
     @FXML
-    private void onSubscribersClicked(ActionEvent event) {
-        navigateTo(event, "/gui/manageSubscriber.fxml");
+    private void onSubscribersClicked() {
+        openWindow("manageSubscriber.fxml", "Manage Subscribers");
     }
 
     @FXML
-    private void onGuestsClicked(ActionEvent event) {
-        navigateTo(event, "/gui/manegeGustsGui.fxml");
+    private void onGuestsClicked() {
+        openWindow("manegeGustsGui.fxml", "Manage Guests");
     }
 
     @FXML
-    private void onBackToMenuClicked(ActionEvent event) {
-        navigateTo(event, "/gui/RestaurantManagement_B.fxml");
+    private void onBackToMenuClicked() {
+        openWindow("RestaurantManagement_B.fxml", "Restaurant Management");
     }
 
-    private void navigateTo(ActionEvent event, String fxmlPath) {
+    /* ================= NAVIGATION ================= */
+
+    private void openWindow(String fxmlName, String title) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
             Parent root = loader.load();
 
             Object controller = loader.getController();
 
-            // להעביר clientActions (כמו שהיה לך)
+            // העברת ClientActions (אם קיים)
             if (controller != null && clientActions != null) {
                 try {
                     controller.getClass()
@@ -62,7 +69,7 @@ public class SelectUser_BController {
                 } catch (Exception ignored) {}
             }
 
-            // ✅ להעביר user + chatClient למסך הבא (ManageSubscriber צריך את זה)
+            // העברת session (User + ChatClient)
             if (controller != null && user != null && chatClient != null) {
                 try {
                     controller.getClass()
@@ -71,15 +78,27 @@ public class SelectUser_BController {
                 } catch (Exception ignored) {}
             }
 
-            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-            stage.setScene(new Scene(root));
-            stage.centerOnScreen();
-            stage.show();
+            switchRoot(root, "Bistro - " + title);
 
-            System.out.println("Switched to: " + fxmlPath);
-
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    /* ================= SCENE HANDLING ================= */
+
+    private void switchRoot(Parent root, String title) {
+        Stage stage = (Stage) rootPane.getScene().getWindow();
+        Scene scene = stage.getScene();
+
+        if (scene == null) {
+            stage.setScene(new Scene(root));
+        } else {
+            scene.setRoot(root);
+        }
+
+        stage.setTitle(title);
+        stage.setMaximized(true);
+        stage.show();
     }
 }

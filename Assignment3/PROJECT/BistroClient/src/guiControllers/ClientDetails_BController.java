@@ -161,19 +161,16 @@ public class ClientDetails_BController implements ClientResponseHandler {
         String phone = txtPhoneNumber.getText().trim();
         String email = txtEmail.getText().trim();
 
-        // בדיקת תקינות טלפון: חייב להתחיל ב-05 ומכיל 10 ספרות
         if (!phone.matches("^05\\d{8}$")) {
             showMessage("Phone number must start with 05 and contain 10 digits.");
             return;
         }
 
-        // בדיקת תקינות אימייל: תבנית סטנדרטית
         if (!email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")) {
             showMessage("Please enter a valid email address (e.g., name@domain.com).");
             return;
         }
 
-        // בדיקה ששדות חובה לא ריקים
         if (username.isEmpty() || firstName.isEmpty() || lastName.isEmpty()) {
             showMessage("All fields must be filled.");
             return;
@@ -183,7 +180,7 @@ public class ClientDetails_BController implements ClientResponseHandler {
             UpdateSubscriberDetailsDTO dto =
                     new UpdateSubscriberDetailsDTO(
                             subscriber.getUserId(),
-                            username, // עכשיו מעדכן את ה-Username החדש מהשדה
+                            username,
                             firstName,
                             lastName,
                             phone,
@@ -200,12 +197,12 @@ public class ClientDetails_BController implements ClientResponseHandler {
             showMessage("Failed to update details.");
         }
     }
+
     @FXML
     private void onRefreshClicked() {
         requestReservationHistory();
         showMessage("✔ Data refreshed");
     }
-
 
     @FXML
     private void onBackToMenuClicked() {
@@ -216,20 +213,27 @@ public class ClientDetails_BController implements ClientResponseHandler {
 
             Parent root = loader.load();
 
-            // ✅ להעביר session לתפריט
             Menu_BController menu = loader.getController();
             if (menu != null) {
-            	menu.setClient(
-            		    application.ClientSession.getLoggedInUser(),
-            		    chatClient
-            		);
-
+                menu.setClient(
+                        application.ClientSession.getLoggedInUser(),
+                        chatClient
+                );
             }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
 
             stage.setTitle("Bistro - Main Menu");
-            stage.setScene(new Scene(root));
+
+            // ✅ שינוי תצוגה בלבד – בלי Scene חדשה
+            Scene scene = stage.getScene();
+            if (scene == null) {
+                stage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
+            stage.setMaximized(true);
             stage.show();
 
         } catch (Exception e) {

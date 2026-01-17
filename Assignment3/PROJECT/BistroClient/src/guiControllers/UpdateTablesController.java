@@ -45,7 +45,6 @@ public class UpdateTablesController implements ClientResponseHandler {
         colSeats.setCellValueFactory(new PropertyValueFactory<>("seatsAmount"));
         tblTables.setItems(tables);
 
-        // הגבלת קלט למספרים בלבד בזמן ההקלדה
         addNumericLimiter(txtTableNumber);
         addNumericLimiter(txtSeats);
 
@@ -57,9 +56,6 @@ public class UpdateTablesController implements ClientResponseHandler {
         });
     }
 
-    /**
-     * פונקציית עזר המאפשרת הקלדת ספרות בלבד בשדות הטקסט
-     */
     private void addNumericLimiter(TextField tf) {
         tf.textProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal == null) return;
@@ -82,8 +78,7 @@ public class UpdateTablesController implements ClientResponseHandler {
 
     private void requestTables() {
         try {
-            RequestDTO req = new RequestDTO(Commands.GET_TABLES, null);
-            chatClient.sendToServer(req);
+            chatClient.sendToServer(new RequestDTO(Commands.GET_TABLES, null));
             show("Loading tables...");
         } catch (IOException e) {
             show("Failed to load tables");
@@ -92,15 +87,13 @@ public class UpdateTablesController implements ClientResponseHandler {
 
     @FXML
     private void onAddOrSave() {
-        hide(); // ניקוי הודעות קודמות
+        hide();
 
         Integer num = parseInt(txtTableNumber.getText(), "Table #");
         Integer seats = parseInt(txtSeats.getText(), "Seats");
 
-        // אם אחד השדות לא תקין, parseInt כבר הציג הודעה
         if (num == null || seats == null) return;
 
-        // בדיקה שהמספרים חיוביים וגדולים מ-0
         if (num <= 0) {
             show("Table number must be greater than 0");
             return;
@@ -111,9 +104,9 @@ public class UpdateTablesController implements ClientResponseHandler {
         }
 
         try {
-            SaveTableDTO dto = new SaveTableDTO(num, seats);
-            RequestDTO req = new RequestDTO(Commands.SAVE_TABLE, dto);
-            chatClient.sendToServer(req);
+            chatClient.sendToServer(
+                    new RequestDTO(Commands.SAVE_TABLE, new SaveTableDTO(num, seats))
+            );
             show("Saving table...");
         } catch (IOException e) {
             show("Failed to save table");
@@ -127,10 +120,14 @@ public class UpdateTablesController implements ClientResponseHandler {
             show("Select a table first");
             return;
         }
+
         try {
-            DeleteTableDTO dto = new DeleteTableDTO(selected.getTableNumber());
-            RequestDTO req = new RequestDTO(Commands.DELETE_TABLE, dto);
-            chatClient.sendToServer(req);
+            chatClient.sendToServer(
+                    new RequestDTO(
+                            Commands.DELETE_TABLE,
+                            new DeleteTableDTO(selected.getTableNumber())
+                    )
+            );
             show("Deleting table...");
         } catch (IOException e) {
             show("Failed to delete table");
@@ -155,6 +152,7 @@ public class UpdateTablesController implements ClientResponseHandler {
                 Platform.runLater(() -> show("Unexpected data type from server"));
                 return;
             }
+
             @SuppressWarnings("unchecked")
             List<Table> tableList = (List<Table>) list;
             Platform.runLater(() -> {
@@ -172,31 +170,39 @@ public class UpdateTablesController implements ClientResponseHandler {
 
     @Override
     public void handleConnectionError(Exception e) {
-        Platform.runLater(() -> show("Connection error: " + e.getMessage()));
+        Platform.runLater(() -> show("Connection error"));
     }
 
     @Override
-    public void handleConnectionClosed() {
-        Platform.runLater(() -> show("Connection closed"));
-    }
+    public void handleConnectionClosed() {}
+
+    /* ================= BACK (FIXED) ================= */
 
     @FXML
     private void onBack() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/RestaurantManagement_B.fxml"));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/RestaurantManagement_B.fxml"));
             Parent root = loader.load();
-            Object controller = loader.getController();
-            if (controller instanceof RestaurantManagement_BController rm) {
-                rm.setClient(user, chatClient);
-            }
+
+            RestaurantManagement_BController controller = loader.getController();
+            controller.setClient(user, chatClient);
+
             Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setScene(new Scene(root));
+            Scene scene = stage.getScene();
+
+            // ✅ לפי הכלל: לא יוצרים Scene חדש
+            scene.setRoot(root);
             stage.setTitle("Bistro - Restaurant Management");
+            stage.centerOnScreen();
             stage.show();
+
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
+
+    /* ================= HELPERS ================= */
 
     private Integer parseInt(String s, String field) {
         try {

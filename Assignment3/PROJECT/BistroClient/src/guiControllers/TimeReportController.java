@@ -41,48 +41,35 @@ public class TimeReportController implements ClientResponseHandler {
             DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH);
 
     /* ======================= Root ======================= */
-    @FXML
-    private BorderPane rootPane;
-    @FXML
-    private ComboBox<YearMonth> cmbReportMonth;
+    @FXML private BorderPane rootPane;
+    @FXML private ComboBox<YearMonth> cmbReportMonth;
 
     /* ======================= Arrival summary ======================= */
-    @FXML
-    private Label lblSummaryTitle;
-    @FXML
-    private Text txtSummaryText;
+    @FXML private Label lblSummaryTitle;
+    @FXML private Text txtSummaryText;
 
     /* ======================= Stay summary ======================= */
-    @FXML
-    private Label lblStaySummaryTitle;
-    @FXML
-    private Text txtStaySummaryText;
+    @FXML private Label lblStaySummaryTitle;
+    @FXML private Text txtStaySummaryText;
 
     /* ======================= Arrival status ======================= */
-    @FXML
-    private PieChart arrivalPieChart;
-    @FXML
-    private Label lblOnTime;
-    @FXML
-    private Label lblMinorDelay;
-    @FXML
-    private Label lblMajorDelay;
+    @FXML private PieChart arrivalPieChart;
+    @FXML private Label lblOnTime;
+    @FXML private Label lblMinorDelay;
+    @FXML private Label lblMajorDelay;
 
     /* ======================= Stay duration ======================= */
-    @FXML
-    private BarChart<String, Number> timesChart;
-    @FXML
-    private Label lblMonthlyAvg;
-    @FXML
-    private Label lblMaxDay;
-    @FXML
-    private Label lblMinDay;
+    @FXML private BarChart<String, Number> timesChart;
+    @FXML private Label lblMonthlyAvg;
+    @FXML private Label lblMaxDay;
+    @FXML private Label lblMinDay;
 
     private ChatClient chatClient;
     private User user;
     private YearMonth reportMonth;
 
     /* ======================= Initialization ======================= */
+
     @FXML
     public void initialize() {
         arrivalPieChart.setLegendVisible(false);
@@ -93,12 +80,16 @@ public class TimeReportController implements ClientResponseHandler {
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
-        this.chatClient.setResponseHandler(this);
+
+        if (this.chatClient != null) {
+            this.chatClient.setResponseHandler(this);
+        }
 
         onMonthSelected(cmbReportMonth.getValue());
     }
 
     /* ======================= Month Selection ======================= */
+
     private void initMonthComboBox() {
         YearMonth defaultMonth = YearMonth.now().minusMonths(1);
 
@@ -117,8 +108,8 @@ public class TimeReportController implements ClientResponseHandler {
                 setText(empty || item == null ? null : item.format(MONTH_FORMATTER));
             }
         });
-        cmbReportMonth.setButtonCell(cmbReportMonth.getCellFactory().call(null));
 
+        cmbReportMonth.setButtonCell(cmbReportMonth.getCellFactory().call(null));
         cmbReportMonth.setOnAction(e -> onMonthSelected(cmbReportMonth.getValue()));
     }
 
@@ -132,6 +123,7 @@ public class TimeReportController implements ClientResponseHandler {
     }
 
     /* ======================= Request ======================= */
+
     private void requestTimeReport(int year, int month) {
         TimeReportDTO dto = new TimeReportDTO();
         dto.setYear(year);
@@ -145,6 +137,7 @@ public class TimeReportController implements ClientResponseHandler {
     }
 
     /* ======================= Response ======================= */
+
     @Override
     public void handleResponse(ResponseDTO response) {
         if (response == null || !response.isSuccess()) return;
@@ -157,6 +150,7 @@ public class TimeReportController implements ClientResponseHandler {
     }
 
     /* ======================= Summaries ======================= */
+
     private void updateArrivalSummary() {
         lblSummaryTitle.setText("Arrival Status: " + reportMonth.format(MONTH_FORMATTER));
         txtSummaryText.setText(
@@ -170,6 +164,7 @@ public class TimeReportController implements ClientResponseHandler {
     }
 
     /* ======================= Charts ======================= */
+
     private void drawArrivalStatus(TimeReportDTO dto) {
         int onTime = dto.getOnTimeCount();
         int minor = dto.getMinorDelayCount();
@@ -177,7 +172,7 @@ public class TimeReportController implements ClientResponseHandler {
         int total = onTime + minor + major;
 
         arrivalPieChart.getData().setAll(
-        		new PieChart.Data(percent(onTime, total), onTime),
+                new PieChart.Data(percent(onTime, total), onTime),
                 new PieChart.Data(percent(major, total), major),
                 new PieChart.Data(percent(minor, total), minor)
         );
@@ -212,26 +207,34 @@ public class TimeReportController implements ClientResponseHandler {
     }
 
     /* ======================= Navigation ======================= */
+
     @FXML
     private void onBackClicked() {
         try {
-            chatClient.setResponseHandler(null);
+            if (chatClient != null) {
+                chatClient.setResponseHandler(null);
+            }
 
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/ReportsMenu.fxml"));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/ReportsMenu.fxml"));
             Parent root = loader.load();
 
             ReportsMenuController controller = loader.getController();
             controller.setClient(user, chatClient);
+
             Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setScene(new Scene(root));
+            Scene scene = stage.getScene();
+
+            // ✅ לפי הכלל: לא מחליפים Scene
+            scene.setRoot(root);
+            stage.centerOnScreen();
             stage.show();
+
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    @Override
-    public void handleConnectionError(Exception e) {}
-    @Override
-    public void handleConnectionClosed() {}
+    @Override public void handleConnectionError(Exception e) {}
+    @Override public void handleConnectionClosed() {}
 }

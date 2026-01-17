@@ -42,20 +42,15 @@ public class ReservationMenu_BController {
             TableReservation_BController controller = loader.getController();
             if (controller != null) {
                 controller.setClient(user, chatClient);
-
-                // ⬅️ זה כל הקסם
                 controller.setBackFxml("/gui/ReservationMenu_B.fxml");
             }
 
-            Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setScene(new Scene(root));
-            stage.show();
+            switchRoot(root, "Bistro - Create Reservation");
 
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-
 
     @FXML
     private void onCancelReservation() {
@@ -67,14 +62,10 @@ public class ReservationMenu_BController {
             CancelReservation_BController controller = loader.getController();
             if (controller != null) {
                 controller.setClient(user, chatClient);
-
-                // ⬅️ חזרה לפה
                 controller.setBackFxml("/gui/ReservationMenu_B.fxml");
             }
 
-            Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setScene(new Scene(root));
-            stage.show();
+            switchRoot(root, "Bistro - Cancel Reservation");
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -122,13 +113,27 @@ public class ReservationMenu_BController {
                 } catch (Exception ignored) {}
             }
 
-            Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setTitle("Bistro - " + title);
-            stage.setScene(new Scene(root));
-            stage.show();
+            switchRoot(root, "Bistro - " + title);
 
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    /* ================= SCENE HANDLING (FIX) ================= */
+
+    private void switchRoot(Parent root, String title) {
+        Stage stage = (Stage) rootPane.getScene().getWindow();
+        Scene scene = stage.getScene();
+
+        if (scene == null) {
+            stage.setScene(new Scene(root));
+        } else {
+            scene.setRoot(root);
+        }
+
+        stage.setTitle(title);
+        stage.setMaximized(true);
+        stage.show();
     }
 }

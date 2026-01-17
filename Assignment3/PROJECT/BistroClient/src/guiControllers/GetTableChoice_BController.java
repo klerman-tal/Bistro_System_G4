@@ -69,7 +69,16 @@ public class GetTableChoice_BController {
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setTitle("Bistro - " + title);
-            stage.setScene(new Scene(root));
+
+            // ✅ תצוגה בלבד – בלי Scene חדשה
+            Scene scene = stage.getScene();
+            if (scene == null) {
+                stage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
+            stage.setMaximized(true);
             stage.show();
 
         } catch (Exception e) {

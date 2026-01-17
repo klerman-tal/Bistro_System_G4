@@ -91,7 +91,6 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
                 }
 
                 showSuccessAlert("You are seated!", "Welcome 🎉\n" + (tableMsg.isEmpty() ? "" : tableMsg));
-
                 showInfo(tableMsg.isEmpty() ? "You are seated." : tableMsg);
                 return;
             }
@@ -112,9 +111,6 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
     @Override
     public void handleConnectionClosed() { }
 
-    // =========================
-    // Back navigation (preserve user + chatClient)
-    // =========================
     @FXML
     private void onBackClicked() {
         if (chatClient != null) chatClient.setResponseHandler(null);
@@ -128,7 +124,6 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
 
             Object controller = loader.getController();
 
-            // Pass clientActions if exists
             if (controller != null && clientActions != null) {
                 try {
                     controller.getClass()
@@ -137,7 +132,6 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
                 } catch (Exception ignored) {}
             }
 
-            // Pass user + chatClient to preserve session
             if (controller != null && user != null && chatClient != null) {
                 try {
                     controller.getClass()
@@ -148,7 +142,16 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setTitle("Bistro - " + title);
-            stage.setScene(new Scene(root));
+
+            // ✅ תצוגה בלבד – בלי Scene חדשה
+            Scene scene = stage.getScene();
+            if (scene == null) {
+                stage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
+            stage.setMaximized(true);
             stage.show();
 
         } catch (Exception e) {
@@ -156,9 +159,6 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
         }
     }
 
-    // =========================
-    // UI helpers
-    // =========================
     private void hideMessages() {
         lblError.setVisible(false);
         lblError.setManaged(false);

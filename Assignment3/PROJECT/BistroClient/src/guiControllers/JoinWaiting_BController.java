@@ -41,10 +41,7 @@ public class JoinWaiting_BController implements ClientResponseHandler {
     private String confirmationCode;
     private Timeline pollingTimeline;
 
-    // UI state helpers
     private boolean didShowJoinPopup = false;
-
-    /* ================= INJECTION ================= */
 
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
@@ -56,8 +53,6 @@ public class JoinWaiting_BController implements ClientResponseHandler {
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
     }
-
-    /* ================= ACTIONS ================= */
 
     @FXML
     private void onJoinClicked() {
@@ -111,8 +106,6 @@ public class JoinWaiting_BController implements ClientResponseHandler {
         }
     }
 
-    /* ================= POLLING ================= */
-
     private void startPollingEvery10Seconds() {
         stopPolling();
         pollingTimeline = new Timeline(
@@ -137,8 +130,6 @@ public class JoinWaiting_BController implements ClientResponseHandler {
             pollingTimeline = null;
         }
     }
-
-    /* ================= SERVER RESPONSES ================= */
 
     @Override
     public void handleResponse(ResponseDTO response) {
@@ -216,8 +207,6 @@ public class JoinWaiting_BController implements ClientResponseHandler {
         showInfo("You are in the waiting list.");
     }
 
-    /* ================= BACK ================= */
-
     @FXML
     private void onBackClicked() {
         stopPolling();
@@ -238,16 +227,22 @@ public class JoinWaiting_BController implements ClientResponseHandler {
             }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setScene(new Scene(root));
-            stage.centerOnScreen();
+
+            // ✅ תצוגה בלבד – בלי Scene חדשה
+            Scene scene = stage.getScene();
+            if (scene == null) {
+                stage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
+            stage.setMaximized(true);
             stage.show();
 
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-
-    /* ================= UI HELPERS ================= */
 
     private void hideMessages() {
         lblError.setVisible(false);

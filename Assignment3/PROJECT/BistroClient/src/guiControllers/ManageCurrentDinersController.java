@@ -13,6 +13,7 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -26,13 +27,11 @@ public class ManageCurrentDinersController implements ClientResponseHandler {
     @FXML private BorderPane rootPane;
     @FXML private Label lblStatus;
 
-    // ===== TABLE =====
     @FXML private TableView<CurrentDinerDTO> tblCurrentDiners;
     @FXML private TableColumn<CurrentDinerDTO, Integer> colCreatedBy;
     @FXML private TableColumn<CurrentDinerDTO, String> colCreatedByRole;
     @FXML private TableColumn<CurrentDinerDTO, Integer> colTableNumber;
 
-    // ===== SESSION =====
     private User user;
     private ChatClient chatClient;
     private ClientAPI clientAPI;
@@ -40,9 +39,6 @@ public class ManageCurrentDinersController implements ClientResponseHandler {
     private final ObservableList<CurrentDinerDTO> dinersList =
             FXCollections.observableArrayList();
 
-    /**
-     * Called from RestaurantManagement_BController
-     */
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
@@ -50,22 +46,16 @@ public class ManageCurrentDinersController implements ClientResponseHandler {
         if (chatClient != null) {
             this.clientAPI = new ClientAPI(chatClient);
             chatClient.setResponseHandler(this);
-            
         }
 
         initTable();
         loadCurrentDiners();
     }
 
-    // =====================================================
-    // TABLE
-    // =====================================================
-
     private void initTable() {
         colCreatedBy.setCellValueFactory(new PropertyValueFactory<>("createdBy"));
         colCreatedByRole.setCellValueFactory(new PropertyValueFactory<>("createdByRole"));
         colTableNumber.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
-
         tblCurrentDiners.setItems(dinersList);
     }
 
@@ -83,12 +73,6 @@ public class ManageCurrentDinersController implements ClientResponseHandler {
             showMessage("Failed to load current diners");
         }
     }
-    
-    
-
-    // =====================================================
-    // ClientResponseHandler
-    // =====================================================
 
     @Override
     public void handleResponse(ResponseDTO response) {
@@ -121,13 +105,7 @@ public class ManageCurrentDinersController implements ClientResponseHandler {
     }
 
     @Override
-    public void handleConnectionClosed() {
-        // no-op
-    }
-
-    // =====================================================
-    // UI helpers
-    // =====================================================
+    public void handleConnectionClosed() {}
 
     private void showMessage(String msg) {
         lblStatus.setText(msg);
@@ -139,7 +117,7 @@ public class ManageCurrentDinersController implements ClientResponseHandler {
         lblStatus.setVisible(false);
         lblStatus.setManaged(false);
     }
-    
+
     @FXML
     private void onBackClicked() {
         try {
@@ -148,15 +126,21 @@ public class ManageCurrentDinersController implements ClientResponseHandler {
             );
 
             Parent root = loader.load();
-
             RestaurantManagement_BController controller = loader.getController();
-
-            // העברת הנתונים חזרה
             controller.setClient(user, chatClient);
 
-            // תיקון: במקום להחליף רק את ה-Center, מחליפים את כל הסצנה בחלון
-            javafx.stage.Stage stage = (javafx.stage.Stage) rootPane.getScene().getWindow();
-            stage.setScene(new javafx.scene.Scene(root));
+            javafx.stage.Stage stage =
+                    (javafx.stage.Stage) rootPane.getScene().getWindow();
+
+            // ✅ תצוגה בלבד – בלי Scene חדשה
+            Scene scene = stage.getScene();
+            if (scene == null) {
+                stage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
+            stage.setMaximized(true);
             stage.show();
 
         } catch (IOException e) {
@@ -164,5 +148,4 @@ public class ManageCurrentDinersController implements ClientResponseHandler {
             showMessage("Failed to go back");
         }
     }
-
 }

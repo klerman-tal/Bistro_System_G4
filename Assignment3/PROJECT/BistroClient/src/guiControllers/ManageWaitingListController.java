@@ -3,6 +3,7 @@ package guiControllers;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
+
 import application.ChatClient;
 import dto.ResponseDTO;
 import entities.User;
@@ -28,6 +29,7 @@ import network.ClientResponseHandler;
 public class ManageWaitingListController {
 
     @FXML private BorderPane rootPane;
+
     @FXML private TableView<Waiting> tblWaitingList;
     @FXML private TableColumn<Waiting, Integer> colWaitingId;
     @FXML private TableColumn<Waiting, Integer> colCreatedBy;
@@ -41,7 +43,11 @@ public class ManageWaitingListController {
     private User user;
     private ChatClient chatClient;
     private ClientAPI clientAPI;
-    private final ObservableList<Waiting> waitingData = FXCollections.observableArrayList();
+
+    private final ObservableList<Waiting> waitingData =
+            FXCollections.observableArrayList();
+
+    /* ================= SESSION ================= */
 
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
@@ -60,6 +66,7 @@ public class ManageWaitingListController {
                     });
                 }
             }
+
             @Override public void handleConnectionError(Exception e) {}
             @Override public void handleConnectionClosed() {}
         });
@@ -67,6 +74,8 @@ public class ManageWaitingListController {
         setupTable();
         loadWaitingList();
     }
+
+    /* ================= TABLE ================= */
 
     private void setupTable() {
         colWaitingId.setCellValueFactory(new PropertyValueFactory<>("waitingId"));
@@ -78,12 +87,13 @@ public class ManageWaitingListController {
         colTableNum.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
         colStatus.setCellValueFactory(new PropertyValueFactory<>("waitingStatus"));
 
-        // הוספת צביעת שורות לפי סטטוס
+        // Row coloring by status
         tblWaitingList.setRowFactory(tv -> new TableRow<Waiting>() {
             @Override
             protected void updateItem(Waiting item, boolean empty) {
                 super.updateItem(item, empty);
                 getStyleClass().removeAll("row-cancelled", "row-seated");
+
                 if (item != null && !empty) {
                     if (item.getWaitingStatus() == WaitingStatus.Cancelled) {
                         getStyleClass().add("row-cancelled");
@@ -97,38 +107,26 @@ public class ManageWaitingListController {
         tblWaitingList.setItems(waitingData);
     }
 
+    /* ================= ACTIONS ================= */
+
     @FXML
     private void onAddWaitingClicked() {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/JoinWaiting_B.fxml")); 
-            Parent root = loader.load();
-            JoinWaiting_BController controller = loader.getController();
-            controller.setClient(user, chatClient);
-            Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setScene(new Scene(root));
-            stage.show();
-        } catch (IOException e) { e.printStackTrace(); }
+        openScreen("/gui/JoinWaiting_B.fxml", controller ->
+                ((JoinWaiting_BController) controller).setClient(user, chatClient)
+        );
     }
 
     @FXML
     private void onCancelWaitingClicked() {
         Waiting selected = tblWaitingList.getSelectionModel().getSelectedItem();
-        if (selected == null) return; 
+        if (selected == null) return;
 
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/CancelWaiting_B.fxml"));
-            Parent root = loader.load();
-            CancelWaiting_BController controller = loader.getController();
-            
-            // הקריאה למתודה החדשה שיצרנו ב-CancelWaiting_BController
-            controller.setClient(user, chatClient, selected.getConfirmationCode());
-            
-            Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setScene(new Scene(root));
-            stage.show();
-        } catch (IOException e) { e.printStackTrace(); }
+        openScreen("/gui/CancelWaiting_B.fxml", controller ->
+                ((CancelWaiting_BController) controller)
+                        .setClient(user, chatClient, selected.getConfirmationCode())
+        );
     }
-    
+
     @FXML
     private void onRefreshClicked() {
         waitingData.clear();
@@ -136,19 +134,47 @@ public class ManageWaitingListController {
     }
 
     private void loadWaitingList() {
-        try { clientAPI.getWaitingList(); } catch (IOException e) { e.printStackTrace(); }
+        try {
+            clientAPI.getWaitingList();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @FXML
     private void onBackClicked() {
+        openScreen("/gui/RestaurantManagement_B.fxml", controller ->
+                ((RestaurantManagement_BController) controller)
+                        .setClient(user, chatClient)
+        );
+    }
+
+    /* ================= NAVIGATION ================= */
+
+    private void openScreen(String fxmlPath, java.util.function.Consumer<Object> injector) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/RestaurantManagement_B.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
             Parent root = loader.load();
-            RestaurantManagement_BController controller = loader.getController();
-            controller.setClient(user, chatClient);
+
+            Object controller = loader.getController();
+            if (controller != null && injector != null) {
+                injector.accept(controller);
+            }
+
             Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setScene(new Scene(root));
+            Scene scene = stage.getScene();
+
+            if (scene == null) {
+                stage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
+            stage.setMaximized(true);
             stage.show();
-        } catch (IOException e) { e.printStackTrace(); }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
