@@ -5,15 +5,37 @@ import java.time.LocalDateTime;
 import entities.Enums;
 import entities.Reservation;
 
+/**
+ * Handles the business logic related to reservation payments.
+ * <p>
+ * This controller is responsible for processing a full payment flow,
+ * including price calculation, reservation state updates, checkout handling,
+ * and conditional release of table availability.
+ * </p>
+ * <p>
+ * The payment logic is independent of the actual payment method
+ * (credit card / cash) and focuses only on server-side state management.
+ * </p>
+ */
 public class PaymentController {
 
+    /**
+     * Fixed base price for a single reservation order.
+     */
     private static final int ORDER_PRICE = 200;
 
     private final ReservationController reservationController;
     private final RestaurantController restaurantController;
 
     /**
-     * Injected once when server starts.
+     * Constructs a PaymentController with required controller dependencies.
+     * <p>
+     * This controller is typically instantiated once during server startup
+     * and reused for all payment operations.
+     * </p>
+     *
+     * @param reservationController controller responsible for reservation updates
+     * @param restaurantController  controller responsible for table availability
      */
     public PaymentController(ReservationController reservationController,
                              RestaurantController restaurantController) {
@@ -22,10 +44,19 @@ public class PaymentController {
     }
 
     /**
-     * Full payment flow:
-     * - calculate amount
-     * - update reservation status + checkout in DB
-     * - free table if paid before 2 hours passed
+     * Processes the full payment flow for a reservation.
+     * <p>
+     * The method performs the following steps:
+     * <ol>
+     *   <li>Calculates the final payment amount (including subscriber discount)</li>
+     *   <li>Updates the reservation checkout time</li>
+     *   <li>Marks the reservation as finished</li>
+     *   <li>Releases future table slots if payment occurred before the 2-hour window ended</li>
+     * </ol>
+     * </p>
+     *
+     * @param reservation the reservation being paid
+     * @return the final amount charged for the reservation
      */
     public double processPayment(Reservation reservation) {
 
@@ -33,7 +64,7 @@ public class PaymentController {
             return 0;
         }
 
-        // 1️⃣ Calculate final amount
+        // 1) Calculate final amount
         double finalAmount;
         if (reservation.getCreatedByRole() != Enums.UserRole.RandomClient ) {
             finalAmount = ORDER_PRICE * 0.9;
@@ -41,7 +72,7 @@ public class PaymentController {
             finalAmount = ORDER_PRICE;
         }
 
-        // 2️⃣ Update checkout time
+        // 2) Update checkout time
         LocalDateTime checkoutTime = LocalDateTime.now();
         reservation.setCheckoutTime(checkoutTime);
 
@@ -50,7 +81,7 @@ public class PaymentController {
                 checkoutTime
         );
 
-        // 3️⃣ Update reservation status to FINISHED
+        // 3) Update reservation status to FINISHED
         reservation.setReservationStatus(Enums.ReservationStatus.Finished);
 
         reservationController.updateReservationStatus(
@@ -58,15 +89,22 @@ public class PaymentController {
                 Enums.ReservationStatus.Finished
         );
 
-        // 4️⃣ Free table if paid before 2 hours passed
+        // 4) Free table slots if payment was completed early
         freeTableIfPaidEarly(reservation, checkoutTime);
 
         return finalAmount;
     }
 
     /**
-     * Frees future slots only if payment happened
-     * before the original 2-hour reservation window ended.
+     * Releases future table availability slots if the reservation
+     * was paid before the original 2-hour reservation window ended.
+     * <p>
+     * Only slots occurring after the checkout time and within the
+     * original reservation duration are released.
+     * </p>
+     *
+     * @param reservation the reservation being checked out
+     * @param checkoutTime the actual checkout time
      */
     private void freeTableIfPaidEarly(Reservation reservation, LocalDateTime checkoutTime) {
 
@@ -77,7 +115,7 @@ public class PaymentController {
             return;
         }
 
-        // If already passed 2 hours – do nothing
+        // If already passed the 2-hour window – do nothing
         if (checkoutTime.isAfter(checkinTime.plusHours(2))) {
             return;
         }
@@ -90,7 +128,7 @@ public class PaymentController {
                 try {
                     restaurantController.releaseSlot(slot, tableNumber);
                 } catch (Exception ignore) {
-                    // as requested – no logs, no handling
+                    // intentionally ignored as per business requirements
                 }
             }
         }

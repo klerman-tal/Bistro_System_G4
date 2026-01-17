@@ -11,12 +11,24 @@ import logicControllers.ReservationController;
 import logicControllers.UserController;
 import ocsf.server.ConnectionToClient;
 
+/**
+ * Server-side request handler responsible for processing
+ * receipt payment operations.
+ * <p>
+ * This handler validates payment details, verifies session ownership,
+ * ensures reservation eligibility for payment, marks the receipt as paid,
+ * finalizes the reservation, and performs post-payment cleanup when required.
+ * </p>
+ */
 public class PayReceiptHandler implements RequestHandler {
 
     private final ReservationController reservationController;
     private final ReceiptController receiptController;
     private final UserController userController;
 
+    /**
+     * Constructs a handler with the required controller dependencies.
+     */
     public PayReceiptHandler(ReservationController reservationController,
                              ReceiptController receiptController,
                              UserController userController) {
@@ -25,6 +37,15 @@ public class PayReceiptHandler implements RequestHandler {
         this.userController = userController;
     }
 
+    /**
+     * Handles a receipt payment request received from the client.
+     * <p>
+     * The method validates the payment data, verifies that the requesting
+     * user owns the reservation, checks reservation and receipt status,
+     * processes the payment, finalizes the reservation, and removes
+     * temporary guest users when applicable.
+     * </p>
+     */
     @Override
     public void handle(RequestDTO request, ConnectionToClient client) throws Exception {
 
@@ -34,7 +55,6 @@ public class PayReceiptHandler implements RequestHandler {
             return;
         }
 
-        // ✅ session user (saved at login)
         Object sessionUserObj = (client == null) ? null : client.getInfo("user");
         if (!(sessionUserObj instanceof entities.User sessionUser)) {
             client.sendToClient(new ResponseDTO(false, "Not logged-in session. Please login again.", null));
@@ -52,7 +72,6 @@ public class PayReceiptHandler implements RequestHandler {
             return;
         }
 
-        // If CreditCard -> validate fields
         if (dto.getPaymentType().name().equals("CreditCard")) {
             Integer last4 = dto.getLast4Digits();
             Integer cvv = dto.getCvv();
@@ -78,7 +97,6 @@ public class PayReceiptHandler implements RequestHandler {
             return;
         }
 
-        // ✅ ownership check
         if (r.getCreatedByUserId() != sessionUser.getUserId()) {
             client.sendToClient(new ResponseDTO(false, "This reservation does not belong to you.", null));
             return;
@@ -105,7 +123,6 @@ public class PayReceiptHandler implements RequestHandler {
             return;
         }
 
-        // 1) Mark receipt paid
         boolean paid = receiptController.markPaid(
                 r.getReservationId(),
                 dto.getPaymentType(),
@@ -117,14 +134,12 @@ public class PayReceiptHandler implements RequestHandler {
             return;
         }
 
-        // 2) Finish reservation
         boolean finished = reservationController.FinishReservation(code);
         if (!finished) {
             client.sendToClient(new ResponseDTO(false, "Payment done, but failed to finish reservation.", null));
             return;
         }
 
-        // 3) If RandomClient -> delete guest row
         if (r.getCreatedByRole() == entities.Enums.UserRole.RandomClient) {
             try {
                 userController.deleteGuestAfterPayment(r.getCreatedByUserId());

@@ -13,17 +13,53 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Server-side request handler responsible for updating the restaurant's
+ * weekly opening hours.
+ * <p>
+ * This handler performs a multi-step update process:
+ * <ul>
+ *   <li>Updates the weekly opening hours definition in the database</li>
+ *   <li>Synchronizes availability grids for the next 30 days</li>
+ *   <li>Cancels existing reservations that conflict with the new hours</li>
+ *   <li>Returns the updated opening hours list to refresh the client UI</li>
+ * </ul>
+ * </p>
+ * <p>
+ * The logic ensures data consistency between weekly rules, special dates,
+ * availability grids, and existing reservations.
+ * </p>
+ */
 public class UpdateOpeningHoursHandler implements RequestHandler {
 
     private final RestaurantController restaurantController;
     private final ReservationController reservationController;
 
+    /**
+     * Constructs a handler with required controller dependencies.
+     *
+     * @param restaurantController   controller responsible for opening hours and availability
+     * @param reservationController  controller responsible for reservation management
+     */
     public UpdateOpeningHoursHandler(RestaurantController restaurantController,
                                      ReservationController reservationController) {
         this.restaurantController = restaurantController;
         this.reservationController = reservationController;
     }
 
+    /**
+     * Handles an opening-hours update request.
+     * <p>
+     * The method executes a complex update flow:
+     * <ol>
+     *   <li>Validates the incoming update payload</li>
+     *   <li>Updates weekly opening hours in the database</li>
+     *   <li>Applies the change to all matching weekdays in the next 30 days</li>
+     *   <li>Synchronizes availability grids and cancels conflicting reservations</li>
+     *   <li>Returns the refreshed opening hours list to the client</li>
+     * </ol>
+     * </p>
+     */
     @Override
     public void handle(RequestDTO request, ConnectionToClient client) throws Exception {
 
@@ -95,12 +131,11 @@ public class UpdateOpeningHoursHandler implements RequestHandler {
             return;
         }
 
-        // ✅ 3) Return UPDATED opening hours list so GUI refreshes immediately
+        // 3) Return updated opening hours list so GUI refreshes immediately
         ArrayList<OpeningHouers> updatedList;
         try {
             updatedList = restaurantController.getOpeningHours();
         } catch (Exception e) {
-            // still return success but without list
             String msg =
                     "Opening hours updated. Synced days=" + syncedDays +
                     ", Cancelled reservations=" + cancelledReservations +
@@ -118,6 +153,13 @@ public class UpdateOpeningHoursHandler implements RequestHandler {
         client.sendToClient(new ResponseDTO(true, msg, updatedList));
     }
 
+    /**
+     * Utility method used to determine whether a string is null,
+     * empty, or contains only whitespace.
+     *
+     * @param s the string to check
+     * @return {@code true} if the string is blank or null
+     */
     private boolean isBlank(String s) {
         return s == null || s.trim().isEmpty();
     }

@@ -2,44 +2,74 @@ package logicControllers;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.List;   // ✅ FIX: correct List import
+import java.util.List;
 
 import dbControllers.User_DB_Controller;
 import entities.Enums;
-import entities.Restaurant;
 import entities.Subscriber;
 import entities.User;
 
+/**
+ * Handles user-related business logic for authentication and user management.
+ * <p>
+ * This controller provides a logic layer above {@link User_DB_Controller} and is responsible for:
+ * <ul>
+ *   <li>Logging in subscribers and guests</li>
+ *   <li>Registering subscribers and restaurant agents (with role-based authorization rules)</li>
+ *   <li>Fetching and searching subscriber records</li>
+ *   <li>Updating and deleting user records via the DB layer</li>
+ *   <li>Generating new user identifiers based on the current maximum in persistence</li>
+ * </ul>
+ * </p>
+ */
 public class UserController {
 
     private User_DB_Controller userDB;
 
+    /**
+     * Constructs a UserController with the given database controller.
+     *
+     * @param userDB database controller used for user and subscriber persistence
+     */
     public UserController(User_DB_Controller userDB) {
         this.userDB = userDB;
     }
 
+    /**
+     * Authenticates a subscriber by subscriber ID and username.
+     *
+     * @param subscriberId subscriber identifier
+     * @param username     subscriber username
+     * @return a {@link Subscriber} on successful login, or {@code null} if validation fails or user not found
+     */
     public Subscriber loginSubscriber(int subscriberId, String username) {
 
-        // Validate input parameters
         if (subscriberId <= 0 || username == null || username.isBlank()) {
             return null;
         }
 
-        // Delegate authentication check to DB layer
         Subscriber subscriber =
                 userDB.loginSubscriber(subscriberId, username);
 
-        // Return null if subscriber does not exist
         if (subscriber == null) {
             return null;
         }
 
-        // Successful login
         return subscriber;
     }
 
+    /**
+     * Logs in or creates a guest user using phone and/or email.
+     * <p>
+     * At least one of the contact fields (phone, email) must be provided.
+     * A new guest ID is generated using {@link #generateNextUserId()}.
+     * </p>
+     *
+     * @param phone guest phone (may be blank if email is provided)
+     * @param email guest email (may be blank if phone is provided)
+     * @return a {@link User} representing the guest on success, or {@code null} on validation failure or DB error
+     */
     public User loginGuest(String phone, String email) {
-        // שינוי: ולידציה שבודקת שלפחות אחד קיים
         if ((phone == null || phone.isBlank()) && (email == null || email.isBlank())) {
             return null;
         }
@@ -47,7 +77,6 @@ public class UserController {
 		try {
 			int guestId = generateNextUserId();
 			
-			 // שליחה ל-DB (ה-DB יקבל null עבור השדה הריק)
 	        User guest = userDB.loginGuest(guestId, phone, email);
 
 	        if (guest == null) {
@@ -57,7 +86,6 @@ public class UserController {
 	        return guest;
 		
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			
 			return null;
@@ -65,6 +93,29 @@ public class UserController {
     }
        
 
+    /**
+     * Registers a new subscriber or restaurant agent, subject to role-based authorization rules.
+     * <p>
+     * Authorization rules implemented:
+     * <ul>
+     *   <li>RestaurantAgent can create {@code Subscriber} only</li>
+     *   <li>RestaurantManager can create {@code Subscriber} or {@code RestaurantAgent}</li>
+     *   <li>Subscriber and RandomClient cannot register users</li>
+     * </ul>
+     * </p>
+     * <p>
+     * A new global user ID is generated using {@link #generateNextUserId()}.
+     * </p>
+     *
+     * @param username     new user's username
+     * @param firstName    new user's first name
+     * @param lastName     new user's last name
+     * @param phone        new user's phone
+     * @param email        new user's email
+     * @param role         role to assign to the new user
+     * @param performedBy  the authenticated subscriber performing the action
+     * @return the new subscriber/agent ID on success, or {@code -1} on validation/authorization/DB failure
+     */
     public int registerSubscriber(
             String username,
             String firstName,
@@ -74,14 +125,10 @@ public class UserController {
             Enums.UserRole role,
             Subscriber performedBy) {
 
-        // Validate performing user
         if (performedBy == null) {
             return -1;
         }
 
-        // Authorization rules:
-        // - RestaurantAgent can create Subscriber only
-        // - RestaurantManager can create Subscriber or RestaurantAgent
         if (performedBy.getUserRole() == Enums.UserRole.RestaurantAgent &&
             role != Enums.UserRole.Subscriber) {
             return -1;
@@ -92,7 +139,6 @@ public class UserController {
             return -1;
         }
 
-        // Validate input data
         if (username == null || username.isBlank() ||
             firstName == null || firstName.isBlank() ||
             lastName == null || lastName.isBlank() ||
@@ -101,11 +147,9 @@ public class UserController {
             return -1;
         }
 
-        // Generate global subscriber ID
 		try {
 			 int subscriberId = generateNextUserId();
 			
-			// Delegate persistence to DB layer
 	        userDB.registerSubscriber(
 	                subscriberId,
 	                username,
@@ -119,14 +163,26 @@ public class UserController {
 	        return subscriberId;
 	        
 		} catch (SQLException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			return -1;
 		}
-
-        
     }
     
+    /**
+     * Creates a new restaurant agent user.
+     * <p>
+     * Only a {@code RestaurantManager} is authorized to perform this action.
+     * A new global user ID is generated using {@link #generateNextUserId()}.
+     * </p>
+     *
+     * @param username    agent username
+     * @param firstName   agent first name
+     * @param lastName    agent last name
+     * @param phone       agent phone
+     * @param email       agent email
+     * @param performedBy the authenticated subscriber performing the action
+     * @return the new agent ID on success, or {@code -1} on validation/authorization/DB failure
+     */
     public int addRestaurantAgent(
             String username,
             String firstName,
@@ -135,17 +191,14 @@ public class UserController {
             String email,
             Subscriber performedBy) {
 
-        // Validate performing user
         if (performedBy == null) {
             return -1;
         }
 
-        // Only RestaurantManager can add restaurant agents
         if (performedBy.getUserRole() != Enums.UserRole.RestaurantManager) {
             return -1;
         }
 
-        // Validate input
         if (username == null || username.isBlank() ||
             firstName == null || firstName.isBlank() ||
             lastName == null || lastName.isBlank() ||
@@ -169,26 +222,24 @@ public class UserController {
 			 
 			 return agentId;
 		} catch (SQLException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			return -1;
 		}
-        // Delegate creation to DB layer
-       
     }
     
- // מתודה חדשה ב-UserController במיוחד עבור הברקוד
+    /**
+     * Authenticates a subscriber using only a barcode-derived subscriber ID.
+     *
+     * @param subscriberId subscriber identifier extracted from the barcode
+     * @return a {@link Subscriber} if found, or {@code null} if the ID is invalid or not found
+     */
     public Subscriber loginByBarcode(int subscriberId) {
-        // 1. ולידציה בסיסית של הקלט
         if (subscriberId <= 0) {
             return null;
         }
 
-        // 2. שליפה ישירה מה-DB (ללא בדיקת performedBy כי זה תהליך לוגין)
         Subscriber sub = userDB.getSubscriberById(subscriberId);
         
-        // 3. כאן אפשר להוסיף את בדיקת ה-Role שציינת
-        // רק מנוי, נציג או מנהל רשאים להיכנס (בהנחה שכולם מופיעים בטבלת Subscribers)
         if (sub != null) {
             return sub;
         }
@@ -197,84 +248,107 @@ public class UserController {
     }
 
 
+    /**
+     * Retrieves a subscriber by ID with role-based authorization checks.
+     *
+     * @param subscriberId subscriber identifier
+     * @param performedBy  the authenticated subscriber performing the action
+     * @return the matching {@link Subscriber}, or {@code null} if validation/authorization fails or not found
+     */
     public Subscriber getSubscriberById(int subscriberId, Subscriber performedBy) {
 
-        // Validate performing user
         if (performedBy == null) {
             return null;
         }
 
-        // Authorization rules:
-        // Only RestaurantAgent or RestaurantManager can fetch a subscriber by ID
         if (performedBy.getUserRole() != Enums.UserRole.RestaurantAgent &&
             performedBy.getUserRole() != Enums.UserRole.RestaurantManager) {
             return null;
         }
 
-        // Validate input
         if (subscriberId <= 0) {
             return null;
         }
 
-        // Delegate DB access
         return userDB.getSubscriberById(subscriberId);
     }
 
+    /**
+     * Finds a subscriber by username and phone number.
+     *
+     * @param username subscriber username
+     * @param phone    subscriber phone number
+     * @return the matching {@link Subscriber}, or {@code null} if input is invalid or no match exists
+     */
     public Subscriber findSubscriberByUsernameAndPhone(String username, String phone) {
 
-        // Validate input parameters
         if (username == null || username.isBlank() ||
             phone == null || phone.isBlank()) {
             return null;
         }
 
-        // Delegate lookup to DB layer
         return userDB.getSubscriberByUsernameAndPhone(username, phone);
     }
 
+    /**
+     * Retrieves all subscribers, subject to role-based authorization.
+     *
+     * @param performedBy the authenticated subscriber performing the action
+     * @return list of subscribers (empty list if unauthorized or none exist)
+     */
     public List<Subscriber> getAllSubscribers(Subscriber performedBy) {
 
-        // Validate performing user
         if (performedBy == null) {
             return new ArrayList<>();
         }
 
-        // Authorization rules:
-        // Only RestaurantAgent or RestaurantManager can view all subscribers
         if (performedBy.getUserRole() != Enums.UserRole.RestaurantAgent &&
             performedBy.getUserRole() != Enums.UserRole.RestaurantManager) {
             return new ArrayList<>();
         }
 
-        // Delegate DB access
         return userDB.getAllSubscribers();
     }
     
+    /**
+     * Deletes a guest user record after payment is completed.
+     *
+     * @param guestId guest identifier
+     * @return {@code true} if deletion succeeded, {@code false} otherwise
+     */
     public boolean deleteGuestAfterPayment(int guestId) {
 
-        // Validate input
         if (guestId <= 0) {
             return false;
         }
 
-        // Delegate deletion to DB layer
         return userDB.deleteGuest(guestId);
     }
     
+    /**
+     * Deletes a subscriber record.
+     *
+     * @param subscriberId subscriber identifier
+     * @param performedBy  the authenticated subscriber performing the action
+     * @return {@code true} if deletion succeeded, {@code false} otherwise
+     */
     public boolean deleteSubscriber(int subscriberId, Subscriber performedBy) {
 
-        // Validate input
         if (subscriberId <= 0) {
             return false;
         }
 
-        // NOTE:
-        // Authorization is intentionally skipped for now
-        // (will be enforced later – Manager / Agent)
-
         return userDB.deleteSubscriber(subscriberId);
     }
 
+    /**
+     * Attempts to recover a subscriber record using username, phone, and email.
+     *
+     * @param username subscriber username
+     * @param phone    subscriber phone number
+     * @param email    subscriber email address
+     * @return the matching {@link Subscriber}, or {@code null} if input is invalid or no match exists
+     */
     public Subscriber recoverSubscriberCode(
             String username,
             String phone,
@@ -293,6 +367,18 @@ public class UserController {
         return subscriber;
     }
     
+    /**
+     * Updates subscriber profile details in persistence.
+     *
+     * @param subscriberId subscriber identifier
+     * @param username     new username
+     * @param firstName    new first name
+     * @param lastName     new last name
+     * @param phone        new phone
+     * @param email        new email
+     * @return {@code true} if update succeeded, {@code false} otherwise
+     * @throws SQLException if the database operation fails
+     */
     public boolean updateSubscriberDetails(
             int subscriberId,
             String username,
@@ -313,17 +399,14 @@ public class UserController {
         );
     }
 
-
+    /**
+     * Generates the next available user ID across guests and subscribers.
+     *
+     * @return next user identifier
+     * @throws SQLException if reading the maximum user ID fails
+     */
     public int generateNextUserId() throws SQLException {
         int max = userDB.getMaxUserIdFromGuestsAndSubscribers();
         return max + 1;
     }
-    
-    
- // בתוך UserController.java
-
-
-
-    
-
 }
