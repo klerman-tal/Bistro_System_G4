@@ -145,8 +145,31 @@ public class ReservationMenu_BController {
      */
     @FXML
     private void onBack() {
-        openWindow("Menu_B.fxml", "Main Menu");
+        try {
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
+            Parent root = loader.load();
+
+            Object controller = loader.getController();
+
+            // ✅ ALWAYS pass the real logged-in user to Menu
+            User logged = application.ClientSession.getLoggedInUser();
+
+            if (controller != null && logged != null && chatClient != null) {
+                try {
+                    controller.getClass()
+                            .getMethod("setClient", User.class, ChatClient.class)
+                            .invoke(controller, logged, chatClient);
+                } catch (Exception ignored) {}
+            }
+
+            switchRoot(root, "Bistro - Main Menu");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
+
 
     /**
      * Loads an FXML screen from {@code /gui/}, injects session context and optional {@link ClientActions},

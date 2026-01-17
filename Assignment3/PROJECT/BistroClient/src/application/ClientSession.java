@@ -50,15 +50,39 @@ public class ClientSession {
     /**
      * Sets the logged-in user for the session.
      * <p>
-     * This method also initializes the acting user to be the same user,
-     * ensuring a consistent default state immediately after login.
+     * IMPORTANT RULE:
+     * - loggedInUser must NOT change until logout.
+     * - actingUser should be set to loggedInUser ONLY on a real login (or when user changes),
+     *   NOT when returning to Menu/back navigation.
      * </p>
      *
      * @param user the authenticated user
      */
     public static void setLoggedInUser(User user) {
+
+        // logout case
+        if (user == null) {
+            loggedInUser = null;
+            actingUser = null;
+            return;
+        }
+
+        boolean isNewLogin =
+                (loggedInUser == null) ||
+                (loggedInUser.getUserId() != user.getUserId());
+
         loggedInUser = user;
-        actingUser = user;
+
+        // Only on real login (or user change) -> reset acting user to logged-in user
+        if (isNewLogin) {
+            actingUser = user;
+            return;
+        }
+
+        // If same logged-in user and acting user is missing -> restore to logged-in user
+        if (actingUser == null) {
+            actingUser = user;
+        }
     }
 
     /**
@@ -95,10 +119,6 @@ public class ClientSession {
 
     /**
      * Resets the acting user back to the logged-in user.
-     * <p>
-     * Useful after completing manager/agent operations performed on behalf
-     * of another user.
-     * </p>
      */
     public static void resetActingUser() {
         actingUser = loggedInUser;
