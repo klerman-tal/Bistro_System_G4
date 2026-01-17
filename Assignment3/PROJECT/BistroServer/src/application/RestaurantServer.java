@@ -19,6 +19,17 @@ import ocsf.server.AbstractServer;
 import ocsf.server.ConnectionToClient;
 import protocol.Commands;
 
+/**
+ * Main OCSF-based server for the restaurant system.
+ *
+ * <p>This server is responsible for:
+ * initializing the database connection and schema, constructing database and logic controllers,
+ * registering DTO handlers, routing incoming {@link RequestDTO} messages, maintaining online user state,
+ * running background schedulers (waiting expiration, reservation grace-period cancellation, end-of-day cleanup,
+ * and daily availability grid refresh), and managing automatic shutdown on extended inactivity.</p>
+ *
+ * <p>The server logs events to both stdout and (optionally) a JavaFX UI controller.</p>
+ */
 public class RestaurantServer extends AbstractServer {
 
     public static final int DEFAULT_PORT = 5556;
@@ -68,14 +79,30 @@ public class RestaurantServer extends AbstractServer {
     private Runnable onAutoShutdown;
 
     // ================= UI =================
+
+    /**
+     * Sets the JavaFX UI controller used to display server logs.
+     *
+     * @param controller the UI controller that receives log messages
+     */
     public void setUiController(gui.ServerGUIController controller) {
         this.uiController = controller;
     }
 
+    /**
+     * Sets a callback that will be invoked when the server auto-shuts down due to inactivity.
+     *
+     * @param r callback to run on auto-shutdown
+     */
     public void setOnAutoShutdown(Runnable r) {
         this.onAutoShutdown = r;
     }
 
+    /**
+     * Logs a message to stdout and, if available, to the JavaFX UI.
+     *
+     * @param msg message to log
+     */
     public void log(String msg) {
         System.out.println(msg);
         if (uiController != null) {
@@ -84,6 +111,15 @@ public class RestaurantServer extends AbstractServer {
     }
 
     // ================= Constructor =================
+
+    /**
+     * Creates a new server instance bound to the given port.
+     *
+     * <p>This constructor initializes the {@link DBController} reference, configures the server reference
+     * inside the DB controller, creates a {@link RequestRouter}, and attempts to resolve the local server IP.</p>
+     *
+     * @param port the port to listen on
+     */
     public RestaurantServer(int port) {
         super(port);
         conn = new DBController();
@@ -98,6 +134,14 @@ public class RestaurantServer extends AbstractServer {
     }
 
     // ================= Server Start =================
+
+    /**
+     * Called by the OCSF framework when the server starts listening.
+     *
+     * <p>This method initializes the database connection and schema, creates all DB and logic controllers,
+     * starts background schedulers, initializes notification runtime services, registers request handlers,
+     * and ensures the availability grid for the upcoming days.</p>
+     */
     @Override
     protected void serverStarted() {
         touchActivity();
@@ -115,7 +159,6 @@ public class RestaurantServer extends AbstractServer {
                 return;
             }
 
-            // ===== DB Controllers =====
             restaurantDB = new Restaurant_DB_Controller(sqlConn);
             reservationDB = new Reservation_DB_Controller(sqlConn);
             userDB = new User_DB_Controller(sqlConn);
@@ -136,12 +179,10 @@ public class RestaurantServer extends AbstractServer {
             specialOpeningHoursDB.createSpecialOpeningHoursTable();
             log("✅ Database schema ensured.");
 
-            // ===== Logic Controllers =====
             restaurantController = new RestaurantController(restaurantDB);
             userController = new UserController(userDB);
             receiptController = new ReceiptController(receiptDB);
             restaurantController.setReservationDB(reservationDB);
-
 
             reservationController =
                     new ReservationController(
@@ -168,7 +209,6 @@ public class RestaurantServer extends AbstractServer {
             reportsController =
                     new ReportsController(reservationDB, waitingDB, userDB);
 
-            // ===== Waiting auto-cancel (WAITINGS ONLY) =====
             waitingScheduler = Executors.newSingleThreadScheduledExecutor();
             waitingScheduler.scheduleAtFixedRate(() -> {
                 try {
@@ -180,7 +220,6 @@ public class RestaurantServer extends AbstractServer {
                 }
             }, 10, 10, TimeUnit.SECONDS);
 
-            // ===== Reservation auto-cancel (NO CHECK-IN AFTER 15 MIN) =====
             reservationScheduler = Executors.newSingleThreadScheduledExecutor();
             reservationScheduler.scheduleAtFixedRate(() -> {
                 try {
@@ -194,7 +233,6 @@ public class RestaurantServer extends AbstractServer {
                 }
             }, 30, 30, TimeUnit.SECONDS);
 
-            // ===== Closing Scheduler (End of Day) =====
             closingScheduler = Executors.newSingleThreadScheduledExecutor();
             closingScheduler.scheduleAtFixedRate(() -> {
                 try {
@@ -218,7 +256,6 @@ public class RestaurantServer extends AbstractServer {
                 }
             }, 10, 60, TimeUnit.SECONDS);
 
-            // ===== Notifications runtime =====
             onlineUsersRegistry = new OnlineUsersRegistry();
             notificationDispatcher =
                     new NotificationDispatcher(onlineUsersRegistry, this::log);
@@ -249,11 +286,10 @@ public class RestaurantServer extends AbstractServer {
                 } catch (Exception e) {
                     log("❌ Daily grid refresh failed: " + e.getMessage());
                 }
-            }, 
-            1,              // דיליי ראשון (דקה אחרי עליית שרת)
-            24 * 60,        // כל 24 שעות
+            },
+            1,
+            24 * 60,
             TimeUnit.MINUTES);
-
 
             log("✅ Server fully initialized.");
 
@@ -264,10 +300,16 @@ public class RestaurantServer extends AbstractServer {
     }
 
     // ================= Router =================
+
+    /**
+     * Registers all command handlers into the {@link RequestRouter}.
+     *
+     * <p>Each handler is responsible for validating and processing a specific {@link Commands} request
+     * and producing the appropriate response back to the client.</p>
+     */
     private void registerHandlers() {
         log("⚙️ Registering DTO handlers...");
 
-        // ===== Reservations =====
         router.register(Commands.CREATE_RESERVATION,
                 new CreateReservationHandler(reservationController));
         router.register(Commands.GET_RESERVATION_HISTORY,
@@ -285,7 +327,6 @@ public class RestaurantServer extends AbstractServer {
         router.register(Commands.GET_CURRENT_DINERS,
                 new GetCurrentDinersHandler(reservationController));
 
-        // ===== Waiting =====
         router.register(Commands.JOIN_WAITING_LIST,
                 new JoinWaitingListHandler(waitingController));
         router.register(Commands.GET_WAITING_STATUS,
@@ -299,7 +340,6 @@ public class RestaurantServer extends AbstractServer {
         router.register(Commands.GET_MY_ACTIVE_WAITINGS,
                 new GetMyActiveWaitingsHandler(waitingController));
 
-        // ===== Users =====
         router.register(Commands.SUBSCRIBER_LOGIN,
                 new SubscriberLoginHandler(userController, onlineUsersRegistry));
         router.register(Commands.GUEST_LOGIN,
@@ -324,16 +364,14 @@ public class RestaurantServer extends AbstractServer {
                 new FindUserByIdHandler(userController));
         router.register(Commands.CREATE_GUEST_BY_PHONE,
                 new CreateGuestByPhoneHandler(userController));
-        router.register(Commands.BARCODE_LOGIN, 
+        router.register(Commands.BARCODE_LOGIN,
                 new BarcodeLoginHandler(userController, onlineUsersRegistry));
 
-        // ===== Reports =====
         router.register(Commands.GET_TIME_REPORT,
                 new GetTimeReportHandler(reportsController));
         router.register(Commands.GET_SUBSCRIBERS_REPORT,
                 new GetSubscribersReportHandler(reportsController));
 
-        // ===== Tables / Opening Hours =====
         router.register(Commands.GET_TABLES,
                 new GetTablesHandler(restaurantController));
         router.register(Commands.SAVE_TABLE,
@@ -346,10 +384,7 @@ public class RestaurantServer extends AbstractServer {
                 new UpdateOpeningHoursHandler(
                         restaurantController,
                         reservationController));
-        
-        
 
-        // ===== Special Opening Hours =====
         router.register(Commands.GET_SPECIAL_OPENING_HOURS,
                 new GetSpecialOpeningHoursHandler(specialOpeningHoursDB));
         router.register(Commands.UPDATE_SPECIAL_OPENING_HOURS,
@@ -358,7 +393,6 @@ public class RestaurantServer extends AbstractServer {
                         restaurantController,
                         reservationController));
 
-        // ===== Payments / Receipts =====
         router.register(Commands.PAY_RECEIPT,
                 new PayReceiptHandler(
                         reservationController,
@@ -369,10 +403,15 @@ public class RestaurantServer extends AbstractServer {
                         reservationController,
                         receiptController));
     }
-  
-
 
     // ================= Messages =================
+
+    /**
+     * Handles incoming messages from clients and routes {@link RequestDTO} objects to the appropriate handler.
+     *
+     * @param msg    the received message object
+     * @param client the client connection that sent the message
+     */
     @Override
     protected void handleMessageFromClient(Object msg, ConnectionToClient client) {
         touchActivity();
@@ -388,6 +427,12 @@ public class RestaurantServer extends AbstractServer {
     }
 
     // ================= Clients =================
+
+    /**
+     * Called when a client connects to the server.
+     *
+     * @param client the connected client
+     */
     @Override
     protected synchronized void clientConnected(ConnectionToClient client) {
         touchActivity();
@@ -398,6 +443,13 @@ public class RestaurantServer extends AbstractServer {
         log("🔌 Client connected | IP: " + ip);
     }
 
+    /**
+     * Called when a client disconnects from the server.
+     *
+     * <p>The client is removed from the online registry (if available) to avoid stale online state.</p>
+     *
+     * @param client the disconnected client
+     */
     @Override
     protected synchronized void clientDisconnected(ConnectionToClient client) {
         touchActivity();
@@ -414,8 +466,13 @@ public class RestaurantServer extends AbstractServer {
         log("🔌 Client disconnected (Logout or window closed) | IP: " + ip);
     }
 
-
     // ================= Shutdown =================
+
+    /**
+     * Called by the OCSF framework when the server stops.
+     *
+     * <p>This method stops all background schedulers and notification services.</p>
+     */
     @Override
     protected void serverStopped() {
         idleScheduler.shutdownNow();
@@ -429,10 +486,20 @@ public class RestaurantServer extends AbstractServer {
     }
 
     // ================= Idle Watchdog =================
+
+    /**
+     * Updates the last activity timestamp used by the idle watchdog.
+     */
     private void touchActivity() {
         lastActivityMs = System.currentTimeMillis();
     }
 
+    /**
+     * Starts a watchdog that periodically checks for inactivity and triggers auto-shutdown.
+     *
+     * <p>Auto-shutdown occurs when no activity was detected for {@link #IDLE_TIMEOUT_MS}
+     * and there are no connected clients.</p>
+     */
     private void startIdleWatchdog() {
         idleScheduler.scheduleAtFixedRate(() -> {
             try {
@@ -447,6 +514,10 @@ public class RestaurantServer extends AbstractServer {
         }, 1, 1, TimeUnit.MINUTES);
     }
 
+    /**
+     * Shuts down the server immediately by stopping listening, closing all connections,
+     * stopping schedulers, and invoking the optional shutdown callback.
+     */
     private void shutdownServerNow() {
         try { stopListening(); } catch (Exception ignored) {}
         try { close(); } catch (Exception ignored) {}
@@ -463,6 +534,13 @@ public class RestaurantServer extends AbstractServer {
     }
 
     // ================= Monthly Report Notification =================
+
+    /**
+     * Creates a "monthly report ready" notification for the restaurant manager if needed.
+     *
+     * <p>This method creates a notification only on the first day of the month, referring
+     * to the previous calendar month.</p>
+     */
     private void createMonthlyReportNotificationIfNeeded() {
         try {
             if (LocalDate.now().getDayOfMonth() != 1) return;
@@ -490,28 +568,41 @@ public class RestaurantServer extends AbstractServer {
             log("❌ Failed to create monthly report notification: " + e.getMessage());
         }
     }
-    
- // =====================================================
-    // טיפול במקרים של סגירת חלון (X) או שגיאות חיבור
-    // =====================================================
+
+    /**
+     * Handles exceptional client disconnects such as abrupt window close or connection failures.
+     *
+     * <p>The client is removed from the online registry (if available) to avoid stale online state,
+     * and a warning is logged.</p>
+     *
+     * @param client    the affected client connection
+     * @param exception the exception that occurred
+     */
     @Override
     protected synchronized void clientException(ConnectionToClient client, Throwable exception) {
         touchActivity();
 
-        String ip = (client.getInetAddress() != null) 
-                    ? client.getInetAddress().getHostAddress() 
+        String ip = (client.getInetAddress() != null)
+                    ? client.getInetAddress().getHostAddress()
                     : "UNKNOWN";
 
-        // הסרת הלקוח מהרישום כדי שלא יישאר "תקוע" כמחובר בשרת
         if (onlineUsersRegistry != null) {
             onlineUsersRegistry.removeClient(client);
         }
 
-        // הדפסה ללוג - זה מה שיופיע כשאתה סוגר את הקליינט בלי Logout מסודר
         log("⚠️ Client connection lost (Window closed or crash) | IP: " + ip);
     }
 
     // ================= Main =================
+
+    /**
+     * Starts the server from the command line.
+     *
+     * <p>If a port is provided in {@code args[0]}, it will be used; otherwise
+     * {@link #DEFAULT_PORT} is used.</p>
+     *
+     * @param args command-line arguments; optional first argument is the port number
+     */
     public static void main(String[] args) {
         int port;
         try {

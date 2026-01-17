@@ -13,14 +13,30 @@ import java.util.Optional;
 import dbControllers.DBController;
 import gui.ServerGUIController;
 
+/**
+ * JavaFX entry point for the restaurant server UI.
+ *
+ * <p>This application:
+ * prompts the user for the MySQL password, stores it in {@link DBController},
+ * loads the server GUI, and starts {@link RestaurantServer} on a background thread
+ * so the JavaFX UI remains responsive.</p>
+ *
+ * <p>The server may auto-shutdown after an idle period (as configured in the server),
+ * and in that case the UI is closed automatically.</p>
+ */
 public class ServerUI extends Application {
 
     private static ServerGUIController controller;
 
+    /**
+     * Initializes and displays the server UI, then starts the server in a separate thread.
+     *
+     * @param primaryStage the main JavaFX stage provided by the runtime
+     * @throws Exception if the FXML cannot be loaded or JavaFX initialization fails
+     */
     @Override
     public void start(Stage primaryStage) throws Exception {
 
-        // ===== Step 1: Request MySQL password from user =====
         TextInputDialog dialog = new TextInputDialog();
         dialog.setTitle("MySQL Password Required");
         dialog.setHeaderText("Enter your MySQL password");
@@ -29,10 +45,8 @@ public class ServerUI extends Application {
         Optional<String> result = dialog.showAndWait();
         String mysqlPassword = result.orElse("");
 
-        // Store the password inside DBController for later database initialization
         DBController.MYSQL_PASSWORD = mysqlPassword;
 
-        // ===== Step 2: Load and display the GUI =====
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/ServerGUI.fxml"));
         Parent root = loader.load();
         controller = loader.getController();
@@ -41,12 +55,10 @@ public class ServerUI extends Application {
         primaryStage.setScene(new Scene(root));
         primaryStage.show();
 
-        // ===== Step 3: Start the server in a separate thread =====
         new Thread(() -> {
             RestaurantServer server = new RestaurantServer(5556);
             server.setUiController(controller);
 
-            // ✅ NEW: Auto close UI when server auto-shuts down (30 min idle)
             server.setOnAutoShutdown(() -> Platform.runLater(() -> {
                 try {
                     primaryStage.close();
@@ -55,13 +67,18 @@ public class ServerUI extends Application {
             }));
 
             try {
-                server.listen(); // Start listening to client connections
+                server.listen();
             } catch (Exception e) {
                 controller.addLog("ERROR: " + e.getMessage());
             }
         }).start();
     }
 
+    /**
+     * Launches the JavaFX application.
+     *
+     * @param args command-line arguments passed to the JavaFX runtime
+     */
     public static void main(String[] args) {
         launch(args);
     }
