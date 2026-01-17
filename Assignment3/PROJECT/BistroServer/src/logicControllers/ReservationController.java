@@ -545,6 +545,8 @@ public class ReservationController {
                 rollbackReservation(start, tableNumber);
                 return false;
             }
+            
+            db.updateCheckinTime(reservationId, LocalDateTime.now());
 
             scheduleReservationReminder2HoursBefore(user.getUserId(), start, confirmationCode.trim());
 
@@ -1004,14 +1006,19 @@ public class ReservationController {
             User user,
             String confirmationCode
     ) {
-        if (start == null || user == null || confirmationCode == null || confirmationCode.isBlank()) return null;
+        if (start == null || user == null || confirmationCode == null || confirmationCode.isBlank())
+            return null;
 
         Table table;
         try {
-        	ArrayList<Integer> lockedTables =
-        	        (waitingController == null) ? new ArrayList<>() : waitingController.getLockedTableNumbersNow();
+            ArrayList<Integer> lockedTables =
+                    (waitingController == null)
+                            ? new ArrayList<>()
+                            : waitingController.getLockedTableNumbersNow();
 
-        	table = restaurantController.getOneAvailableTableAtExcludingTables(start, guests, lockedTables);
+            table = restaurantController.getOneAvailableTableAtExcludingTables(
+                    start, guests, lockedTables
+            );
 
         } catch (Exception e) {
             server.log("ERROR: Waiting -> check availability failed. " + e.getMessage());
@@ -1032,7 +1039,6 @@ public class ReservationController {
         res.setActive(true);
         res.setTableNumber(table.getTableNumber());
         res.setReservationStatus(ReservationStatus.Active);
-
         res.setConfirmationCode(confirmationCode);
 
         try {
@@ -1052,7 +1058,35 @@ public class ReservationController {
 
             res.setReservationId(reservationId);
 
-            scheduleReservationReminder2HoursBefore(user.getUserId(), start, confirmationCode);
+            // ===============================
+            // ✅ AUTO CHECK-IN (IMMEDIATE SEAT)
+            // ===============================
+            LocalDateTime now = LocalDateTime.now();
+
+            db.updateCheckinTime(reservationId, now);
+
+            // bill due = check-in + 2 hours
+            try {
+                db.setBillDueAt(reservationId, now.plusHours(2));
+            } catch (Exception ignore) {}
+
+            // create receipt immediately (if configured)
+            try {
+                if (receiptController != null) {
+                    receiptController.createReceiptIfMissingForCheckin(res, now);
+                }
+            } catch (Exception ignore) {}
+
+            scheduleReservationReminder2HoursBefore(
+                    user.getUserId(),
+                    start,
+                    confirmationCode
+            );
+
+            server.log("Reservation created from waiting (immediate) & checked-in. " +
+                       "Code=" + confirmationCode +
+                       ", Table=" + table.getTableNumber() +
+                       ", ReservationId=" + reservationId);
 
             return res;
 
@@ -1062,6 +1096,7 @@ public class ReservationController {
             return null;
         }
     }
+
     
 
  // ====CHECK-IN (GET TABLE) FROM RESERVATION====
