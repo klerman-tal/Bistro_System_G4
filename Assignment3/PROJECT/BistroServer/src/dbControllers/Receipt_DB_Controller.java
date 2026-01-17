@@ -8,14 +8,29 @@ import entities.Enums;
 import entities.Receipt;
 
 /**
- * DB controller for receipts.
- * Receipt is created at check-in (random amount),
- * and marked as paid at payment time.
+ * Provides persistence operations for receipts.
+ * <p>
+ * This DB controller manages the {@code receipts} table, supporting:
+ * <ul>
+ *   <li>Schema creation</li>
+ *   <li>Idempotent receipt creation per reservation (one receipt per reservation)</li>
+ *   <li>Fetching receipts by reservation ID</li>
+ *   <li>Marking receipts as paid (idempotent update)</li>
+ * </ul>
+ * </p>
+ * <p>
+ * Receipts are typically created at check-in time and later updated when payment is completed.
+ * </p>
  */
 public class Receipt_DB_Controller {
 
     private final Connection conn;
 
+    /**
+     * Constructs a Receipt_DB_Controller with the given JDBC connection.
+     *
+     * @param conn active JDBC connection used for receipt persistence
+     */
     public Receipt_DB_Controller(Connection conn) {
         this.conn = conn;
     }
@@ -24,6 +39,13 @@ public class Receipt_DB_Controller {
     // TABLE SETUP
     // =====================================================
 
+    /**
+     * Creates the {@code receipts} table if it does not already exist.
+     * <p>
+     * The schema enforces a single receipt per reservation via {@code UNIQUE(reservation_id)} and
+     * supports payment tracking via {@code is_paid}, {@code paid_at}, and {@code payment_type}.
+     * </p>
+     */
     public void createReceiptsTable() {
         String sql = """
             CREATE TABLE IF NOT EXISTS receipts (
@@ -63,18 +85,26 @@ public class Receipt_DB_Controller {
     // =====================================================
 
     /**
-     * Creates a receipt only if it does not exist for this reservation_id (idempotent).
-     * Returns receipt_id if inserted, or existing receipt_id if already exists, or -1 on error.
+     * Creates a receipt only if it does not already exist for the given reservation ID.
+     * <p>
+     * This method is idempotent:
+     * <ul>
+     *   <li>If a receipt already exists for {@code reservation_id}, the existing {@code receipt_id} is returned.</li>
+     *   <li>Otherwise, a new receipt row is inserted and the generated {@code receipt_id} is returned.</li>
+     * </ul>
+     * </p>
+     *
+     * @param r receipt object containing reservation ID, creation time, amount, and creator metadata
+     * @return inserted {@code receipt_id}, existing {@code receipt_id} if already present, or {@code -1} on failure
+     * @throws SQLException if a database error occurs while inserting or checking existence
      */
     public int createReceiptIfNotExists(Receipt r) throws SQLException {
         if (r == null) return -1;
         if (r.getReservationId() <= 0) return -1;
 
-        // 1) If exists -> return existing id
         Integer existingId = getReceiptIdByReservationId(r.getReservationId());
         if (existingId != null) return existingId;
 
-        // 2) Insert
         String sql = """
             INSERT INTO receipts
             (reservation_id, created_at, amount, is_paid, paid_at, payment_type, created_by_user_id, created_by_role)
@@ -106,6 +136,13 @@ public class Receipt_DB_Controller {
         return -1;
     }
 
+    /**
+     * Retrieves a receipt by reservation ID.
+     *
+     * @param reservationId reservation identifier
+     * @return the matching {@link Receipt}, or {@code null} if not found
+     * @throws SQLException if a database error occurs during the query
+     */
     public Receipt getReceiptByReservationId(int reservationId) throws SQLException {
         String sql = "SELECT * FROM receipts WHERE reservation_id = ?;";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -117,6 +154,13 @@ public class Receipt_DB_Controller {
         return null;
     }
 
+    /**
+     * Retrieves the receipt ID for a given reservation ID.
+     *
+     * @param reservationId reservation identifier
+     * @return {@code receipt_id} if found, otherwise {@code null}
+     * @throws SQLException if a database error occurs during the query
+     */
     private Integer getReceiptIdByReservationId(int reservationId) throws SQLException {
         String sql = "SELECT receipt_id FROM receipts WHERE reservation_id = ? LIMIT 1;";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -133,8 +177,16 @@ public class Receipt_DB_Controller {
     // =====================================================
 
     /**
-     * Marks receipt as paid (idempotent).
-     * Returns true if updated from unpaid -> paid.
+     * Marks a receipt as paid for the given reservation ID.
+     * <p>
+     * This update is idempotent: it only updates rows where {@code is_paid = 0}.
+     * </p>
+     *
+     * @param reservationId reservation identifier
+     * @param paymentType   payment method used
+     * @param paidAt        payment timestamp (if {@code null}, current time is used)
+     * @return {@code true} if the receipt was updated from unpaid to paid, {@code false} otherwise
+     * @throws SQLException if a database error occurs during the update
      */
     public boolean markReceiptPaid(int reservationId, Enums.TypeOfPayment paymentType, LocalDateTime paidAt) throws SQLException {
         String sql = """
@@ -158,6 +210,13 @@ public class Receipt_DB_Controller {
     // MAPPING
     // =====================================================
 
+    /**
+     * Maps the current {@link ResultSet} row into a {@link Receipt} instance.
+     *
+     * @param rs result set positioned on a valid row
+     * @return mapped {@link Receipt} object
+     * @throws SQLException if reading column values fails
+     */
     private Receipt mapRowToReceipt(ResultSet rs) throws SQLException {
         Receipt r = new Receipt();
 

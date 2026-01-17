@@ -12,12 +12,29 @@ import entities.Enums;
 import entities.Enums.ReservationStatus;
 import entities.Reservation;
 
+/**
+ * Provides persistence operations for reservations.
+ * <p>
+ * This DB controller manages the {@code reservations} table and supports:
+ * <ul>
+ *   <li>Schema creation</li>
+ *   <li>Creating reservations and generating DB identifiers</li>
+ *   <li>Canceling and finishing reservations</li>
+ *   <li>Updating reservation fields (status, confirmation, check-in, check-out, table number)</li>
+ *   <li>Queries for user reservations, active reservations, history, and time-based reports</li>
+ *   <li>Scheduler-driven queries (due reminders, due bills, auto-cancel candidates)</li>
+ *   <li>Real-time occupancy checks based on check-in/check-out columns</li>
+ * </ul>
+ * </p>
+ */
 public class Reservation_DB_Controller {
 
     private final Connection conn;
 
     /**
-     * Constructor: stores DB connection reference.
+     * Constructs a Reservation_DB_Controller with the given JDBC connection.
+     *
+     * @param conn active JDBC connection used for reservation persistence
      */
     public Reservation_DB_Controller(Connection conn) {
         this.conn = conn;
@@ -28,8 +45,10 @@ public class Reservation_DB_Controller {
     // =====================================================
 
     /**
-     * Creates the reservations table if it does not exist (safe create).
-     * Note: CREATE TABLE IF NOT EXISTS will NOT add new columns to an existing table.
+     * Creates the {@code reservations} table if it does not already exist.
+     * <p>
+     * Note: {@code CREATE TABLE IF NOT EXISTS} will not add new columns to an existing table.
+     * </p>
      */
     public void createReservationsTable() {
         String sql = """
@@ -89,8 +108,25 @@ public class Reservation_DB_Controller {
     // =====================================================
 
     /**
-     * Inserts a new reservation row and returns the generated reservation_id.
-     * Also sets reminder_at automatically to 2 hours before reservation_datetime.
+     * Inserts a new reservation row and returns the generated {@code reservation_id}.
+     * <p>
+     * This insert sets:
+     * <ul>
+     *   <li>{@code is_confirmed = 1}</li>
+     *   <li>{@code is_active = 1}</li>
+     *   <li>{@code reminder_at = reservation_datetime - 2 hours}</li>
+     *   <li>{@code reminder_sent = 0}</li>
+     * </ul>
+     * </p>
+     *
+     * @param reservationDateTime reservation date/time
+     * @param guests              number of guests
+     * @param confirmationCode    unique confirmation code
+     * @param createdByUserId     user identifier who created the reservation
+     * @param createdByRole       role of the user who created the reservation
+     * @param tableNumber         assigned table number
+     * @return generated {@code reservation_id}, or {@code -1} if insertion failed or no key was returned
+     * @throws SQLException if a database error occurs during insertion
      */
     public int addReservation(
             LocalDateTime reservationDateTime,
@@ -117,7 +153,6 @@ public class Reservation_DB_Controller {
 
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            // ✅ IMPORTANT: use LocalDateTime directly (no timezone conversions like Timestamp may do)
             ps.setObject(1, reservationDateTime);
 
             ps.setInt(2, guests);
@@ -126,7 +161,6 @@ public class Reservation_DB_Controller {
             ps.setString(5, createdByRole.name());
             ps.setInt(6, tableNumber);
 
-            // reminder_at derived from reservation_datetime
             ps.setObject(7, reservationDateTime);
 
             ps.executeUpdate();
@@ -142,6 +176,16 @@ public class Reservation_DB_Controller {
     // CANCEL
     // =====================================================
 
+    /**
+     * Cancels an active reservation using its confirmation code.
+     * <p>
+     * The update is applied only when the reservation is currently active and has {@code reservation_status = 'Active'}.
+     * </p>
+     *
+     * @param confirmationCode reservation confirmation code
+     * @return {@code true} if the reservation was updated to cancelled, {@code false} otherwise
+     * @throws SQLException if a database error occurs during the update
+     */
     public boolean cancelReservationByConfirmationCode(String confirmationCode) throws SQLException {
         String sql = """
             UPDATE reservations
@@ -163,7 +207,10 @@ public class Reservation_DB_Controller {
     // =====================================================
 
     /**
-     * DTO for reminders that are due to be sent (minimal data for scheduler/notifications).
+     * Minimal DTO representing a reservation reminder due to be sent.
+     * <p>
+     * This class is used by scheduler logic to avoid loading full {@link Reservation} entities.
+     * </p>
      */
     public static class DueReminder {
         public final int reservationId;
@@ -172,7 +219,12 @@ public class Reservation_DB_Controller {
         public final String confirmationCode;
 
         /**
-         * Creates a DueReminder DTO.
+         * Constructs a DueReminder DTO.
+         *
+         * @param reservationId       reservation identifier
+         * @param createdByUserId     creator user identifier
+         * @param reservationDateTime reservation date/time
+         * @param confirmationCode    reservation confirmation code
          */
         public DueReminder(int reservationId, int createdByUserId,
                            LocalDateTime reservationDateTime, String confirmationCode) {
@@ -184,7 +236,20 @@ public class Reservation_DB_Controller {
     }
 
     /**
-     * Returns reminders that should be sent now (reminder_at <= NOW) for active reservations.
+     * Retrieves reminders that should be sent now.
+     * <p>
+     * A reminder is due when:
+     * <ul>
+     *   <li>{@code reminder_at <= NOW()}</li>
+     *   <li>{@code reminder_sent = 0}</li>
+     *   <li>{@code is_active = 1}</li>
+     *   <li>{@code reservation_status = 'Active'}</li>
+     *   <li>{@code NOW() < reservation_datetime} (do not remind after the reservation time)</li>
+     * </ul>
+     * </p>
+     *
+     * @return list of due reminders (possibly empty)
+     * @throws SQLException if a database error occurs during the query
      */
     public ArrayList<DueReminder> getDueReminders() throws SQLException {
         String sql = """
@@ -206,10 +271,7 @@ public class Reservation_DB_Controller {
             while (rs.next()) {
                 int rid = rs.getInt("reservation_id");
                 int uid = rs.getInt("created_by");
-
-                // ✅ IMPORTANT: read LocalDateTime directly
                 LocalDateTime rdt = rs.getObject("reservation_datetime", LocalDateTime.class);
-
                 String code = rs.getString("confirmation_code");
 
                 list.add(new DueReminder(rid, uid, rdt, code));
@@ -219,7 +281,14 @@ public class Reservation_DB_Controller {
     }
 
     /**
-     * Marks the reminder as sent for the given reservation_id (idempotent).
+     * Marks a reminder as sent for the given reservation.
+     * <p>
+     * This update is idempotent and only affects rows where {@code reminder_sent = 0}.
+     * </p>
+     *
+     * @param reservationId reservation identifier
+     * @return {@code true} if the row was updated, {@code false} otherwise
+     * @throws SQLException if a database error occurs during the update
      */
     public boolean markReminderSent(int reservationId) throws SQLException {
         String sql = """
@@ -240,7 +309,10 @@ public class Reservation_DB_Controller {
     // =====================================================
 
     /**
-     * Returns all reservations (history), ordered by reservation_datetime.
+     * Retrieves all reservations (including history), ordered by reservation date/time.
+     *
+     * @return list of reservations
+     * @throws SQLException if a database error occurs during the query
      */
     public ArrayList<Reservation> getAllReservations() throws SQLException {
         String sql = "SELECT * FROM reservations ORDER BY reservation_datetime;";
@@ -248,7 +320,10 @@ public class Reservation_DB_Controller {
     }
 
     /**
-     * Returns reservations that are currently active in the system (is_active=1).
+     * Retrieves all active reservations ({@code is_active = 1}), ordered by reservation date/time.
+     *
+     * @return list of active reservations
+     * @throws SQLException if a database error occurs during the query
      */
     public ArrayList<Reservation> getActiveReservations() throws SQLException {
         String sql = """
@@ -260,7 +335,11 @@ public class Reservation_DB_Controller {
     }
 
     /**
-     * Returns a reservation by its DB primary key (reservation_id), or null if not found.
+     * Retrieves a reservation by its primary key.
+     *
+     * @param reservationId reservation identifier
+     * @return reservation if found, otherwise {@code null}
+     * @throws SQLException if a database error occurs during the query
      */
     public Reservation getReservationById(int reservationId) throws SQLException {
         String sql = "SELECT * FROM reservations WHERE reservation_id = ?;";
@@ -274,7 +353,11 @@ public class Reservation_DB_Controller {
     }
 
     /**
-     * Returns a reservation by confirmation code, or null if not found.
+     * Retrieves a reservation by confirmation code.
+     *
+     * @param confirmationCode reservation confirmation code
+     * @return reservation if found, otherwise {@code null}
+     * @throws SQLException if a database error occurs during the query
      */
     public Reservation getReservationByConfirmationCode(String confirmationCode) throws SQLException {
         String sql = "SELECT * FROM reservations WHERE confirmation_code = ?;";
@@ -288,7 +371,11 @@ public class Reservation_DB_Controller {
     }
 
     /**
-     * Returns all reservations created by a specific user (created_by=userId).
+     * Retrieves reservations created by a specific user.
+     *
+     * @param userId creator user identifier
+     * @return list of reservations created by the given user
+     * @throws SQLException if a database error occurs during the query
      */
     public ArrayList<Reservation> getReservationsByUser(int userId) throws SQLException {
         String sql = """
@@ -310,7 +397,11 @@ public class Reservation_DB_Controller {
     }
 
     /**
-     * Checks if an active reservation exists for the given confirmation code (is_active=1).
+     * Checks whether an active reservation exists for the given confirmation code.
+     *
+     * @param confirmationCode confirmation code to check
+     * @return {@code true} if at least one active reservation exists, {@code false} otherwise
+     * @throws SQLException if a database error occurs during the query
      */
     public boolean isActiveReservationExists(String confirmationCode) throws SQLException {
         String sql = """
@@ -329,8 +420,20 @@ public class Reservation_DB_Controller {
     }
 
     /**
-     * Returns reservations that were completed (have checkout)
-     * for a specific year and month.
+     * Retrieves finished reservations for a given year and month.
+     * <p>
+     * A reservation is included when it has:
+     * <ul>
+     *   <li>{@code reservation_status = 'Finished'}</li>
+     *   <li>{@code checkin IS NOT NULL}</li>
+     *   <li>{@code checkout IS NOT NULL}</li>
+     * </ul>
+     * </p>
+     *
+     * @param year  report year
+     * @param month report month (1-12)
+     * @return list of finished reservations
+     * @throws SQLException if a database error occurs during the query
      */
     public ArrayList<Reservation> getFinishedReservationsByMonth(int year, int month)
             throws SQLException {
@@ -361,7 +464,15 @@ public class Reservation_DB_Controller {
 
         return list;
     }
-    
+
+    /**
+     * Checks whether there is at least one active reservation for a table within the next given number of days.
+     *
+     * @param tableNumber table identifier
+     * @param days        forward-looking window in days
+     * @return {@code true} if an active reservation exists in the window, {@code false} otherwise
+     * @throws SQLException if a database error occurs during the query
+     */
     public boolean hasActiveReservationForTableInNextDays(int tableNumber, int days) throws SQLException {
         String sql = """
             SELECT 1
@@ -382,7 +493,15 @@ public class Reservation_DB_Controller {
             }
         }
     }
-    
+
+    /**
+     * Retrieves active reservations for a table within the next given number of days.
+     *
+     * @param tableNumber table identifier
+     * @param days        forward-looking window in days
+     * @return list of matching reservations (possibly empty)
+     * @throws SQLException if a database error occurs during the query
+     */
     public ArrayList<Reservation> getActiveReservationsForTableInNextDays(int tableNumber, int days) throws SQLException {
         String sql = """
             SELECT *
@@ -405,6 +524,15 @@ public class Reservation_DB_Controller {
         }
         return list;
     }
+
+    /**
+     * Updates the table number assigned to an active reservation.
+     *
+     * @param reservationId  reservation identifier
+     * @param newTableNumber new table number
+     * @return {@code true} if the row was updated, {@code false} otherwise
+     * @throws SQLException if a database error occurs during the update
+     */
     public boolean updateReservationTableNumber(int reservationId, int newTableNumber) throws SQLException {
         String sql = """
             UPDATE reservations
@@ -421,14 +549,17 @@ public class Reservation_DB_Controller {
         }
     }
 
-
-
     // =====================================================
     // UPDATE
     // =====================================================
 
     /**
-     * Updates the check-in time for a reservation_id.
+     * Updates the check-in time for a reservation.
+     *
+     * @param reservationId reservation identifier
+     * @param checkinTime   check-in timestamp
+     * @return {@code true} if the row was updated, {@code false} otherwise
+     * @throws SQLException if a database error occurs during the update
      */
     public boolean updateCheckinTime(int reservationId, LocalDateTime checkinTime) throws SQLException {
         String sql = """
@@ -438,17 +569,19 @@ public class Reservation_DB_Controller {
             """;
 
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            // ✅ IMPORTANT: use LocalDateTime directly
             pstmt.setObject(1, checkinTime);
-
             pstmt.setInt(2, reservationId);
             return pstmt.executeUpdate() > 0;
         }
     }
 
     /**
-     * Updates the check-out time for a reservation_id.
+     * Updates the check-out time for a reservation.
+     *
+     * @param reservationId reservation identifier
+     * @param checkoutTime  check-out timestamp
+     * @return {@code true} if the row was updated, {@code false} otherwise
+     * @throws SQLException if a database error occurs during the update
      */
     public boolean updateCheckoutTime(int reservationId, LocalDateTime checkoutTime) throws SQLException {
         String sql = """
@@ -458,17 +591,19 @@ public class Reservation_DB_Controller {
             """;
 
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            // ✅ IMPORTANT: use LocalDateTime directly
             pstmt.setObject(1, checkoutTime);
-
             pstmt.setInt(2, reservationId);
             return pstmt.executeUpdate() > 0;
         }
     }
 
     /**
-     * Updates reservation_status for a reservation_id.
+     * Updates {@code reservation_status} for a reservation.
+     *
+     * @param reservationId reservation identifier
+     * @param status        new reservation status
+     * @return {@code true} if the row was updated, {@code false} otherwise
+     * @throws SQLException if a database error occurs during the update
      */
     public boolean updateReservationStatus(int reservationId, ReservationStatus status) throws SQLException {
         String sql = """
@@ -485,7 +620,12 @@ public class Reservation_DB_Controller {
     }
 
     /**
-     * Updates is_confirmed flag for a reservation_id.
+     * Updates {@code is_confirmed} flag for a reservation.
+     *
+     * @param reservationId reservation identifier
+     * @param isConfirmed   confirmation flag value
+     * @return {@code true} if the row was updated, {@code false} otherwise
+     * @throws SQLException if a database error occurs during the update
      */
     public boolean updateIsConfirmed(int reservationId, boolean isConfirmed) throws SQLException {
         String sql = """
@@ -506,7 +646,11 @@ public class Reservation_DB_Controller {
     // =====================================================
 
     /**
-     * Maps a ResultSet row to a Reservation entity (partial mapping for current project needs).
+     * Maps a result set row into a {@link Reservation} entity.
+     *
+     * @param rs result set positioned on a valid row
+     * @return mapped reservation instance
+     * @throws SQLException if reading column values fails
      */
     private Reservation mapRowToReservation(ResultSet rs) throws SQLException {
 
@@ -516,7 +660,6 @@ public class Reservation_DB_Controller {
         r.setConfirmationCode(rs.getString("confirmation_code"));
         r.setGuestAmount(rs.getInt("number_of_guests"));
 
-        // ✅ IMPORTANT: read LocalDateTime directly (prevents timezone shifting)
         LocalDateTime resTime = rs.getObject("reservation_datetime", LocalDateTime.class);
         r.setReservationTime(resTime);
 
@@ -538,7 +681,6 @@ public class Reservation_DB_Controller {
         int tableNum = rs.getInt("table_number");
         r.setTableNumber(rs.wasNull() ? null : tableNum);
 
-        // ===== CHECK-IN / CHECK-OUT MAPPING =====
         LocalDateTime checkin = rs.getObject("checkin", LocalDateTime.class);
         if (checkin != null) {
             r.setCheckinTime(checkin);
@@ -553,7 +695,11 @@ public class Reservation_DB_Controller {
     }
 
     /**
-     * Executes a SELECT query that returns a list of reservations and maps each row.
+     * Executes a SQL query that returns reservation rows and maps each row into {@link Reservation} objects.
+     *
+     * @param sql select query returning reservation rows
+     * @return mapped list of reservations
+     * @throws SQLException if a database error occurs during query execution
      */
     private ArrayList<Reservation> executeReservationListQuery(String sql) throws SQLException {
         ArrayList<Reservation> list = new ArrayList<>();
@@ -566,6 +712,23 @@ public class Reservation_DB_Controller {
         return list;
     }
 
+    /**
+     * Marks an active reservation as finished using its confirmation code.
+     * <p>
+     * This update sets:
+     * <ul>
+     *   <li>{@code reservation_status = 'Finished'}</li>
+     *   <li>{@code checkout = checkoutTime}</li>
+     *   <li>{@code is_active = 0}</li>
+     * </ul>
+     * and only applies to active reservations.
+     * </p>
+     *
+     * @param confirmationCode reservation confirmation code
+     * @param checkoutTime     check-out timestamp to store
+     * @return {@code true} if the reservation was updated, {@code false} otherwise
+     * @throws SQLException if a database error occurs during the update
+     */
     public boolean finishReservationByConfirmationCode(String confirmationCode, LocalDateTime checkoutTime) throws SQLException {
         String sql = """
             UPDATE reservations
@@ -578,15 +741,20 @@ public class Reservation_DB_Controller {
             """;
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            // ✅ IMPORTANT: use LocalDateTime directly
             ps.setObject(1, checkoutTime);
-
             ps.setString(2, confirmationCode);
             return ps.executeUpdate() > 0;
         }
     }
 
+    /**
+     * Finds the most recent guest confirmation code for a given reservation time among a set of guest IDs.
+     *
+     * @param reservationDateTime reservation date/time to match
+     * @param guestIds            guest identifiers to match in {@code created_by}
+     * @return confirmation code if found, otherwise {@code null}
+     * @throws SQLException if a database error occurs during the query
+     */
     public String findGuestConfirmationCodeByDateTimeAndGuestIds(
             java.time.LocalDateTime reservationDateTime,
             java.util.ArrayList<Integer> guestIds) throws SQLException {
@@ -610,8 +778,6 @@ public class Reservation_DB_Controller {
             "LIMIT 1;";
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            // ✅ IMPORTANT: use LocalDateTime directly
             ps.setObject(1, reservationDateTime);
 
             int idx = 2;
@@ -627,6 +793,17 @@ public class Reservation_DB_Controller {
         return null;
     }
 
+    /**
+     * Retrieves guest IDs from the {@code guests} table matching the given contact information.
+     * <p>
+     * The query filters by phone and/or email depending on which values are provided.
+     * </p>
+     *
+     * @param phone guest phone (optional)
+     * @param email guest email (optional)
+     * @return list of matching guest IDs (possibly empty)
+     * @throws SQLException if a database error occurs during the query
+     */
     public java.util.ArrayList<Integer> getGuestIdsByContact(String phone, String email) throws SQLException {
 
         String p = (phone == null) ? "" : phone.trim();
@@ -653,6 +830,15 @@ public class Reservation_DB_Controller {
         return ids;
     }
 
+    /**
+     * Finds a guest reservation by contact info and reservation time.
+     *
+     * @param phone    guest phone (optional)
+     * @param email    guest email (optional)
+     * @param dateTime reservation date/time to match
+     * @return matching reservation if found, otherwise {@code null}
+     * @throws SQLException if a database error occurs during the query
+     */
     public Reservation findGuestReservationByContactAndTime(
             String phone,
             String email,
@@ -679,8 +865,6 @@ public class Reservation_DB_Controller {
             """;
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            // ✅ IMPORTANT: use LocalDateTime directly
             ps.setObject(1, dateTime);
 
             ps.setInt(2, hasPhone ? 1 : 0);
@@ -699,6 +883,15 @@ public class Reservation_DB_Controller {
         return null;
     }
 
+    /**
+     * Aggregates reservation counts per day for a given creator role and month.
+     *
+     * @param role  creator role filter
+     * @param year  target year
+     * @param month target month (1-12)
+     * @return map of day-of-month to reservation count
+     * @throws SQLException if a database error occurs during the query
+     */
     public Map<Integer, Integer> getReservationsCountPerDayByRole(
             Enums.UserRole role, int year, int month) throws SQLException {
 
@@ -715,8 +908,7 @@ public class Reservation_DB_Controller {
         Map<Integer, Integer> map = new HashMap<>();
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            // וודא שכאן אתה שולח את הערך המתאים למסד הנתונים (String או ID)
-            ps.setString(1, role.name()); 
+            ps.setString(1, role.name());
             ps.setInt(2, year);
             ps.setInt(3, month);
 
@@ -731,46 +923,58 @@ public class Reservation_DB_Controller {
         }
         return map;
     }
- 
- 
- /**
-  * Updates core reservation details in the database.
-  */
- public boolean updateFullReservationDetails(Reservation res) throws SQLException {
-     String sql = """
-         UPDATE reservations 
-         SET reservation_datetime = ?, 
-             number_of_guests = ?, 
-             table_number = ?, 
-             reservation_status = ?,
-             confirmation_code = ?
-         WHERE reservation_id = ?
-         """;
 
-     try (PreparedStatement ps = conn.prepareStatement(sql)) {
-         ps.setTimestamp(1, Timestamp.valueOf(res.getReservationTime()));
-         ps.setInt(2, res.getGuestAmount());
-         
-         if (res.getTableNumber() != null) ps.setInt(3, res.getTableNumber());
-         else ps.setNull(3, Types.INTEGER);
-         
-         ps.setString(4, res.getReservationStatus().name());
-         ps.setString(5, res.getConfirmationCode());
-         ps.setInt(6, res.getReservationId());
+    /**
+     * Updates core reservation fields based on the given {@link Reservation} entity.
+     *
+     * @param res reservation entity containing the updated values
+     * @return {@code true} if the row was updated, {@code false} otherwise
+     * @throws SQLException if a database error occurs during the update
+     */
+    public boolean updateFullReservationDetails(Reservation res) throws SQLException {
+        String sql = """
+            UPDATE reservations 
+            SET reservation_datetime = ?, 
+                number_of_guests = ?, 
+                table_number = ?, 
+                reservation_status = ?,
+                confirmation_code = ?
+            WHERE reservation_id = ?
+            """;
 
-         return ps.executeUpdate() > 0;
-     }
- }
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setTimestamp(1, Timestamp.valueOf(res.getReservationTime()));
+            ps.setInt(2, res.getGuestAmount());
 
+            if (res.getTableNumber() != null) ps.setInt(3, res.getTableNumber());
+            else ps.setNull(3, Types.INTEGER);
+
+            ps.setString(4, res.getReservationStatus().name());
+            ps.setString(5, res.getConfirmationCode());
+            ps.setInt(6, res.getReservationId());
+
+            return ps.executeUpdate() > 0;
+        }
+    }
 
     // =====================================================
     // REAL-TIME OCCUPANCY (CHECKIN/CHECKOUT)
     // =====================================================
 
     /**
-     * Returns true if the table is currently occupied in REAL LIFE:
-     * there is an active reservation on this table with checkin != null and checkout == null.
-     * excludeReservationId allows ignoring the current reservation.
+     * Checks whether a table is currently occupied based on reservation check-in/check-out columns.
+     * <p>
+     * A table is considered occupied when there exists an active reservation where:
+     * <ul>
+     *   <li>{@code checkin IS NOT NULL}</li>
+     *   <li>{@code checkout IS NULL}</li>
+     * </ul>
+     * </p>
+     *
+     * @param tableNumber          table identifier
+     * @param excludeReservationId reservation identifier to exclude from the check (useful for self-check scenarios)
+     * @return {@code true} if the table is occupied, {@code false} otherwise
+     * @throws SQLException if a database error occurs during the query
      */
     public boolean isTableOccupiedNow(int tableNumber, int excludeReservationId) throws SQLException {
         String sql = """
@@ -794,7 +998,13 @@ public class Reservation_DB_Controller {
             }
         }
     }
-    
+
+    /**
+     * Retrieves bills that are due to be sent now for currently seated diners.
+     *
+     * @return list of due bill DTOs (possibly empty)
+     * @throws SQLException if a database error occurs during the query
+     */
     public ArrayList<DueBillDTO> getDueBills() throws SQLException {
         String sql = """
             SELECT reservation_id, created_by, confirmation_code
@@ -823,14 +1033,17 @@ public class Reservation_DB_Controller {
         }
         return list;
     }
-    
-    
+
     /**
-     * Returns reservations of diners currently in the restaurant:
-     * checkin IS NOT NULL AND checkout IS NULL
+     * Retrieves reservations for diners currently in the restaurant.
+     * <p>
+     * A diner is considered present when {@code checkin IS NOT NULL} and {@code checkout IS NULL}.
+     * </p>
+     *
+     * @return list of current diners (possibly empty)
+     * @throws SQLException if a database error occurs during the query
      */
     public ArrayList<Reservation> getCurrentDiners() throws SQLException {
-        // הסרנו את התנאי של status = 'Active' כי הוא עלול להטעות
         String sql = """
             SELECT *
             FROM reservations
@@ -842,8 +1055,14 @@ public class Reservation_DB_Controller {
         return executeReservationListQuery(sql);
     }
 
-    
-
+    /**
+     * Sets the bill due timestamp for a reservation and resets {@code bill_sent} to 0.
+     *
+     * @param reservationId reservation identifier
+     * @param billAt        bill due timestamp
+     * @return {@code true} if the row was updated, {@code false} otherwise
+     * @throws SQLException if a database error occurs during the update
+     */
     public boolean setBillDueAt(int reservationId, LocalDateTime billAt) throws SQLException {
         String sql = """
             UPDATE reservations
@@ -859,6 +1078,16 @@ public class Reservation_DB_Controller {
         }
     }
 
+    /**
+     * Marks a reservation bill notification as sent.
+     * <p>
+     * This update is idempotent and only affects rows where {@code bill_sent = 0}.
+     * </p>
+     *
+     * @param reservationId reservation identifier
+     * @return {@code true} if the row was updated, {@code false} otherwise
+     * @throws SQLException if a database error occurs during the update
+     */
     public boolean markBillSent(int reservationId) throws SQLException {
         String sql = """
             UPDATE reservations
@@ -872,43 +1101,55 @@ public class Reservation_DB_Controller {
             return ps.executeUpdate() > 0;
         }
     }
-    
- // =====================================================
- // AUTO-CANCEL: reservations without check-in (15 min)
- // =====================================================
 
- /**
-  * Returns confirmation codes of ACTIVE reservations
-  * that passed reservation_datetime + 15 minutes
-  * and were never checked-in.
-  */
- public ArrayList<String> getReservationsWithoutCheckinExpired(LocalDateTime threshold)
-         throws SQLException {
+    // =====================================================
+    // AUTO-CANCEL: reservations without check-in (15 min)
+    // =====================================================
 
-     String sql = """
-         SELECT confirmation_code
-         FROM reservations
-         WHERE is_active = 1
-           AND reservation_status = 'Active'
-           AND checkin IS NULL
-           AND reservation_datetime <= ?
-         """;
+    /**
+     * Retrieves confirmation codes for active reservations that have not checked in by a given threshold.
+     * <p>
+     * Intended for auto-cancel logic where the threshold is typically {@code now.minusMinutes(15)}.
+     * </p>
+     *
+     * @param threshold upper bound timestamp; reservations at or before this time are considered expired
+     * @return list of confirmation codes for expired, not-checked-in reservations
+     * @throws SQLException if a database error occurs during the query
+     */
+    public ArrayList<String> getReservationsWithoutCheckinExpired(LocalDateTime threshold)
+            throws SQLException {
 
-     ArrayList<String> list = new ArrayList<>();
+        String sql = """
+            SELECT confirmation_code
+            FROM reservations
+            WHERE is_active = 1
+              AND reservation_status = 'Active'
+              AND checkin IS NULL
+              AND reservation_datetime <= ?
+            """;
 
-     try (PreparedStatement ps = conn.prepareStatement(sql)) {
-         ps.setObject(1, threshold);
+        ArrayList<String> list = new ArrayList<>();
 
-         try (ResultSet rs = ps.executeQuery()) {
-             while (rs.next()) {
-                 list.add(rs.getString("confirmation_code"));
-             }
-         }
-     }
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, threshold);
 
-     return list;
- }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(rs.getString("confirmation_code"));
+                }
+            }
+        }
 
+        return list;
+    }
+
+    /**
+     * Retrieves active reservations by date (ignoring time-of-day).
+     *
+     * @param date target date
+     * @return list of active reservations on the given date
+     * @throws SQLException if a database error occurs during the query
+     */
     public ArrayList<Reservation> getActiveReservationsByDate(LocalDate date) throws SQLException {
         ArrayList<Reservation> list = new ArrayList<>();
 
@@ -930,7 +1171,14 @@ public class Reservation_DB_Controller {
 
         return list;
     }
-    
+
+    /**
+     * Retrieves active reservations created by a specific user.
+     *
+     * @param userId creator user identifier
+     * @return list of active reservations created by the user
+     * @throws SQLException if a database error occurs during the query
+     */
     public ArrayList<Reservation> getActiveReservationsByUser(int userId) throws SQLException {
         String sql = """
             SELECT *

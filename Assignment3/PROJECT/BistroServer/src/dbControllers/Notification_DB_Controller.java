@@ -3,19 +3,36 @@ package dbControllers;
 import entities.Enums;
 import entities.Notification;
 
-
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * DB Controller for scheduled notifications (SMS / Email simulation).
+ * Provides persistence operations for scheduled notifications (SMS / Email simulation).
+ * <p>
+ * This DB controller manages the {@code notifications} table, supporting:
+ * <ul>
+ *   <li>Schema creation</li>
+ *   <li>Insertion of scheduled notifications</li>
+ *   <li>Querying notifications due to be sent (unsent + scheduled time reached)</li>
+ *   <li>Marking notifications as sent</li>
+ * </ul>
+ * </p>
+ * <p>
+ * The logic layer can use this controller as part of a scheduler/dispatcher that periodically
+ * pulls due notifications and sends them through simulated channels.
+ * </p>
  */
 public class Notification_DB_Controller {
 
     private final Connection conn;
 
+    /**
+     * Constructs a Notification_DB_Controller with the given JDBC connection.
+     *
+     * @param conn active JDBC connection used for notification persistence
+     */
     public Notification_DB_Controller(Connection conn) {
         this.conn = conn;
     }
@@ -25,7 +42,16 @@ public class Notification_DB_Controller {
     // =====================================================
 
     /**
-     * Creates the notifications table if it does not exist.
+     * Creates the {@code notifications} table if it does not already exist.
+     * <p>
+     * The table stores:
+     * <ul>
+     *   <li>Notification metadata (user, channel, type)</li>
+     *   <li>Delivery payload (message)</li>
+     *   <li>Scheduling information (scheduled_for)</li>
+     *   <li>Delivery state (is_sent, sent_at)</li>
+     * </ul>
+     * </p>
      */
     public void createNotificationsTable() {
         String sql = """
@@ -66,8 +92,11 @@ public class Notification_DB_Controller {
     // =====================================================
 
     /**
-     * Inserts a new scheduled notification.
-     * @return generated notification_id
+     * Inserts a new scheduled notification record.
+     *
+     * @param n notification to insert
+     * @return generated {@code notification_id}, or {@code -1} if insertion succeeded but no key was returned
+     * @throws SQLException if a database error occurs during insertion
      */
     public int addNotification(Notification n) throws SQLException {
         String sql = """
@@ -101,7 +130,19 @@ public class Notification_DB_Controller {
     // =====================================================
 
     /**
-     * Returns all unsent notifications that should be sent now.
+     * Retrieves all notifications that are due to be sent by the given timestamp.
+     * <p>
+     * A notification is considered due when:
+     * <ul>
+     *   <li>{@code is_sent = 0}</li>
+     *   <li>{@code scheduled_for <= now}</li>
+     * </ul>
+     * Results are ordered by {@code scheduled_for} ascending to support chronological dispatch.
+     * </p>
+     *
+     * @param now timestamp used as the upper bound for due notifications
+     * @return list of due unsent notifications (possibly empty)
+     * @throws SQLException if a database error occurs while reading notifications
      */
     public List<Notification> getDueUnsent(LocalDateTime now) throws SQLException {
         String sql = """
@@ -133,6 +174,17 @@ public class Notification_DB_Controller {
 
     /**
      * Marks a notification as sent.
+     * <p>
+     * This updates:
+     * <ul>
+     *   <li>{@code is_sent = 1}</li>
+     *   <li>{@code sent_at = sentAt}</li>
+     * </ul>
+     * </p>
+     *
+     * @param notificationId notification identifier
+     * @param sentAt         timestamp when the notification was sent
+     * @throws SQLException if a database error occurs while updating the record
      */
     public void markAsSent(int notificationId, LocalDateTime sentAt) throws SQLException {
         String sql = """
@@ -153,6 +205,13 @@ public class Notification_DB_Controller {
     // ROW MAPPING
     // =====================================================
 
+    /**
+     * Maps the current row of the given {@link ResultSet} into a {@link Notification} instance.
+     *
+     * @param rs result set positioned on a valid row
+     * @return mapped {@link Notification} instance
+     * @throws SQLException if reading column values fails
+     */
     private Notification mapRow(ResultSet rs) throws SQLException {
 
         int id = rs.getInt("notification_id");
@@ -179,6 +238,4 @@ public class Notification_DB_Controller {
                 sentAt
         );
     }
-    
-    
 }
