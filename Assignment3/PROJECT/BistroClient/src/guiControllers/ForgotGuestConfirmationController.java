@@ -16,6 +16,16 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
+/**
+ * JavaFX controller for recovering a guest reservation confirmation code.
+ *
+ * <p>This controller collects guest contact details (phone and/or email) along with the reservation
+ * date and time, sends a recovery request to the server via {@link ClientAPI}, and displays the
+ * recovered confirmation code in an information dialog.</p>
+ *
+ * <p>The controller implements {@link ClientResponseHandler} to handle asynchronous responses and
+ * connection events from the server.</p>
+ */
 public class ForgotGuestConfirmationController implements ClientResponseHandler {
 
     @FXML private TextField phoneField;
@@ -27,6 +37,12 @@ public class ForgotGuestConfirmationController implements ClientResponseHandler 
     private ChatClient chatClient;
     private ClientAPI api;
 
+    /**
+     * Injects the {@link ChatClient} into this controller, initializes {@link ClientAPI},
+     * and registers this controller as the active response handler.
+     *
+     * @param chatClient the network client used to send requests
+     */
     public void setClient(ChatClient chatClient) {
         this.chatClient = chatClient;
         if (chatClient != null) {
@@ -35,11 +51,16 @@ public class ForgotGuestConfirmationController implements ClientResponseHandler 
         }
     }
 
+    /**
+     * Initializes the controller after FXML injection.
+     *
+     * <p>Clears the error label and populates the time combo-box with half-hour increments
+     * for the full day (00:00..23:30).</p>
+     */
     @FXML
     public void initialize() {
         hideError();
 
-        // Fill half-hour times (00:00..23:30)
         if (timeCombo != null) {
             timeCombo.getItems().clear();
             for (int h = 0; h < 24; h++) {
@@ -49,6 +70,13 @@ public class ForgotGuestConfirmationController implements ClientResponseHandler 
         }
     }
 
+    /**
+     * Handles the Recover action.
+     *
+     * <p>Validates the input fields and sends a guest confirmation-code recovery request to the server.</p>
+     *
+     * @param event the JavaFX action event
+     */
     @FXML
     private void handleRecover(ActionEvent event) {
         hideError();
@@ -94,11 +122,24 @@ public class ForgotGuestConfirmationController implements ClientResponseHandler 
         }
     }
 
+    /**
+     * Handles the Cancel action by closing the current window.
+     *
+     * @param event the JavaFX action event
+     */
     @FXML
     private void handleCancel(ActionEvent event) {
         closeWindow(event);
     }
 
+    /**
+     * Handles a server response for the guest confirmation-code recovery request.
+     *
+     * <p>On success, displays the recovered confirmation code and closes the window.
+     * On failure, displays an error message.</p>
+     *
+     * @param response the response received from the server
+     */
     @Override
     public void handleResponse(ResponseDTO response) {
         Platform.runLater(() -> {
@@ -121,31 +162,51 @@ public class ForgotGuestConfirmationController implements ClientResponseHandler 
             alert.setContentText(code);
             alert.showAndWait();
 
-            // close popup after success
             closeWindowByAnyNode();
         });
     }
 
+    /**
+     * Handles connection errors by showing an error message on the UI thread.
+     *
+     * @param e the connection exception
+     */
     @Override
     public void handleConnectionError(Exception e) {
         Platform.runLater(() -> showError("Server connection lost."));
     }
 
+    /**
+     * Handles connection closure events (no UI action defined in this controller).
+     */
     @Override
     public void handleConnectionClosed() {}
 
+    /**
+     * Displays an error message in the UI.
+     *
+     * @param msg the message to display
+     */
     private void showError(String msg) {
         lblError.setText(msg);
         lblError.setVisible(true);
         lblError.setManaged(true);
     }
 
+    /**
+     * Hides the error label area and clears its text.
+     */
     private void hideError() {
         lblError.setText("");
         lblError.setVisible(false);
         lblError.setManaged(false);
     }
 
+    /**
+     * Closes the current window using the given action event source node.
+     *
+     * @param event the JavaFX action event
+     */
     private void closeWindow(ActionEvent event) {
         try {
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
@@ -153,6 +214,9 @@ public class ForgotGuestConfirmationController implements ClientResponseHandler 
         } catch (Exception ignored) {}
     }
 
+    /**
+     * Closes the current window using an available injected node (phoneField) as an anchor.
+     */
     private void closeWindowByAnyNode() {
         try {
             if (phoneField != null) {

@@ -18,6 +18,14 @@ import javafx.stage.Stage;
 import network.ClientResponseHandler;
 import protocol.Commands;
 
+/**
+ * JavaFX controller for the "Cancel Reservation" screen.
+ *
+ * <p>This controller collects a reservation confirmation code and a cancellation reason,
+ * builds a {@link CancelReservationDTO}, and sends a {@link Commands#CANCEL_RESERVATION}
+ * request to the server via {@link ChatClient}. It also implements {@link ClientResponseHandler}
+ * to display server responses on the UI thread.</p>
+ */
 public class CancelReservation_BController implements ClientResponseHandler {
 
     @FXML private BorderPane rootPane;
@@ -29,11 +37,13 @@ public class CancelReservation_BController implements ClientResponseHandler {
     private ChatClient chatClient;
     private User user;
 
-    // ⬅️ FXML לחזרה
     private String backFxml;
 
-    /* ================= INIT ================= */
-
+    /**
+     * Initializes the controller after FXML injection.
+     *
+     * <p>Populates the cancellation reason combo-box with predefined options.</p>
+     */
     @FXML
     public void initialize() {
         cmbCancelReason.getItems().addAll(
@@ -45,12 +55,22 @@ public class CancelReservation_BController implements ClientResponseHandler {
         );
     }
 
+    /**
+     * Prefills the confirmation code input field.
+     *
+     * @param code the confirmation code to display
+     */
     public void setConfirmationCode(String code) {
         txtConfirmationCode.setText(code);
     }
 
-    /* ================= CONTEXT ================= */
-
+    /**
+     * Sets the current user and client instance for this screen and registers this controller
+     * as the active response handler.
+     *
+     * @param user       the current logged-in user
+     * @param chatClient the network client used to send requests
+     */
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
@@ -58,24 +78,37 @@ public class CancelReservation_BController implements ClientResponseHandler {
             chatClient.setResponseHandler(this);
         }
     }
-    
-    /* גרסה נוספת שמאפשרת לקבל קוד אישור באופן אוטומטי מהטבלה */
+
+    /**
+     * Sets the current user and client instance and optionally pre-fills the confirmation code
+     * (e.g., when navigating from a table selection).
+     *
+     * @param user             the current logged-in user
+     * @param chatClient       the network client used to send requests
+     * @param confirmationCode the confirmation code to prefill in the UI
+     */
     public void setClient(User user, ChatClient chatClient, String confirmationCode) {
-        // קריאה למתודה המקורית שכבר כתבת כדי לשמור על הלוגיקה הקיימת
-        setClient(user, chatClient); 
-        
-        // מילוי אוטומטי של שדה הטקסט בקוד שהגיע מהטבלה
+        setClient(user, chatClient);
+
         if (confirmationCode != null && txtConfirmationCode != null) {
             txtConfirmationCode.setText(confirmationCode);
         }
     }
 
+    /**
+     * Defines which FXML should be loaded when the user clicks the Back button.
+     *
+     * @param backFxml the FXML resource path to navigate back to
+     */
     public void setBackFxml(String backFxml) {
         this.backFxml = backFxml;
     }
 
-    /* ================= ACTIONS ================= */
-
+    /**
+     * Handles the Cancel Reservation button click.
+     *
+     * <p>Validates input, builds a cancellation DTO, and sends the request to the server.</p>
+     */
     @FXML
     private void onCancelReservationClicked() {
 
@@ -112,8 +145,12 @@ public class CancelReservation_BController implements ClientResponseHandler {
         }
     }
 
-    /* ================= BACK ================= */
-
+    /**
+     * Handles the Back button click by loading the configured FXML and replacing the current scene root.
+     *
+     * <p>If the target controller has a {@code setClient(User, ChatClient)} method, it will be invoked
+     * reflectively to preserve the session context.</p>
+     */
     @FXML
     private void onBackClicked() {
         if (backFxml == null) return;
@@ -131,7 +168,6 @@ public class CancelReservation_BController implements ClientResponseHandler {
                 } catch (Exception ignored) {}
             }
 
-            // ✅ תצוגה בלבד: לא פותחים Scene חדש אם כבר יש אחד.
             Stage stage = (Stage) rootPane.getScene().getWindow();
             Scene scene = stage.getScene();
 
@@ -141,7 +177,6 @@ public class CancelReservation_BController implements ClientResponseHandler {
                 scene.setRoot(root);
             }
 
-            // ✅ שומר על Maximized עקבי בכל מעבר מסך
             stage.setMaximized(true);
             stage.show();
 
@@ -150,8 +185,11 @@ public class CancelReservation_BController implements ClientResponseHandler {
         }
     }
 
-    /* ================= SERVER RESPONSE ================= */
-
+    /**
+     * Handles a server response and updates the UI accordingly.
+     *
+     * @param response the response received from the server
+     */
     @Override
     public void handleResponse(ResponseDTO response) {
         Platform.runLater(() -> {
@@ -163,8 +201,11 @@ public class CancelReservation_BController implements ClientResponseHandler {
         });
     }
 
-    /* ================= UI HELPERS ================= */
-
+    /**
+     * Displays an error message in the UI.
+     *
+     * @param msg the message to display
+     */
     private void showError(String msg) {
         lblMessage.setText(msg);
         lblMessage.setStyle("-fx-text-fill: red;");
@@ -172,6 +213,11 @@ public class CancelReservation_BController implements ClientResponseHandler {
         lblMessage.setManaged(true);
     }
 
+    /**
+     * Displays a success message in the UI.
+     *
+     * @param msg the message to display
+     */
     private void showSuccess(String msg) {
         lblMessage.setText(msg);
         lblMessage.setStyle("-fx-text-fill: green;");
@@ -179,11 +225,25 @@ public class CancelReservation_BController implements ClientResponseHandler {
         lblMessage.setManaged(true);
     }
 
+    /**
+     * Hides the message label area.
+     */
     private void hideMessage() {
         lblMessage.setVisible(false);
         lblMessage.setManaged(false);
     }
 
-    @Override public void handleConnectionError(Exception e) {}
-    @Override public void handleConnectionClosed() {}
+    /**
+     * Handles connection errors (no UI action defined in this controller).
+     *
+     * @param e the connection exception
+     */
+    @Override
+    public void handleConnectionError(Exception e) {}
+
+    /**
+     * Handles connection closure events (no UI action defined in this controller).
+     */
+    @Override
+    public void handleConnectionClosed() {}
 }

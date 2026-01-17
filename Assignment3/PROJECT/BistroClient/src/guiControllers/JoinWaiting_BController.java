@@ -24,40 +24,43 @@ import javafx.util.Duration;
 import network.ClientAPI;
 import network.ClientResponseHandler;
 
+/**
+ * JavaFX controller for joining the waiting list and tracking waiting status.
+ *
+ * <p>This screen allows a user to join the waiting list with a specified number of guests.
+ * After joining, the controller can periodically poll the server for waiting status updates
+ * and update the UI accordingly. It also supports navigation back to the previous screen
+ * while preserving the current session context.</p>
+ *
+ * <p>The controller communicates with the server through {@link ClientAPI} and processes
+ * asynchronous responses via {@link ClientResponseHandler}.</p>
+ */
 public class JoinWaiting_BController implements ClientResponseHandler {
 
-    /* =======================
-       FXML
-       ======================= */
     @FXML private BorderPane rootPane;
     @FXML private TextField txtGuests;
     @FXML private Button btnJoin;
     @FXML private Label lblInfo;
     @FXML private Label lblError;
 
-    /* =======================
-       Context
-       ======================= */
     private User user;
     private ChatClient chatClient;
     private ClientActions clientActions;
     private ClientAPI api;
 
-    /* =======================
-       Navigation
-       ======================= */
     private String backFxml;
 
-    /* =======================
-       Waiting state
-       ======================= */
     private String confirmationCode;
     private Timeline pollingTimeline;
     private boolean didShowJoinPopup = false;
 
-    /* =======================
-       Setters
-       ======================= */
+    /**
+     * Injects the current session context, initializes {@link ClientAPI},
+     * and registers this controller as the active response handler.
+     *
+     * @param user       the current logged-in user
+     * @param chatClient the network client used to communicate with the server
+     */
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
@@ -65,17 +68,29 @@ public class JoinWaiting_BController implements ClientResponseHandler {
         this.chatClient.setResponseHandler(this);
     }
 
+    /**
+     * Injects a {@link ClientActions} implementation for controllers that rely on GUI-to-client actions.
+     *
+     * @param clientActions the client actions bridge used by downstream controllers
+     */
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
     }
 
+    /**
+     * Sets the FXML path to navigate back to when the Back button is pressed.
+     *
+     * @param backFxml the classpath resource path of the previous screen FXML
+     */
     public void setBackFxml(String backFxml) {
         this.backFxml = backFxml;
     }
 
-    /* =======================
-       Actions
-       ======================= */
+    /**
+     * Handles the Join button click.
+     *
+     * <p>Validates the guest count and sends a join-waiting-list request to the server.</p>
+     */
     @FXML
     private void onJoinClicked() {
         hideMessages();
@@ -109,9 +124,12 @@ public class JoinWaiting_BController implements ClientResponseHandler {
         }
     }
 
-    /* =======================
-       Back
-       ======================= */
+    /**
+     * Handles the Back button click.
+     *
+     * <p>Stops polling, clears the response handler, and navigates back to the configured screen
+     * while preserving {@link User} and {@link ChatClient} context.</p>
+     */
     @FXML
     private void onBackClicked() {
         stopPolling();
@@ -154,9 +172,9 @@ public class JoinWaiting_BController implements ClientResponseHandler {
         }
     }
 
-    /* =======================
-       Polling
-       ======================= */
+    /**
+     * Starts polling the server every 10 seconds to refresh the waiting status.
+     */
     private void startPollingEvery10Seconds() {
         stopPolling();
         pollingTimeline = new Timeline(
@@ -166,6 +184,9 @@ public class JoinWaiting_BController implements ClientResponseHandler {
         pollingTimeline.play();
     }
 
+    /**
+     * Sends a waiting-status request for the current confirmation code.
+     */
     private void pollWaitingStatus() {
         if (api == null || confirmationCode == null || confirmationCode.isBlank())
             return;
@@ -175,6 +196,9 @@ public class JoinWaiting_BController implements ClientResponseHandler {
         } catch (IOException ignored) {}
     }
 
+    /**
+     * Stops polling if an active polling timeline exists.
+     */
     private void stopPolling() {
         if (pollingTimeline != null) {
             pollingTimeline.stop();
@@ -182,9 +206,14 @@ public class JoinWaiting_BController implements ClientResponseHandler {
         }
     }
 
-    /* =======================
-       Server responses
-       ======================= */
+    /**
+     * Handles server responses for join and waiting-status operations.
+     *
+     * <p>On success, updates the waiting state, shows a one-time confirmation popup,
+     * optionally starts polling, and updates the UI based on the current waiting status.</p>
+     *
+     * @param response the response received from the server
+     */
     @Override
     public void handleResponse(ResponseDTO response) {
         Platform.runLater(() -> {
@@ -222,6 +251,15 @@ public class JoinWaiting_BController implements ClientResponseHandler {
         });
     }
 
+    /**
+     * Updates the UI according to the provided {@link Waiting} object.
+     *
+     * <p>If the status is {@link WaitingStatus#Seated}, polling is stopped and a success popup is shown.
+     * If a table is ready, an informational message is displayed. Otherwise, the user is informed
+     * they are still waiting.</p>
+     *
+     * @param w the waiting record returned from the server
+     */
     private void updateUIFromWaiting(Waiting w) {
         if (w == null) return;
 
@@ -250,9 +288,9 @@ public class JoinWaiting_BController implements ClientResponseHandler {
         showInfo("You are in the waiting list.");
     }
 
-    /* =======================
-       UI helpers
-       ======================= */
+    /**
+     * Hides both information and error messages.
+     */
     private void hideMessages() {
         lblError.setVisible(false);
         lblError.setManaged(false);
@@ -260,18 +298,34 @@ public class JoinWaiting_BController implements ClientResponseHandler {
         lblInfo.setManaged(false);
     }
 
+    /**
+     * Displays an error message.
+     *
+     * @param msg the message to display
+     */
     private void showError(String msg) {
         lblError.setText(msg);
         lblError.setVisible(true);
         lblError.setManaged(true);
     }
 
+    /**
+     * Displays an informational message.
+     *
+     * @param msg the message to display
+     */
     private void showInfo(String msg) {
         lblInfo.setText(msg);
         lblInfo.setVisible(true);
         lblInfo.setManaged(true);
     }
 
+    /**
+     * Shows a success information alert dialog.
+     *
+     * @param title   the alert title
+     * @param content the alert content text
+     */
     private void showSuccessAlert(String title, String content) {
         javafx.scene.control.Alert alert =
                 new javafx.scene.control.Alert(
@@ -282,12 +336,20 @@ public class JoinWaiting_BController implements ClientResponseHandler {
         alert.showAndWait();
     }
 
+    /**
+     * Handles connection errors by stopping polling and displaying an error message.
+     *
+     * @param e the connection exception
+     */
     @Override
     public void handleConnectionError(Exception e) {
         stopPolling();
         Platform.runLater(() -> showError("Connection lost."));
     }
 
+    /**
+     * Handles connection closure events by stopping polling.
+     */
     @Override
     public void handleConnectionClosed() {
         stopPolling();

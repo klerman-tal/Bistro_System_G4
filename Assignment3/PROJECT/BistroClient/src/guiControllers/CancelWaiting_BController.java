@@ -17,30 +17,31 @@ import javafx.stage.Stage;
 import network.ClientAPI;
 import network.ClientResponseHandler;
 
+/**
+ * JavaFX controller for the "Cancel Waiting" screen.
+ *
+ * <p>This controller allows a user to cancel a waiting-list entry by providing a confirmation code.
+ * It uses {@link ClientAPI} to send the cancel request to the server and implements
+ * {@link ClientResponseHandler} to display the server response on the UI thread.</p>
+ */
 public class CancelWaiting_BController implements ClientResponseHandler {
 
-    /* =======================
-       FXML
-       ======================= */
     @FXML private BorderPane rootPane;
     @FXML private TextField txtConfirmationCode;
     @FXML private Label lblMessage;
 
-    /* =======================
-       Context
-       ======================= */
     private User user;
     private ChatClient chatClient;
     private ClientAPI api;
 
-    /* =======================
-       Navigation
-       ======================= */
     private String backFxml;
 
-    /* =======================
-       Injection
-       ======================= */
+    /**
+     * Injects the session context into this controller and registers it as the active response handler.
+     *
+     * @param user       the current logged-in user
+     * @param chatClient the network client used to send requests
+     */
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
@@ -51,6 +52,13 @@ public class CancelWaiting_BController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Injects the session context and optionally pre-fills the confirmation code.
+     *
+     * @param user             the current logged-in user
+     * @param chatClient       the network client used to send requests
+     * @param confirmationCode the confirmation code to prefill in the UI
+     */
     public void setClient(User user, ChatClient chatClient, String confirmationCode) {
         setClient(user, chatClient);
         if (confirmationCode != null && txtConfirmationCode != null) {
@@ -58,13 +66,21 @@ public class CancelWaiting_BController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Defines which FXML should be loaded when the user clicks the Back button.
+     *
+     * @param backFxml the FXML resource path to navigate back to
+     */
     public void setBackFxml(String backFxml) {
         this.backFxml = backFxml;
     }
 
-    /* =======================
-       Actions
-       ======================= */
+    /**
+     * Handles the Cancel Waiting button click.
+     *
+     * <p>Validates the confirmation code and sends a cancel request through {@link ClientAPI}.
+     * UI feedback is shown only after receiving the server response.</p>
+     */
     @FXML
     private void onCancelWaitingClicked() {
         hideMessage();
@@ -77,13 +93,18 @@ public class CancelWaiting_BController implements ClientResponseHandler {
 
         try {
             api.cancelWaiting(code.trim());
-            // ❗ לא מציגים הודעה כאן – מחכים לשרת
         } catch (IOException e) {
             showError("Failed to send cancel request.");
             e.printStackTrace();
         }
     }
 
+    /**
+     * Handles the Back button click by loading the configured FXML and replacing the current scene root.
+     *
+     * <p>If the target controller has a {@code setClient(User, ChatClient)} method, it will be invoked
+     * reflectively to preserve the session context.</p>
+     */
     @FXML
     private void onBackClicked() {
         if (chatClient != null) {
@@ -123,9 +144,11 @@ public class CancelWaiting_BController implements ClientResponseHandler {
         }
     }
 
-    /* =======================
-       Server Response
-       ======================= */
+    /**
+     * Handles a server response and updates the UI accordingly.
+     *
+     * @param response the response received from the server
+     */
     @Override
     public void handleResponse(ResponseDTO response) {
         Platform.runLater(() -> {
@@ -147,25 +170,44 @@ public class CancelWaiting_BController implements ClientResponseHandler {
         });
     }
 
-    /* =======================
-       UI Helpers
-       ======================= */
+    /**
+     * Displays an error message in the UI.
+     *
+     * @param msg the message to display
+     */
     private void showError(String msg) {
         lblMessage.setText(msg);
         lblMessage.setStyle("-fx-text-fill: red;");
         lblMessage.setVisible(true);
     }
 
+    /**
+     * Displays a success message in the UI.
+     *
+     * @param msg the message to display
+     */
     private void showSuccess(String msg) {
         lblMessage.setText(msg);
         lblMessage.setStyle("-fx-text-fill: green;");
         lblMessage.setVisible(true);
     }
 
+    /**
+     * Hides the message label area.
+     */
     private void hideMessage() {
         lblMessage.setVisible(false);
     }
 
+    /**
+     * Handles connection errors (no UI action defined in this controller).
+     *
+     * @param e the connection exception
+     */
     @Override public void handleConnectionError(Exception e) {}
+
+    /**
+     * Handles connection closure events (no UI action defined in this controller).
+     */
     @Override public void handleConnectionClosed() {}
 }

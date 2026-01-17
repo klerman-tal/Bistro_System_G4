@@ -27,6 +27,16 @@ import javafx.stage.Stage;
 import network.ClientAPI;
 import network.ClientResponseHandler;
 
+/**
+ * JavaFX controller for checking in to an existing reservation and receiving a table assignment.
+ *
+ * <p>This screen allows a user to enter a reservation confirmation code and send a check-in request.
+ * For non-random users, it can also display a table of the user's active reservations, allowing
+ * quick selection of the confirmation code.</p>
+ *
+ * <p>The controller communicates with the server through {@link ClientAPI} and processes asynchronous
+ * responses via {@link ClientResponseHandler}.</p>
+ */
 public class GetTableFromReservation_BController implements ClientResponseHandler {
 
     @FXML private BorderPane rootPane;
@@ -35,7 +45,6 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
     @FXML private Label lblInfo;
     @FXML private Label lblError;
 
-    // ✅ Table (visible for: Subscriber/Agent/Manager; hidden for: RandomClient)
     @FXML private VBox boxMyActive;
     @FXML private TableView<Reservation> tblMyActive;
     @FXML private TableColumn<Reservation, LocalDate> colDate;
@@ -49,6 +58,13 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
     private ClientActions clientActions;
     private ClientAPI api;
 
+    /**
+     * Injects the current session context, initializes {@link ClientAPI}, registers this controller
+     * as the active response handler, and initializes the "My Active Reservations" table.
+     *
+     * @param user       the current logged-in user
+     * @param chatClient the network client used to communicate with the server
+     */
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
@@ -60,10 +76,21 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
         loadMyActiveIfAllowed();
     }
 
+    /**
+     * Injects a {@link ClientActions} implementation for controllers that rely on GUI-to-client actions.
+     *
+     * @param clientActions the client actions bridge used by downstream controllers
+     */
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
     }
 
+    /**
+     * Initializes the table that displays the user's active reservations.
+     *
+     * <p>Configures column value factories and attaches a listener to prefill the confirmation code
+     * input field when a row is selected.</p>
+     */
     private void initMyActiveTable() {
         if (tblMyActive == null) return;
 
@@ -93,6 +120,11 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
         });
     }
 
+    /**
+     * Loads active reservations for the current user if the role allows it.
+     *
+     * <p>The active reservations table is hidden for {@link UserRole#RandomClient} and shown for other roles.</p>
+     */
     private void loadMyActiveIfAllowed() {
         boolean show = user != null && user.getUserRole() != UserRole.RandomClient;
 
@@ -110,6 +142,11 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
         }
     }
 
+    /**
+     * Handles the "Get Table" button click.
+     *
+     * <p>Validates that the confirmation code is a 6-digit number and sends a check-in request to the server.</p>
+     */
     @FXML
     private void onGetTableClicked() {
         hideMessages();
@@ -137,6 +174,15 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
         }
     }
 
+    /**
+     * Handles server responses for:
+     * <ul>
+     *   <li>Active reservations list (to populate the table)</li>
+     *   <li>Check-in results ({@link GetTableResultDTO})</li>
+     * </ul>
+     *
+     * @param response the response received from the server
+     */
     @Override
     public void handleResponse(ResponseDTO response) {
         Platform.runLater(() -> {
@@ -147,7 +193,6 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
                 return;
             }
 
-            // ✅ List for the table
             if (response.isSuccess() && response.getData() instanceof ArrayList<?> list) {
                 myActiveReservations.clear();
                 for (Object o : list) {
@@ -158,7 +203,6 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
                 return;
             }
 
-            // ✅ Check-in result
             GetTableResultDTO res = null;
             try { res = (GetTableResultDTO) response.getData(); } catch (Exception ignored) {}
 
@@ -190,20 +234,41 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
         });
     }
 
+    /**
+     * Handles connection errors by displaying an error message on the UI thread.
+     *
+     * @param e the connection exception
+     */
     @Override
     public void handleConnectionError(Exception e) {
         Platform.runLater(() -> showError("Connection lost."));
     }
 
+    /**
+     * Handles connection closure events (no UI action defined in this controller).
+     */
     @Override
     public void handleConnectionClosed() {}
 
+    /**
+     * Navigates back to the table-choice screen and clears the active response handler.
+     */
     @FXML
     private void onBackClicked() {
         if (chatClient != null) chatClient.setResponseHandler(null);
         openWindow("GetTableChoice_B.fxml", "Get Table");
     }
 
+    /**
+     * Loads the requested FXML and swaps the current scene root to navigate between screens.
+     *
+     * <p>If the target controller defines {@code setClientActions(ClientActions)} and/or
+     * {@code setClient(User, ChatClient)}, these will be invoked reflectively to preserve
+     * session context.</p>
+     *
+     * @param fxmlName the target FXML file name under {@code /gui/}
+     * @param title    the window title suffix to display
+     */
     private void openWindow(String fxmlName, String title) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
@@ -230,7 +295,6 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
             Stage stage = (Stage) rootPane.getScene().getWindow();
             Scene scene = stage.getScene();
 
-            // ✅ ניווט למסך גדול – בלי Scene חדשה
             if (scene == null) {
                 stage.setScene(new Scene(root));
             } else {
@@ -246,7 +310,9 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
         }
     }
 
-
+    /**
+     * Hides both information and error messages.
+     */
     private void hideMessages() {
         lblError.setText("");
         lblError.setVisible(false);
@@ -257,6 +323,11 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
         lblInfo.setManaged(false);
     }
 
+    /**
+     * Displays an error message and hides the information message area.
+     *
+     * @param msg the message to display
+     */
     private void showError(String msg) {
         lblError.setText(msg);
         lblError.setVisible(true);
@@ -267,6 +338,11 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
         lblInfo.setManaged(false);
     }
 
+    /**
+     * Displays an informational message and hides the error message area.
+     *
+     * @param msg the message to display
+     */
     private void showInfo(String msg) {
         lblInfo.setText(msg);
         lblInfo.setVisible(true);
@@ -277,6 +353,12 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
         lblError.setManaged(false);
     }
 
+    /**
+     * Shows a success information alert dialog.
+     *
+     * @param title   the alert title
+     * @param content the alert content text
+     */
     private void showSuccessAlert(String title, String content) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);

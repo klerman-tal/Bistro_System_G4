@@ -24,6 +24,13 @@ import javafx.stage.Stage;
 import network.ClientResponseHandler;
 import protocol.Commands;
 
+/**
+ * JavaFX controller for displaying and updating subscriber profile details.
+ *
+ * <p>This screen is available to {@link Subscriber} users only. It shows the subscriber's
+ * personal details and loads the reservation history into a table. The controller sends
+ * update and history requests to the server and handles responses via {@link ClientResponseHandler}.</p>
+ */
 public class ClientDetails_BController implements ClientResponseHandler {
 
     private Subscriber subscriber;
@@ -49,6 +56,11 @@ public class ClientDetails_BController implements ClientResponseHandler {
     private final DateTimeFormatter formatter =
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
+    /**
+     * Initializes the controller after FXML injection.
+     *
+     * <p>Configures table columns to display reservation history fields as formatted strings.</p>
+     */
     @FXML
     private void initialize() {
 
@@ -75,6 +87,15 @@ public class ClientDetails_BController implements ClientResponseHandler {
                 ));
     }
 
+    /**
+     * Injects the session context into this controller.
+     *
+     * <p>If the provided user is not a {@link Subscriber}, the screen will display an error message
+     * and no server requests will be performed.</p>
+     *
+     * @param user       the current logged-in user
+     * @param chatClient the network client used to send requests
+     */
     public void setClient(User user, ChatClient chatClient) {
 
         if (!(user instanceof Subscriber)) {
@@ -93,6 +114,11 @@ public class ClientDetails_BController implements ClientResponseHandler {
         requestReservationHistory();
     }
 
+    /**
+     * Requests reservation history for the currently loaded subscriber.
+     *
+     * @throws RuntimeException not thrown directly; errors are handled by displaying a UI message
+     */
     private void requestReservationHistory() {
         try {
             GetReservationHistoryDTO data =
@@ -108,6 +134,11 @@ public class ClientDetails_BController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Handles server responses related to this screen (reservation history and profile updates).
+     *
+     * @param response the response received from the server
+     */
     @Override
     public void handleResponse(ResponseDTO response) {
 
@@ -134,16 +165,27 @@ public class ClientDetails_BController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Handles connection errors by displaying an error message in the UI.
+     *
+     * @param e the connection exception
+     */
     @Override
     public void handleConnectionError(Exception e) {
         showMessage("Connection error: " + e.getMessage());
     }
 
+    /**
+     * Handles connection closure events by displaying a message in the UI.
+     */
     @Override
     public void handleConnectionClosed() {
         showMessage("Connection closed.");
     }
 
+    /**
+     * Loads subscriber details into the form fields from the in-memory {@link Subscriber} object.
+     */
     private void loadSubscriberDetails() {
         txtSubscriberNumber.setText(String.valueOf(subscriber.getUserId()));
         txtUserName.setText(subscriber.getUsername());
@@ -153,6 +195,12 @@ public class ClientDetails_BController implements ClientResponseHandler {
         txtEmail.setText(subscriber.getEmail());
     }
 
+    /**
+     * Handles the Update Details button click.
+     *
+     * <p>Validates the input fields (phone, email, and required fields), then sends an
+     * {@link Commands#UPDATE_SUBSCRIBER_DETAILS} request to the server.</p>
+     */
     @FXML
     private void onUpdateDetailsClicked() {
         String username = txtUserName.getText().trim();
@@ -198,12 +246,21 @@ public class ClientDetails_BController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Handles the Refresh button click by re-requesting the reservation history.
+     */
     @FXML
     private void onRefreshClicked() {
         requestReservationHistory();
         showMessage("✔ Data refreshed");
     }
 
+    /**
+     * Navigates back to the main menu screen while preserving the current session context.
+     *
+     * <p>Loads {@code /gui/Menu_B.fxml} and injects the logged-in user and {@link ChatClient}
+     * into the target controller.</p>
+     */
     @FXML
     private void onBackToMenuClicked() {
 
@@ -225,7 +282,6 @@ public class ClientDetails_BController implements ClientResponseHandler {
 
             stage.setTitle("Bistro - Main Menu");
 
-            // ✅ שינוי תצוגה בלבד – בלי Scene חדשה
             Scene scene = stage.getScene();
             if (scene == null) {
                 stage.setScene(new Scene(root));
@@ -242,6 +298,11 @@ public class ClientDetails_BController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Displays a message in the UI message label.
+     *
+     * @param msg the message to display
+     */
     private void showMessage(String msg) {
         lblMessage.setText(msg);
         lblMessage.setVisible(true);

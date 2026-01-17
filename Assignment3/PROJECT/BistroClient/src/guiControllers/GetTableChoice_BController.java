@@ -10,6 +10,15 @@ import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
+/**
+ * JavaFX controller for choosing a table flow source.
+ *
+ * <p>This screen acts as a navigation hub that lets the user choose whether to
+ * proceed to a table-selection flow starting from an existing reservation or from
+ * the waiting list. It preserves the current session context by passing
+ * {@link User}, {@link ChatClient}, and (optionally) {@link ClientActions} to the
+ * next screen controllers.</p>
+ */
 public class GetTableChoice_BController {
 
     @FXML private BorderPane rootPane;
@@ -18,30 +27,60 @@ public class GetTableChoice_BController {
     private ChatClient chatClient;
     private ClientActions clientActions;
 
+    /**
+     * Injects the current session context into this controller.
+     *
+     * @param user       the current logged-in user
+     * @param chatClient the network client used to communicate with the server
+     */
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
     }
 
+    /**
+     * Injects a {@link ClientActions} implementation for controllers that rely on GUI-to-client actions.
+     *
+     * @param clientActions the client actions bridge used by downstream controllers
+     */
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
     }
 
+    /**
+     * Navigates to the "Get Table From Reservation" flow.
+     */
     @FXML
     private void onFromReservationClicked() {
         openWindow("GetTableFromReservation_B.fxml", "Get Table (Reservation)");
     }
 
+    /**
+     * Navigates to the "Get Table From Waiting" flow.
+     */
     @FXML
     private void onFromWaitingClicked() {
         openWindow("GetTableFromWaiting_B.fxml", "Get Table (Waiting)");
     }
 
+    /**
+     * Navigates back to the main visit menu.
+     */
     @FXML
     private void onBackClicked() {
         openWindow("MyVisitMenu_B.fxml", "Main Menu");
     }
 
+    /**
+     * Loads the requested FXML and swaps the current scene root to navigate between screens.
+     *
+     * <p>If the target controller defines {@code setClientActions(ClientActions)} and/or
+     * {@code setClient(User, ChatClient)}, these will be invoked reflectively to preserve
+     * session context.</p>
+     *
+     * @param fxmlName the target FXML file name under {@code /gui/}
+     * @param title    the window title suffix to display
+     */
     private void openWindow(String fxmlName, String title) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
@@ -49,7 +88,6 @@ public class GetTableChoice_BController {
 
             Object controller = loader.getController();
 
-            // Pass clientActions if exists
             if (controller != null && clientActions != null) {
                 try {
                     controller.getClass()
@@ -58,7 +96,6 @@ public class GetTableChoice_BController {
                 } catch (Exception ignored) {}
             }
 
-            // Pass user + chatClient to preserve session
             if (controller != null && user != null && chatClient != null) {
                 try {
                     controller.getClass()
@@ -70,7 +107,6 @@ public class GetTableChoice_BController {
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setTitle("Bistro - " + title);
 
-            // ✅ תצוגה בלבד – בלי Scene חדשה
             Scene scene = stage.getScene();
             if (scene == null) {
                 stage.setScene(new Scene(root));
