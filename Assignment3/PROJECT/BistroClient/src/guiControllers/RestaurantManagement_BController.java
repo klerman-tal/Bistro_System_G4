@@ -1,13 +1,11 @@
 package guiControllers;
 
 import application.ChatClient;
-import entities.Enums;
 import entities.User;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
@@ -17,30 +15,13 @@ public class RestaurantManagement_BController {
     @FXML private BorderPane rootPane;
     @FXML private Label lblMessage;
 
-    // 🔑 כפתור הדוחות
-    @FXML private Button btnReports;
-
     private User user;
     private ChatClient chatClient;
-
-    /* ================= SETTER ================= */
 
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
-
-        boolean isManager =
-                user != null &&
-                user.getUserRole() == Enums.UserRole.RestaurantManager;
-
-        // 🔒 Reports – Manager ONLY
-        btnReports.setVisible(isManager);
-        btnReports.setManaged(isManager);
-
-        hideMessage();
     }
-
-    /* ================= NAVIGATION ================= */
 
     private void openWindow(String fxmlName, String title) {
         try {
@@ -49,24 +30,29 @@ public class RestaurantManagement_BController {
             Parent root = loader.load();
 
             Object controller = loader.getController();
+            System.out.println("Loaded controller: " + controller.getClass().getName());
 
-            if (controller != null && user != null && chatClient != null) {
-                try {
-                    controller.getClass()
-                            .getMethod("setClient", User.class, ChatClient.class)
-                            .invoke(controller, user, chatClient);
-                } catch (Exception ignored) {}
+            // Try to call setClient(User, ChatClient)
+            try {
+                var m = controller.getClass().getDeclaredMethod("setClient", User.class, ChatClient.class);
+                m.setAccessible(true);
+                m.invoke(controller, user, chatClient);
+                System.out.println("setClient(User, ChatClient) invoked successfully");
+            } catch (Exception e) {
+                System.out.println("Failed to call setClient(User, ChatClient)");
+                e.printStackTrace();
             }
 
-            switchRoot(root, "Bistro - " + title);
+            Stage stage = (Stage) rootPane.getScene().getWindow();
+            stage.setTitle("Bistro - " + title);
+            stage.setScene(new Scene(root));
+            stage.show();
 
         } catch (Exception e) {
             e.printStackTrace();
             showMessage("Failed to open: " + fxmlName);
         }
     }
-
-    /* ================= BUTTONS ================= */
 
     @FXML
     private void onUpdateTablesClicked() {
@@ -100,14 +86,6 @@ public class RestaurantManagement_BController {
 
     @FXML
     private void onReportsClicked() {
-        // 🛑 HARD BLOCK – גם אם מישהו יגיע לכאן בטעות
-        if (user == null ||
-            user.getUserRole() != Enums.UserRole.RestaurantManager) {
-
-            showMessage("Access denied. Managers only.");
-            return;
-        }
-
         openWindow("ReportsMenu.fxml", "Reports");
     }
 
@@ -116,33 +94,9 @@ public class RestaurantManagement_BController {
         openWindow("Menu_B.fxml", "Main Menu");
     }
 
-    /* ================= SCENE HANDLING ================= */
-
-    private void switchRoot(Parent root, String title) {
-        Stage stage = (Stage) rootPane.getScene().getWindow();
-        Scene scene = stage.getScene();
-
-        if (scene == null) {
-            stage.setScene(new Scene(root));
-        } else {
-            scene.setRoot(root);
-        }
-
-        stage.setTitle(title);
-        stage.setMaximized(true);
-        stage.show();
-    }
-
-    /* ================= UI ================= */
-
     private void showMessage(String msg) {
         lblMessage.setText(msg);
         lblMessage.setVisible(true);
         lblMessage.setManaged(true);
-    }
-
-    private void hideMessage() {
-        lblMessage.setVisible(false);
-        lblMessage.setManaged(false);
     }
 }
