@@ -4,57 +4,79 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<BorderPane fx:id="rootPane" stylesheets="@Style.css"
-    xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-    fx:controller="guiControllers.GetTableFromReservation_BController">
+<BorderPane fx:id="rootPane"
+            stylesheets="@Style.css"
+            xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="guiControllers.GetTableFromReservation_BController">
 
+    <!-- ===== HEADER ===== -->
     <top>
-        <BorderPane fx:id="header">
+        <HBox alignment="CENTER">
             <padding>
-                <Insets bottom="18" left="25" right="25" top="18"/>
+                <Insets top="18" right="25" bottom="18" left="25"/>
             </padding>
-
-            <left>
-                <Label styleClass="title" text="Get Table" textFill="WHITE"/>
-            </left>
-
-            <right>
-                <Button text="Back" onAction="#onBackClicked"
-                        style="-fx-background-color: yellow; -fx-text-fill: black; -fx-font-size: 13px;" />
-            </right>
-        </BorderPane>
+            <children>
+                <Label text="Get Table"
+                       styleClass="mainTitle"
+                       textFill="WHITE"/>
+            </children>
+        </HBox>
     </top>
 
+    <!-- ===== CENTER ===== -->
     <center>
-        <VBox alignment="TOP_CENTER" spacing="14">
+        <VBox alignment="CENTER" spacing="15">
             <padding>
-                <Insets bottom="20" left="40" right="40" top="30" />
+                <Insets top="30" right="40" bottom="20" left="40"/>
             </padding>
 
             <children>
-                <Label styleClass="section" text="Get table from reservation" />
 
-                <Label text="Enter your confirmation code:" />
-                <TextField fx:id="txtCode" maxWidth="220" promptText="e.g., 123456" />
+                <Label text="Get table from reservation"
+                       styleClass="section"/>
 
-                <Button fx:id="btnGetTable" text="Get Table"
-                        prefWidth="220"
-                        styleClass="btnPrimary"
+                <Label text="Enter your confirmation code:"/>
+
+                <TextField fx:id="txtCode"
+                           promptText="e.g., 123456"
+                           maxWidth="260"/>
+
+                <!-- Get Table -->
+                <Button fx:id="btnGetTable"
+                        text="Get Table"
+                        prefWidth="260"
+                        styleClass="btnSecondary"
                         onAction="#onGetTableClicked"/>
 
-                <Label fx:id="lblInfo" managed="false" visible="false"
-                       style="-fx-text-fill: #2e7d32; -fx-font-size: 12px;" text=""/>
+                <!-- Info -->
+                <Label fx:id="lblInfo"
+                       visible="false"
+                       managed="false"
+                       styleClass="infoMsg"/>
 
-                <Label fx:id="lblError" managed="false" visible="false"
-                       styleClass="errorMsg" text=""/>
+                <!-- Error -->
+                <Label fx:id="lblError"
+                       visible="false"
+                       managed="false"
+                       styleClass="errorMsg"/>
 
-                <!-- ✅ Subscriber-only -->
-                <VBox fx:id="boxMyActive" spacing="8" managed="false" visible="false" maxWidth="520">
-                    <Separator />
+                <!-- Subscriber-only -->
+                <VBox fx:id="boxMyActive"
+                      spacing="10"
+                      managed="false"
+                      visible="false"
+                      maxWidth="520">
+
+                    <Separator/>
+
                     <Label text="My active reservations (click to fill the code):"
-                           style="-fx-font-weight: bold; -fx-font-size: 12px;" />
+                           styleClass="section"/>
 
-                    <TableView fx:id="tblMyActive" prefHeight="150" maxWidth="520">
+                    <TableView fx:id="tblMyActive"
+                               prefHeight="150"
+                               maxWidth="520">
+
                         <columns>
                             <TableColumn fx:id="colDate" text="Date" prefWidth="160"/>
                             <TableColumn fx:id="colTime" text="Time" prefWidth="120"/>
@@ -62,6 +84,12 @@
                         </columns>
                     </TableView>
                 </VBox>
+
+                <!-- Back -->
+                <Button text="Back"
+                        prefWidth="260"
+                        styleClass="btnPrimary"
+                        onAction="#onBackClicked"/>
 
             </children>
         </VBox>

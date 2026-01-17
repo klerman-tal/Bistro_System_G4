@@ -1,81 +1,106 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.layout.BorderPane?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
 
-<BorderPane fx:id="rootPane" stylesheets="@Style.css"
-	xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-	fx:controller="guiControllers.RestaurantManagement_BController">
+<BorderPane fx:id="rootPane"
+            stylesheets="@Style.css"
+            xmlns="http://javafx.com/javafx/25"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="guiControllers.RestaurantManagement_BController">
 
-	<top>
-		<HBox fx:id="header" alignment="CENTER_LEFT">
-			<padding>
-				<Insets top="18" right="25" bottom="18" left="25" />
-			</padding>
-			<children>
-				<Label styleClass="title" text="Restaurant Management"
-					textFill="WHITE" />
-			</children>
-		</HBox>
-	</top>
+    <!-- ===== HEADER ===== -->
+    <top>
+        <HBox fx:id="header"
+              alignment="CENTER">
+            <padding>
+                <Insets top="25" right="25" bottom="25" left="25"/>
+            </padding>
 
-	<center>
-		<VBox alignment="TOP_CENTER" spacing="20">
-			<padding>
-				<Insets top="30" right="40" bottom="20" left="40" />
-			</padding>
+            <children>
+                <Label text="Restaurant Management"
+                       styleClass="mainTitle">
+                    <font>
+                        <Font size="44"/>
+                    </font>
+                </Label>
+            </children>
+        </HBox>
+    </top>
 
-			<children>
-				<Label styleClass="section" text="Management actions" />
+    <!-- ===== CONTENT ===== -->
+    <center>
+        <VBox alignment="TOP_CENTER"
+              spacing="22">
+            <padding>
+                <Insets top="35" right="40" bottom="20" left="40"/>
+            </padding>
 
-				<Button text="Update Tables" maxWidth="300" prefWidth="260"
-					styleClass="btnSecondary" onAction="#onUpdateTablesClicked" />
+            <children>
 
-				<Button text="Update Opening Hours" maxWidth="300"
-					prefWidth="260" styleClass="btnSecondary"
-					onAction="#onUpdateOpeningHoursClicked" />
+                <!-- ===== SECTION ===== -->
+                <Label text="Management actions"
+                       styleClass="section"/>
 
-				<Button text="Manage Users" maxWidth="300" prefWidth="260"
-					styleClass="btnSecondary" onAction="#onManageUsersClicked" />
+                <!-- ===== MANAGEMENT ACTIONS ===== -->
+                <Button text="Update Tables"
+                        prefWidth="720"
+                        prefHeight="72"
+                        styleClass="btnSecondary"
+                        onAction="#onUpdateTablesClicked"/>
 
-				<Button text="Manage Reservations" maxWidth="300"
-					prefWidth="260" styleClass="btnSecondary"
-					onAction="#onManageReservationClicked" />
+                <Button text="Update Opening Hours"
+                        prefWidth="720"
+                        prefHeight="72"
+                        styleClass="btnSecondary"
+                        onAction="#onUpdateOpeningHoursClicked"/>
 
-				<Button text="Manage Waiting List" maxWidth="300"
-					prefWidth="260" styleClass="btnSecondary"
-					onAction="#onWaitingListClicked" />
+                <Button text="Manage Users"
+                        prefWidth="720"
+                        prefHeight="72"
+                        styleClass="btnSecondary"
+                        onAction="#onManageUsersClicked"/>
 
+                <Button text="Manage Reservations"
+                        prefWidth="720"
+                        prefHeight="72"
+                        styleClass="btnSecondary"
+                        onAction="#onManageReservationClicked"/>
 
-				<!-- ✅ NEW BUTTON -->
-				<Button text="Manage Current Diners" maxWidth="300"
-					prefWidth="260" styleClass="btnSecondary"
-					onAction="#onManageCurrentDinersClicked" />
+                <Button text="Manage Waiting List"
+                        prefWidth="720"
+                        prefHeight="72"
+                        styleClass="btnSecondary"
+                        onAction="#onWaitingListClicked"/>
 
-				<Button fx:id="btnReports" text="Reports" maxWidth="300"
-					prefWidth="260" styleClass="btnSecondary"
-					onAction="#onReportsClicked" />
+                <Button text="Manage Current Diners"
+                        prefWidth="720"
+                        prefHeight="72"
+                        styleClass="btnSecondary"
+                        onAction="#onManageCurrentDinersClicked"/>
 
-				<Label fx:id="lblMessage" visible="false" managed="false"
-					styleClass="errorMsg" />
-			</children>
-		</VBox>
-	</center>
+                <Button fx:id="btnReports"
+                        text="Reports"
+                        prefWidth="720"
+                        prefHeight="72"
+                        styleClass="btnSecondary"
+                        onAction="#onReportsClicked"/>
 
-	<bottom>
-		<HBox alignment="CENTER_RIGHT" spacing="12">
-			<padding>
-				<Insets top="10" right="40" bottom="20" left="40" />
-			</padding>
-			<children>
-				<Button text="Back" styleClass="btnSecondary"
-					onAction="#onBackToMenuClicked" />
-			</children>
-		</HBox>
-	</bottom>
+                <!-- ===== MESSAGE ===== -->
+                <Label fx:id="lblMessage"
+                       visible="false"
+                       managed="false"
+                       styleClass="errorMsg"/>
+
+                <!-- ===== BACK ===== -->
+                <Button text="Back"
+                        styleClass="btnBack"
+                        onAction="#onBackToMenuClicked"/>
+
+            </children>
+        </VBox>
+    </center>
 
 </BorderPane>

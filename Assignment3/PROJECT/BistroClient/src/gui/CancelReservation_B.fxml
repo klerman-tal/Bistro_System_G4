@@ -12,21 +12,20 @@
 
     <!-- HEADER -->
     <top>
-        <HBox alignment="CENTER_LEFT" spacing="15">
+        <HBox alignment="CENTER" spacing="15">
             <padding>
                 <Insets top="18" right="25" bottom="18" left="25"/>
             </padding>
 
-
             <Label text="Cancel Reservation"
-                   styleClass="title"
+                   styleClass="mainTitle"
                    textFill="WHITE"/>
         </HBox>
     </top>
 
     <!-- CENTER -->
     <center>
-        <VBox spacing="15" alignment="TOP_CENTER">
+        <VBox spacing="15" alignment="CENTER">
             <padding>
                 <Insets top="30" right="40" bottom="20" left="40"/>
             </padding>
@@ -62,12 +61,12 @@
                         onAction="#onCancelReservationClicked"
                         prefWidth="260"
                         styleClass="btnSecondary"/>
-                        
-                  <!-- BACK -->
-            <Button text="Back"
-                    onAction="#onBackClicked"
-                    prefWidth="260"
-                    styleClass="btnPrimary"/>
+
+                <!-- BACK -->
+                <Button text="Back"
+                        onAction="#onBackClicked"
+                        prefWidth="260"
+                        styleClass="btnPrimary"/>
 
             </children>
         </VBox>

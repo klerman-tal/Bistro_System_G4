@@ -15,12 +15,14 @@
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="guiControllers.Menu_BController">
 
-    <!-- ================= HEADER ================= -->
+    <!-- ===== HEADER ===== -->
     <top>
-        <HBox fx:id="header" alignment="CENTER">
+        <HBox fx:id="header"
+              alignment="CENTER">
             <padding>
                 <Insets top="25" right="25" bottom="25" left="25"/>
             </padding>
+
             <children>
                 <Label text="Main Menu"
                        styleClass="mainTitle">
@@ -32,47 +34,48 @@
         </HBox>
     </top>
 
-    <!-- ================= CENTER ================= -->
+    <!-- ===== CONTENT ===== -->
     <center>
-        <VBox alignment="TOP_CENTER" spacing="22">
+        <VBox alignment="TOP_CENTER"
+              spacing="22">
             <padding>
                 <Insets top="35" right="40" bottom="20" left="40"/>
             </padding>
 
             <children>
 
-                <Label styleClass="section"
-                       text="Choose an action"/>
+                <Label text="Choose an action"
+                       styleClass="section"/>
 
-                <!-- ===== MAIN BUTTONS ===== -->
+                <!-- ===== MAIN ACTIONS ===== -->
                 <Button text="Reservations"
-                        onAction="#onSelectReservationsClicked"
                         prefWidth="720"
                         prefHeight="72"
-                        styleClass="btnSecondary"/>
+                        styleClass="btnSecondary"
+                        onAction="#onSelectReservationsClicked"/>
 
                 <Button text="My Visit"
-                        onAction="#onSelectMyVisitClicked"
                         prefWidth="720"
                         prefHeight="72"
-                        styleClass="btnSecondary"/>
+                        styleClass="btnSecondary"
+                        onAction="#onSelectMyVisitClicked"/>
 
                 <Button fx:id="btnPersonalDetails"
                         text="Personal Details"
-                        onAction="#onSelectPersonalDetailsClicked"
                         prefWidth="720"
                         prefHeight="72"
-                        styleClass="btnSecondary"/>
+                        styleClass="btnSecondary"
+                        onAction="#onSelectPersonalDetailsClicked"/>
 
-                <!-- Visible only for RestaurantAgent / RestaurantManager -->
+                <!-- ===== STAFF ONLY ===== -->
                 <Button fx:id="btnRestaurantManagement"
                         text="Restaurant Management"
-                        onAction="#onSelectRestaurantManagementClicked"
                         prefWidth="720"
                         prefHeight="72"
-                        styleClass="btnSecondary"/>
+                        styleClass="btnSecondary"
+                        onAction="#onSelectRestaurantManagementClicked"/>
 
-                <!-- ===== ACT AS BOX (STAFF ONLY) ===== -->
+                <!-- ===== ACT AS (STAFF ONLY) ===== -->
                 <BorderPane fx:id="actAsBox"
                             visible="false"
                             managed="false"
@@ -86,6 +89,7 @@
 
                     <center>
                         <VBox spacing="10">
+
                             <Label fx:id="lblActingUser"
                                    text="Acting User: —"/>
 
@@ -107,10 +111,12 @@
                                 <Button text="Reset to myself"
                                         onAction="#onResetToMyselfClicked"/>
                             </HBox>
+
                         </VBox>
                     </center>
                 </BorderPane>
 
+                <!-- ===== MESSAGE ===== -->
                 <Label fx:id="lblMessage"
                        visible="false"
                        managed="false"
@@ -118,8 +124,8 @@
 
                 <!-- ===== LOGOUT ===== -->
                 <Button text="Logout"
-                        onAction="#onLogoutClicked"
-                        styleClass="btnBack"/>
+                        styleClass="btnBack"
+                        onAction="#onLogoutClicked"/>
 
             </children>
         </VBox>

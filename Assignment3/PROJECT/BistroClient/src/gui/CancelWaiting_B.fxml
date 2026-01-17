@@ -10,72 +10,57 @@
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="guiControllers.CancelWaiting_BController">
 
-    <!-- HEADER -->
+    <!-- ===== HEADER ===== -->
     <top>
-        <HBox alignment="CENTER_LEFT">
+        <HBox alignment="CENTER">
             <padding>
                 <Insets top="18" right="25" bottom="18" left="25"/>
             </padding>
             <children>
                 <Label text="Cancel Waiting List"
-                       styleClass="title"
+                       styleClass="mainTitle"
                        textFill="WHITE"/>
             </children>
         </HBox>
     </top>
 
-    <!-- CENTER -->
+    <!-- ===== CENTER ===== -->
     <center>
-        <VBox alignment="TOP_CENTER" spacing="25">
+        <VBox alignment="CENTER" spacing="15">
             <padding>
                 <Insets top="30" right="40" bottom="20" left="40"/>
             </padding>
 
             <children>
 
-                <Label styleClass="section"
-                       text="Cancel Waiting List"/>
+                <Label text="Cancel Waiting List"
+                       styleClass="section"/>
 
-                <GridPane hgap="15" vgap="15">
-                    <children>
+                <!-- Confirmation Code -->
+                <TextField fx:id="txtConfirmationCode"
+                           promptText="Enter confirmation code"
+                           maxWidth="260"/>
 
-                        <Label text="Confirmation Code:"
-                               GridPane.columnIndex="0"
-                               GridPane.rowIndex="0"/>
-
-                        <TextField fx:id="txtConfirmationCode"
-                                   promptText="Enter confirmation code"
-                                   GridPane.columnIndex="1"
-                                   GridPane.rowIndex="0"/>
-
-                    </children>
-                </GridPane>
-
-                <!-- ✔ הודעת סטטוס כמו Reservation -->
+                <!-- Message -->
                 <Label fx:id="lblMessage"
-                       visible="false"/>
+                       visible="false"
+                       managed="false"
+                       styleClass="errorMsg"/>
+
+                <!-- Cancel -->
+                <Button text="Cancel Waiting List"
+                        onAction="#onCancelWaitingClicked"
+                        prefWidth="260"
+                        styleClass="btnSecondary"/>
+
+                <!-- Back -->
+                <Button text="Back"
+                        onAction="#onBackClicked"
+                        prefWidth="260"
+                        styleClass="btnPrimary"/>
 
             </children>
         </VBox>
     </center>
-
-    <!-- BOTTOM -->
-    <bottom>
-        <HBox alignment="CENTER_RIGHT" spacing="12">
-            <padding>
-                <Insets top="10" right="40" bottom="20" left="40"/>
-            </padding>
-
-            <children>
-                <Button text="Back"
-                        styleClass="btnSecondary"
-                        onAction="#onBackClicked"/>
-
-                <Button text="Cancel Waiting List"
-                        styleClass="btnPrimary"
-                        onAction="#onCancelWaitingClicked"/>
-            </children>
-        </HBox>
-    </bottom>
 
 </BorderPane>

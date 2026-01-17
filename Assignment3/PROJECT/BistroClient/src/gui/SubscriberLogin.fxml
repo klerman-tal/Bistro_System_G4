@@ -9,76 +9,121 @@
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
 
-<StackPane fx:id="rootPane" stylesheets="@Style.css"
-	xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-	fx:controller="guiControllers.SubscriberLoginController">
+<StackPane fx:id="rootPane"
+           stylesheets="@Style.css"
+           xmlns="http://javafx.com/javafx/21"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="guiControllers.SubscriberLoginController">
 
-	<children>
-		<VBox alignment="CENTER" spacing="30.0" maxWidth="600.0">
-			<children>
+    <children>
 
-				<VBox alignment="CENTER" spacing="15.0">
-					<children>
-						<ImageView fitHeight="130.0" preserveRatio="true">
-							<VBox.margin>
-								<Insets top="10.0" />
-							</VBox.margin>
-							<image>
-								<Image url="@BistroLogo.png" />
-							</image>
-						</ImageView>
+        <!-- ===== MAIN CONTAINER ===== -->
+        <VBox alignment="CENTER"
+              spacing="30.0"
+              maxWidth="600.0">
 
-						<VBox alignment="CENTER" spacing="5.0">
-							<children>
-								<Label text="LOGIN AS SUBSCRIBER" styleClass="welcomeTitle" />
-								<Label text="Please enter details or scan your card" styleClass="subtitleItalic" />
-							</children>
-						</VBox>
-					</children>
-				</VBox>
+            <children>
 
-				<VBox alignment="CENTER" spacing="18.0" prefWidth="400.0" prefHeight="480.0" styleClass="card30">
-					<padding>
-						<Insets bottom="20.0" left="30.0" right="30.0" top="20.0" />
-					</padding>
+                <!-- ===== LOGO & TITLE ===== -->
+                <VBox alignment="CENTER"
+                      spacing="15.0">
+                    <children>
 
-					<children>
-						<VBox spacing="5.0" alignment="CENTER_LEFT">
-							<children>
-								<Label text="SUBSCRIBER ID" styleClass="cardHint" />
-								<TextField fx:id="subscriberIdField" promptText="e.g. 12345" />
-							</children>
-						</VBox>
+                        <ImageView fitHeight="130.0"
+                                   preserveRatio="true">
+                            <VBox.margin>
+                                <Insets top="10.0"/>
+                            </VBox.margin>
+                            <image>
+                                <Image url="@BistroLogo.png"/>
+                            </image>
+                        </ImageView>
 
-						<VBox spacing="5.0" alignment="CENTER_LEFT">
-							<children>
-								<Label text="USERNAME" styleClass="cardHint" />
-								<TextField fx:id="usernameField" promptText="Enter your name" />
-							</children>
-						</VBox>
+                        <VBox alignment="CENTER"
+                              spacing="5.0">
+                            <children>
+                                <Label text="LOGIN AS SUBSCRIBER"
+                                       styleClass="welcomeTitle"/>
+                                <Label text="Please enter details or scan your card"
+                                       styleClass="subtitleItalic"/>
+                            </children>
+                        </VBox>
 
-						<Button text="SIGN IN" onAction="#handleSubscriberLogin" 
-						        styleClass="btnDanger" prefWidth="250.0" />
+                    </children>
+                </VBox>
 
-						<Label text="— OR USE CARD —" style="-fx-text-fill: gray; -fx-font-size: 11px; -fx-font-weight: bold;" />
+                <!-- ===== LOGIN CARD ===== -->
+                <VBox alignment="CENTER"
+                      spacing="18.0"
+                      prefWidth="400.0"
+                      prefHeight="480.0"
+                      styleClass="card30">
+                    <padding>
+                        <Insets top="20.0" right="30.0" bottom="20.0" left="30.0"/>
+                    </padding>
 
-						<Button fx:id="btnBarcodeSim" text="💳 SCAN MEMBER CARD"
-							onAction="#onBarcodeSimClicked" 
-							style="-fx-background-color: #2c3e50; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;"
-							prefWidth="250.0" prefHeight="40.0" />
+                    <children>
 
-						<Label fx:id="lblMessage" visible="false" managed="false" styleClass="errorText" />
+                        <!-- ===== CREDENTIALS ===== -->
+                        <VBox spacing="5.0" alignment="CENTER_LEFT">
+                            <children>
+                                <Label text="SUBSCRIBER ID"
+                                       styleClass="cardHint"/>
+                                <TextField fx:id="subscriberIdField"
+                                           promptText="e.g. 12345"/>
+                            </children>
+                        </VBox>
 
-						<VBox alignment="CENTER" spacing="8.0">
-							<children>
-								<Hyperlink text="Forgot Subscriber Code?" onAction="#handleForgotCode" styleClass="linkBlue" />
-								<Hyperlink text="← Back to Welcome" onAction="#handleBackButton" styleClass="linkGray" />
-							</children>
-						</VBox>
-					</children>
-				</VBox>
+                        <VBox spacing="5.0" alignment="CENTER_LEFT">
+                            <children>
+                                <Label text="USERNAME"
+                                       styleClass="cardHint"/>
+                                <TextField fx:id="usernameField"
+                                           promptText="Enter your name"/>
+                            </children>
+                        </VBox>
 
-			</children>
-		</VBox>
-	</children>
+                        <!-- ===== PRIMARY ACTION ===== -->
+                        <Button text="SIGN IN"
+                                prefWidth="250.0"
+                                styleClass="btnDanger"
+                                onAction="#handleSubscriberLogin"/>
+
+                        <!-- ===== ALTERNATIVE LOGIN ===== -->
+                        <Label text="— OR USE CARD —"
+                               style="-fx-text-fill: gray; -fx-font-size: 11px; -fx-font-weight: bold;"/>
+
+                        <Button fx:id="btnBarcodeSim"
+                                text="💳 SCAN MEMBER CARD"
+                                prefWidth="250.0"
+                                prefHeight="40.0"
+                                style="-fx-background-color: #2c3e50; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;"
+                                onAction="#onBarcodeSimClicked"/>
+
+                        <!-- ===== MESSAGE ===== -->
+                        <Label fx:id="lblMessage"
+                               visible="false"
+                               managed="false"
+                               styleClass="errorText"/>
+
+                        <!-- ===== LINKS ===== -->
+                        <VBox alignment="CENTER"
+                              spacing="8.0">
+                            <children>
+                                <Hyperlink text="Forgot Subscriber Code?"
+                                           styleClass="linkBlue"
+                                           onAction="#handleForgotCode"/>
+                                <Hyperlink text="← Back to Welcome"
+                                           styleClass="linkGray"
+                                           onAction="#handleBackButton"/>
+                            </children>
+                        </VBox>
+
+                    </children>
+                </VBox>
+
+            </children>
+        </VBox>
+
+    </children>
 </StackPane>

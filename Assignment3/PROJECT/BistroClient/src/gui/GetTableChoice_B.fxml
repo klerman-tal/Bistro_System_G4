@@ -3,54 +3,62 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
 
 <BorderPane fx:id="rootPane"
             stylesheets="@Style.css"
-            xmlns="http://javafx.com/javafx/21"
+            xmlns="http://javafx.com/javafx/25"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="guiControllers.GetTableChoice_BController">
 
-    <!-- ===== HEADER ===== -->
+    <!-- ================= HEADER ================= -->
     <top>
-        <HBox alignment="CENTER_LEFT">
+        <HBox fx:id="header" alignment="CENTER">
             <padding>
-                <Insets top="18" right="25" bottom="18" left="25"/>
+                <Insets top="25" right="25" bottom="25" left="25"/>
             </padding>
-
             <children>
                 <Label text="Get Table"
-                       styleClass="title"
-                       textFill="WHITE"/>
-
-                <Region HBox.hgrow="ALWAYS"/>
-
-                <Button text="Back"
-                        styleClass="btnSecondary"
-                        onAction="#onBackClicked"/>
+                       styleClass="mainTitle">
+                    <font>
+                        <Font size="44"/>
+                    </font>
+                </Label>
             </children>
         </HBox>
     </top>
 
-    <!-- ===== CENTER ===== -->
+    <!-- ================= CENTER ================= -->
     <center>
-        <VBox alignment="TOP_CENTER" spacing="16">
+        <VBox alignment="TOP_CENTER" spacing="22">
             <padding>
-                <Insets top="30" right="40" bottom="20" left="40"/>
+                <Insets top="35" right="40" bottom="20" left="40"/>
             </padding>
 
             <children>
+
+                <!-- Section title -->
                 <Label text="Choose how to get a table"
                        styleClass="section"/>
 
+                <!-- Actions -->
                 <Button text="Get table from reservation"
-                        prefWidth="280"
-                        styleClass="btnSecondary"
-                        onAction="#onFromReservationClicked"/>
+                        onAction="#onFromReservationClicked"
+                        prefWidth="720"
+                        prefHeight="72"
+                        styleClass="btnSecondary"/>
 
                 <Button text="Get table from waiting list"
-                        prefWidth="280"
-                        styleClass="btnSecondary"
-                        onAction="#onFromWaitingClicked"/>
+                        onAction="#onFromWaitingClicked"
+                        prefWidth="720"
+                        prefHeight="72"
+                        styleClass="btnSecondary"/>
+
+                <!-- Back -->
+                <Button text="Back"
+                        onAction="#onBackClicked"
+                        styleClass="btnBack"/>
+
             </children>
         </VBox>
     </center>

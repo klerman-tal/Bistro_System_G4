@@ -12,13 +12,13 @@
 
     <!-- ===== HEADER ===== -->
     <top>
-        <HBox fx:id="header" alignment="CENTER_LEFT">
+        <HBox alignment="CENTER">
             <padding>
                 <Insets top="18" right="25" bottom="18" left="25"/>
             </padding>
             <children>
-                <Label styleClass="title"
-                       text="Waiting List"
+                <Label text="Waiting List"
+                       styleClass="mainTitle"
                        textFill="WHITE"/>
             </children>
         </HBox>
@@ -26,70 +26,49 @@
 
     <!-- ===== CENTER ===== -->
     <center>
-        <VBox alignment="TOP_CENTER" spacing="25">
+        <VBox alignment="CENTER" spacing="15">
             <padding>
                 <Insets top="30" right="40" bottom="20" left="40"/>
             </padding>
 
             <children>
 
-                <Label styleClass="section"
-                       text="Waiting List Details"/>
+                <Label text="Waiting List Details"
+                       styleClass="section"/>
 
-                <GridPane hgap="15" vgap="15">
-                    <children>
+                <!-- Guests -->
+                <TextField fx:id="txtGuests"
+                           promptText="Number of guests"
+                           maxWidth="260"/>
 
-                        <Label text="Guests:"
-                               GridPane.columnIndex="0"
-                               GridPane.rowIndex="0"/>
-
-                        <TextField fx:id="txtGuests"
-                                   promptText="Number of guests"
-                                   GridPane.columnIndex="1"
-                                   GridPane.rowIndex="0"/>
-
-                    </children>
-                </GridPane>
-
+                <!-- Info -->
                 <Label fx:id="lblInfo"
-                       managed="false"
                        visible="false"
-                       style="-fx-text-fill: #2e7d32; -fx-font-size: 12px;"
-                       text=""/>
+                       managed="false"
+                       styleClass="infoMsg"/>
 
+                <!-- Error -->
                 <Label fx:id="lblError"
-                       managed="false"
                        visible="false"
-                       styleClass="errorMsg"
-                       text=""/>
-
-            </children>
-        </VBox>
-    </center>
-
-    <!-- ===== BOTTOM (ACTIONS) ===== -->
-    <bottom>
-        <HBox alignment="CENTER_RIGHT" spacing="12">
-            <padding>
-                <Insets top="10" right="40" bottom="20" left="40"/>
-            </padding>
-
-            <children>
-
-                <!-- Back -->
-                <Button fx:id="btnBack"
-                        text="Back"
-                        styleClass="btnSecondary"
-                        onAction="#onBackClicked"/>
+                       managed="false"
+                       styleClass="errorMsg"/>
 
                 <!-- Join -->
                 <Button fx:id="btnJoin"
                         text="Join Waiting List"
-                        styleClass="btnPrimary"
-                        onAction="#onJoinClicked"/>
+                        onAction="#onJoinClicked"
+                        prefWidth="260"
+                        styleClass="btnSecondary"/>
+
+                <!-- Back -->
+                <Button fx:id="btnBack"
+                        text="Back"
+                        onAction="#onBackClicked"
+                        prefWidth="260"
+                        styleClass="btnPrimary"/>
 
             </children>
-        </HBox>
-    </bottom>
+        </VBox>
+    </center>
 
 </BorderPane>

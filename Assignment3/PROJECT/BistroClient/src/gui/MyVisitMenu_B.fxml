@@ -3,50 +3,61 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
 
 <BorderPane fx:id="rootPane"
-            xmlns="http://javafx.com/javafx/21"
+            stylesheets="@Style.css"
+            xmlns="http://javafx.com/javafx/25"
             xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="guiControllers.MyVisitMenu_BController"
-            stylesheets="@Style.css">
+            fx:controller="guiControllers.MyVisitMenu_BController">
 
-    <!-- HEADER -->
+    <!-- ================= HEADER ================= -->
     <top>
-        <HBox alignment="CENTER_LEFT">
+        <HBox fx:id="header" alignment="CENTER">
             <padding>
-                <Insets top="18" right="25" bottom="18" left="25"/>
+                <Insets top="25" right="25" bottom="25" left="25"/>
             </padding>
             <children>
                 <Label text="My Visit"
-                       styleClass="title"
-                       textFill="WHITE"/>
+                       styleClass="mainTitle">
+                    <font>
+                        <Font size="44"/>
+                    </font>
+                </Label>
             </children>
         </HBox>
     </top>
 
-    <!-- CENTER -->
+    <!-- ================= CENTER ================= -->
     <center>
-        <VBox alignment="TOP_CENTER" spacing="20">
+        <VBox alignment="TOP_CENTER" spacing="22">
             <padding>
-                <Insets top="40" left="40" right="40"/>
+                <Insets top="35" right="40" bottom="20" left="40"/>
             </padding>
 
             <children>
 
+                <!-- Section title -->
+                <Label text="Choose an action"
+                       styleClass="section"/>
+
+                <!-- Actions -->
                 <Button text="Get Table"
-                        prefWidth="260"
-                        styleClass="btnSecondary"
-                        onAction="#onGetTable"/>
+                        onAction="#onGetTable"
+                        prefWidth="720"
+                        prefHeight="72"
+                        styleClass="btnSecondary"/>
 
                 <Button text="Payment"
-                        prefWidth="260"
-                        styleClass="btnSecondary"
-                        onAction="#onPayment"/>
+                        onAction="#onPayment"
+                        prefWidth="720"
+                        prefHeight="72"
+                        styleClass="btnSecondary"/>
 
+                <!-- Back -->
                 <Button text="Back"
-                        prefWidth="160"
-                        styleClass="btnSecondary"
-                        onAction="#onBack"/>
+                        onAction="#onBack"
+                        styleClass="btnBack"/>
 
             </children>
         </VBox>
