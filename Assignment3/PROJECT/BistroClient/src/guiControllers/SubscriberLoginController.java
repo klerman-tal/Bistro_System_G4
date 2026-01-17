@@ -25,7 +25,7 @@ import java.io.IOException;
 
 public class SubscriberLoginController implements ClientResponseHandler {
 
-    // ✅ MUST match the FXML root (StackPane). Also requires fx:id in FXML (see below),
+    // MUST match the FXML root (StackPane). Also requires fx:id in FXML,
     // but we also fallback to subscriberIdField to avoid crashes.
     @FXML private StackPane rootPane;
 
@@ -39,6 +39,10 @@ public class SubscriberLoginController implements ClientResponseHandler {
 
     /* ================= SETTERS ================= */
 
+    /**
+     * Injects the ChatClient session into this controller and initializes ClientAPI.
+     * Also registers this controller as the active response handler in ChatClient.
+     */
     public void setClient(ChatClient chatClient) {
         this.chatClient = chatClient;
         if (chatClient != null) {
@@ -49,6 +53,11 @@ public class SubscriberLoginController implements ClientResponseHandler {
 
     /* ================= INIT ================= */
 
+    /**
+     * JavaFX initialize hook.
+     * Configures client-side input validation for Subscriber ID:
+     * digits only, max length 10.
+     */
     @FXML
     public void initialize() {
         hideMessage();
@@ -69,6 +78,10 @@ public class SubscriberLoginController implements ClientResponseHandler {
 
     /* ================= ACTIONS ================= */
 
+    /**
+     * Sends a subscriber login request using (subscriberId, username).
+     * Performs basic validation before sending.
+     */
     @FXML
     private void handleSubscriberLogin() {
         hideMessage();
@@ -95,6 +108,10 @@ public class SubscriberLoginController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Opens a modal popup that simulates scanning a subscriber card barcode.
+     * On scan, sends a barcode-login request to the server.
+     */
     @FXML
     private void onBarcodeSimClicked() {
         if (api == null) {
@@ -142,11 +159,18 @@ public class SubscriberLoginController implements ClientResponseHandler {
         simStage.showAndWait();
     }
 
+    /**
+     * Navigates back to the main login choice screen.
+     */
     @FXML
     private void handleBackButton() {
         openWindow("Login_B.fxml", "Login", null);
     }
 
+    /**
+     * Opens a modal window that allows recovering a subscriber code.
+     * Injects the current ChatClient into the popup controller so it can communicate with the server.
+     */
     @FXML
     private void handleForgotCode() {
         try {
@@ -154,7 +178,6 @@ public class SubscriberLoginController implements ClientResponseHandler {
                     new FXMLLoader(getClass().getResource("/gui/ForgotSubscriberCode.fxml"));
             Parent root = loader.load();
 
-            // 🔴 זה החסר
             ForgotCodeController controller = loader.getController();
             controller.setClient(chatClient);
 
@@ -170,6 +193,11 @@ public class SubscriberLoginController implements ClientResponseHandler {
 
     /* ================= SERVER RESPONSE ================= */
 
+    /**
+     * Handles login responses from the server.
+     * On success: stores the logged-in user in ClientSession and navigates to the menu.
+     * On failure: shows the server message.
+     */
     @Override
     public void handleResponse(ResponseDTO response) {
         Platform.runLater(() -> {
@@ -185,14 +213,28 @@ public class SubscriberLoginController implements ClientResponseHandler {
         });
     }
 
+    /**
+     * Called when a connection error occurs.
+     */
     @Override public void handleConnectionError(Exception e) {
         Platform.runLater(() -> showError("Connection error."));
     }
 
+    /**
+     * Called when the connection is closed.
+     */
     @Override public void handleConnectionClosed() {}
 
     /* ================= NAVIGATION ================= */
 
+    /**
+     * Loads an FXML screen and switches the current scene root to it.
+     * If the next controller supports setClient(User, ChatClient), the session is injected.
+     *
+     * @param fxmlName FXML file name under /gui/
+     * @param title window title suffix
+     * @param user optional logged-in user to inject
+     */
     private void openWindow(String fxmlName, String title, User user) {
         try {
             FXMLLoader loader =
@@ -217,6 +259,10 @@ public class SubscriberLoginController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Reuses the current Stage and Scene (if exists) and replaces only the root node.
+     * Uses a safe stage lookup based on available injected nodes.
+     */
     private void switchRoot(Parent root, String title) {
         Stage stage = getStageSafe();
         if (stage == null) {
@@ -233,6 +279,10 @@ public class SubscriberLoginController implements ClientResponseHandler {
         stage.show();
     }
 
+    /**
+     * Safely finds the current Stage using available scene nodes.
+     * Prioritizes rootPane, and falls back to subscriberIdField.
+     */
     private Stage getStageSafe() {
         if (rootPane != null && rootPane.getScene() != null) {
             return (Stage) rootPane.getScene().getWindow();
@@ -245,10 +295,16 @@ public class SubscriberLoginController implements ClientResponseHandler {
 
     /* ================= UI HELPERS ================= */
 
+    /**
+     * Returns trimmed text from a TextField, or empty string if null.
+     */
     private String safe(TextField tf) {
         return (tf == null || tf.getText() == null) ? "" : tf.getText().trim();
     }
 
+    /**
+     * Displays an error message in the screen message label.
+     */
     private void showError(String msg) {
         lblMessage.setText(msg);
         lblMessage.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
@@ -256,6 +312,9 @@ public class SubscriberLoginController implements ClientResponseHandler {
         lblMessage.setManaged(true);
     }
 
+    /**
+     * Hides the message label.
+     */
     private void hideMessage() {
         lblMessage.setVisible(false);
         lblMessage.setManaged(false);
