@@ -5,6 +5,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import application.ChatClient;
+import application.ClientSession; // ✅ added
 import dto.GetReservationHistoryDTO;
 import dto.RequestDTO;
 import dto.ResponseDTO;
@@ -98,13 +99,21 @@ public class ClientDetails_BController implements ClientResponseHandler {
      */
     public void setClient(User user, ChatClient chatClient) {
 
-        if (!(user instanceof Subscriber)) {
+        // ✅ Always keep the chatClient reference so Back works even on error
+        this.chatClient = chatClient;
+
+        // ✅ IMPORTANT: This screen should always show the ACTING user (staff may be RandomClient etc.)
+        User effectiveUser = ClientSession.getActingUser();
+        if (effectiveUser == null) {
+            effectiveUser = user; // fallback (shouldn't happen, but safe)
+        }
+
+        if (!(effectiveUser instanceof Subscriber)) {
             showMessage("Only subscribers can view this screen.");
             return;
         }
 
-        this.subscriber = (Subscriber) user;
-        this.chatClient = chatClient;
+        this.subscriber = (Subscriber) effectiveUser;
 
         if (this.chatClient != null) {
             this.chatClient.setResponseHandler(this);

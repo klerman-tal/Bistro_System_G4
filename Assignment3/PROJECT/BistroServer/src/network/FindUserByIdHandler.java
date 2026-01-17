@@ -4,7 +4,6 @@ import dto.FindUserByIdDTO;
 import dto.RequestDTO;
 import dto.ResponseDTO;
 import entities.Enums;
-import entities.Subscriber;
 import entities.User;
 import logicControllers.UserController;
 import ocsf.server.ConnectionToClient;
@@ -22,21 +21,10 @@ public class FindUserByIdHandler implements RequestHandler {
 
     private final UserController userController;
 
-    /**
-     * Constructs a handler with the required user controller dependency.
-     */
     public FindUserByIdHandler(UserController userController) {
         this.userController = userController;
     }
 
-    /**
-     * Handles a find-user-by-id request received from the client.
-     * <p>
-     * The method verifies that the requesting user is authenticated
-     * and authorized, validates the provided user ID, and retrieves
-     * the corresponding user information from the system.
-     * </p>
-     */
     @Override
     public void handle(RequestDTO request, ConnectionToClient client) throws Exception {
 
@@ -64,16 +52,15 @@ public class FindUserByIdHandler implements RequestHandler {
             return;
         }
 
-        Subscriber s = userController.getSubscriberById(
-                id,
-                (Subscriber) performerObj
-        );
+        // ✅ Use a safe method that returns User (Subscriber or Guest)
+        // Assumes you added: userController.getUserById(int id, User performedBy)
+        User found = userController.getUserById(id, performer);
 
-        if (s == null) {
+        if (found == null) {
             client.sendToClient(new ResponseDTO(false, "User not found", null));
             return;
         }
 
-        client.sendToClient(new ResponseDTO(true, "User found", s));
+        client.sendToClient(new ResponseDTO(true, "User found", found));
     }
 }

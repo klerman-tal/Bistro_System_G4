@@ -97,8 +97,42 @@ public class MyVisitMenu_BController {
      */
     @FXML
     private void onBack() {
-        openWindow("Menu_B.fxml", "Menu");
+        try {
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
+            Parent root = loader.load();
+
+            Object controller = loader.getController();
+
+            // ✅ ALWAYS pass the real logged-in user to Menu
+            User logged = application.ClientSession.getLoggedInUser();
+
+            if (controller != null && logged != null && chatClient != null) {
+                try {
+                    controller.getClass()
+                            .getMethod("setClient", User.class, ChatClient.class)
+                            .invoke(controller, logged, chatClient);
+                } catch (Exception ignored) {}
+            }
+
+            Stage stage = (Stage) rootPane.getScene().getWindow();
+            Scene scene = stage.getScene();
+
+            if (scene == null) {
+                stage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
+            stage.setTitle("Bistro - Menu");
+            stage.setMaximized(true);
+            stage.show();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
+
 
     // ================= NAVIGATION =================
 

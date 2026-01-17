@@ -409,4 +409,22 @@ public class UserController {
         int max = userDB.getMaxUserIdFromGuestsAndSubscribers();
         return max + 1;
     }
+    
+    public User getUserById(int id, User performedBy) {
+
+        if (performedBy == null) return null;
+
+        if (performedBy.getUserRole() != Enums.UserRole.RestaurantAgent &&
+            performedBy.getUserRole() != Enums.UserRole.RestaurantManager) {
+            return null;
+        }
+
+        if (id <= 0) return null;
+
+        Subscriber s = userDB.getSubscriberById(id);
+        if (s != null) return s;
+
+        return userDB.getGuestById(id);
+    }
+
 }

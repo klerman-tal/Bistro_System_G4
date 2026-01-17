@@ -785,5 +785,26 @@ public class User_DB_Controller {
         }
         return null;
     }
+    
+    public User getGuestById(int guestId) {
+        String sql = "SELECT * FROM GUESTS WHERE guest_id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, guestId);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                String phone = rs.getString("phone");
+                String email = rs.getString("email");
+
+                User u = new User(phone, email);
+                u.setUserId(guestId);
+                u.setUserRole(Enums.UserRole.RandomClient);
+                return u;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
 
 }
