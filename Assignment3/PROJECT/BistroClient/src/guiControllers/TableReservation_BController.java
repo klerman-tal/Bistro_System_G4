@@ -36,10 +36,33 @@ public class TableReservation_BController implements ClientResponseHandler {
 
     /* ================= CONTEXT ================= */
 
+    /**
+     * JavaFX controller for creating a table reservation.
+     * <p>
+     * Responsibilities:
+     * <ul>
+     *   <li>Collects reservation details (date, time slot, guests) from the user.</li>
+     *   <li>Requests opening hours and available time slots from the server.</li>
+     *   <li>Sends a reservation creation request and handles server responses.</li>
+     *   <li>Supports navigation back to the originating screen using an injected FXML path.</li>
+     * </ul>
+     * </p>
+     * This controller implements {@link ClientResponseHandler} to receive async responses via {@link ChatClient}.
+     */
     public void setBackFxml(String backFxml) {
         this.backFxml = backFxml;
     }
 
+    /**
+     * Injects the session context and initializes server communication for this screen.
+     * <p>
+     * Also applies date restrictions to the DatePicker (from today to one month ahead)
+     * and triggers an opening-hours request.
+     * </p>
+     *
+     * @param user the current user performing the reservation
+     * @param chatClient the active client connection to the server
+     */
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
@@ -71,7 +94,7 @@ public class TableReservation_BController implements ClientResponseHandler {
         });
 
         try {
-            api.getOpeningHours(); // נשאר (כמו שהיה)
+            api.getOpeningHours();
         } catch (IOException e) {
             showMessage("Failed to load opening hours", "red");
         }
@@ -79,6 +102,13 @@ public class TableReservation_BController implements ClientResponseHandler {
 
     /* ================= ACTIONS ================= */
 
+    /**
+     * Triggered when the user selects a date.
+     * <p>
+     * Clears the time ComboBox and requests available time slots from the server
+     * using the selected date and the current number of guests (or a default value).
+     * </p>
+     */
     @FXML
     private void onDateSelected() {
         hideMessage();
@@ -97,6 +127,13 @@ public class TableReservation_BController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Triggered when the user clicks the "Create" button.
+     * <p>
+     * Validates user input, enforces a minimum 1-hour advance rule for same-day reservations,
+     * and sends the reservation creation request to the server.
+     * </p>
+     */
     @FXML
     private void onCreateClicked() {
         hideMessage();
@@ -129,11 +166,17 @@ public class TableReservation_BController implements ClientResponseHandler {
 
     /* ================= BACK ================= */
 
+    /**
+     * Navigates back to the previous screen defined by {@code backFxml}.
+     * <p>
+     * Clears this controller as the current response handler before navigating.
+     * Reuses the existing {@link Scene} and replaces only the root node.
+     * </p>
+     */
     @FXML
     private void onBackClicked() {
         if (backFxml == null || backFxml.isBlank()) return;
 
-        // לא להשאיר את המסך הזה כ-handler פעיל
         if (chatClient != null) {
             chatClient.setResponseHandler(null);
         }
@@ -144,7 +187,6 @@ public class TableReservation_BController implements ClientResponseHandler {
 
             Object controller = loader.getController();
 
-            // תמיד להעביר את אותו user שהמסך הזה עובד איתו
             if (controller != null && user != null && chatClient != null) {
                 try {
                     controller.getClass()
@@ -156,7 +198,6 @@ public class TableReservation_BController implements ClientResponseHandler {
             Stage stage = (Stage) rootPane.getScene().getWindow();
             Scene scene = stage.getScene();
 
-            // ✅ לפי הכלל: לא Scene חדש
             scene.setRoot(root);
             stage.centerOnScreen();
             stage.show();
@@ -168,6 +209,17 @@ public class TableReservation_BController implements ClientResponseHandler {
 
     /* ================= SERVER RESPONSE ================= */
 
+    /**
+     * Handles responses from the server related to:
+     * <ul>
+     *   <li>Opening hours loading</li>
+     *   <li>Available time slots loading</li>
+     *   <li>Reservation creation success/failure</li>
+     * </ul>
+     * Updates UI safely via {@link Platform#runLater(Runnable)}.
+     *
+     * @param response the server response wrapper
+     */
     @Override
     public void handleResponse(ResponseDTO response) {
         Platform.runLater(() -> {
@@ -191,7 +243,7 @@ public class TableReservation_BController implements ClientResponseHandler {
                 updateHoursComboFromLocalTimes(times);
 
                 if (times.isEmpty()) {
-                    showMessage("אין מקום פנוי שעומד בדרישות ליום הנבחר", "red");
+                    showMessage("No available tables match the selected day requirements.", "red");
                 } else {
                     hideMessage();
                 }
@@ -228,6 +280,11 @@ public class TableReservation_BController implements ClientResponseHandler {
         });
     }
 
+    /**
+     * Updates the hour ComboBox options based on the provided list of {@link LocalTime}.
+     *
+     * @param times list of available time slots (may be null or empty)
+     */
     private void updateHoursComboFromLocalTimes(ArrayList<LocalTime> times) {
         cmbHour.getItems().clear();
         cmbHour.setValue(null);
@@ -239,11 +296,26 @@ public class TableReservation_BController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Checks whether the given list contains {@link OpeningHouers} elements.
+     *
+     * @param list a list returned from the server
+     * @return true if the list is non-empty and contains opening-hours objects
+     */
     private boolean isOpeningHoursList(ArrayList<?> list) {
         if (list == null || list.isEmpty()) return false;
         return list.get(0) instanceof OpeningHouers;
     }
 
+    /**
+     * Checks whether the given list is a {@link LocalTime} list.
+     * <p>
+     * Empty lists are considered valid time lists to support "no available times" responses.
+     * </p>
+     *
+     * @param list a list returned from the server
+     * @return true if the list is empty or contains {@link LocalTime} elements
+     */
     private boolean isLocalTimeList(ArrayList<?> list) {
         if (list == null) return true;
         if (list.isEmpty()) return true;
@@ -252,6 +324,13 @@ public class TableReservation_BController implements ClientResponseHandler {
 
     /* ================= HELPERS ================= */
 
+    /**
+     * Parses the guests input field and returns a valid guest count.
+     * If parsing fails or the value is non-positive, returns the provided default.
+     *
+     * @param def default guest count to use when input is invalid
+     * @return parsed guests count or {@code def}
+     */
     private int parseGuestsOrDefault(int def) {
         try {
             String s = txtGuests.getText();
@@ -263,6 +342,12 @@ public class TableReservation_BController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Validates user inputs (date, hour, and guest count).
+     * Shows an error message when validation fails.
+     *
+     * @return true if all inputs are valid; otherwise false
+     */
     private boolean validateInputs() {
         if (datePicker.getValue() == null) {
             showMessage("Please select a date.", "red");
@@ -282,6 +367,12 @@ public class TableReservation_BController implements ClientResponseHandler {
         return true;
     }
 
+    /**
+     * Displays a message in the UI with the provided text color.
+     *
+     * @param msg the message text to display
+     * @param color a JavaFX color name/string (e.g., "red", "blue")
+     */
     private void showMessage(String msg, String color) {
         lblMessage.setText(msg);
         lblMessage.setStyle("-fx-text-fill: " + color);
@@ -289,11 +380,20 @@ public class TableReservation_BController implements ClientResponseHandler {
         lblMessage.setManaged(true);
     }
 
+    /**
+     * Hides the message label from the UI and removes it from layout calculations.
+     */
     private void hideMessage() {
         lblMessage.setVisible(false);
         lblMessage.setManaged(false);
     }
 
+    /**
+     * Shows an informational success alert dialog.
+     *
+     * @param title alert window title
+     * @param content alert content message
+     */
     private void showSuccessAlert(String title, String content) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);
@@ -302,11 +402,19 @@ public class TableReservation_BController implements ClientResponseHandler {
         alert.showAndWait();
     }
 
+    /**
+     * Called when a connection error occurs while this controller is active.
+     *
+     * @param e the connection exception
+     */
     @Override
     public void handleConnectionError(Exception e) {
         Platform.runLater(() -> showMessage("Connection lost.", "red"));
     }
 
+    /**
+     * Called when the connection is closed while this controller is active.
+     */
     @Override
     public void handleConnectionClosed() {}
 }

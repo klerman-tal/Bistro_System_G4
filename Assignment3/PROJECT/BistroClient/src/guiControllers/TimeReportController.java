@@ -31,7 +31,16 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Controller for displaying monthly time reports.
+ * JavaFX controller for displaying a monthly time report.
+ * <p>
+ * This screen presents two perspectives for a selected month:
+ * <ul>
+ *   <li><b>Arrival status</b>: distribution of on-time arrivals and delays (PieChart)</li>
+ *   <li><b>Stay duration</b>: average stay duration per day (BarChart) and related KPIs</li>
+ * </ul>
+ * </p>
+ * The controller requests a {@link TimeReportDTO} from the server and updates the UI
+ * asynchronously upon receiving a {@link ResponseDTO} via {@link ClientResponseHandler}.
  */
 public class TimeReportController implements ClientResponseHandler {
 
@@ -70,6 +79,12 @@ public class TimeReportController implements ClientResponseHandler {
 
     /* ======================= Initialization ======================= */
 
+    /**
+     * JavaFX initialization hook.
+     * <p>
+     * Configures chart appearance (hides legends) and initializes the report-month selector.
+     * </p>
+     */
     @FXML
     public void initialize() {
         arrivalPieChart.setLegendVisible(false);
@@ -77,6 +92,16 @@ public class TimeReportController implements ClientResponseHandler {
         initMonthComboBox();
     }
 
+    /**
+     * Injects the current session context and registers this controller as the active
+     * {@link ClientResponseHandler}.
+     * <p>
+     * After injection, the controller triggers a report request for the currently selected month.
+     * </p>
+     *
+     * @param user the current user viewing the reports
+     * @param chatClient the active client connection used for server communication
+     */
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
@@ -90,6 +115,14 @@ public class TimeReportController implements ClientResponseHandler {
 
     /* ======================= Month Selection ======================= */
 
+    /**
+     * Initializes the month ComboBox with the last {@link #MONTHS_BACK} months,
+     * defaulting to the most recent complete month.
+     * <p>
+     * Also applies a custom cell renderer to display months using {@link #MONTH_FORMATTER}
+     * and registers the selection handler.
+     * </p>
+     */
     private void initMonthComboBox() {
         YearMonth defaultMonth = YearMonth.now().minusMonths(1);
 
@@ -113,6 +146,14 @@ public class TimeReportController implements ClientResponseHandler {
         cmbReportMonth.setOnAction(e -> onMonthSelected(cmbReportMonth.getValue()));
     }
 
+    /**
+     * Handles a month selection change.
+     * <p>
+     * Updates UI summaries and requests the report data from the server.
+     * </p>
+     *
+     * @param ym the selected month
+     */
     private void onMonthSelected(YearMonth ym) {
         if (ym == null) return;
 
@@ -124,6 +165,12 @@ public class TimeReportController implements ClientResponseHandler {
 
     /* ======================= Request ======================= */
 
+    /**
+     * Sends a time report request to the server for the specified year and month.
+     *
+     * @param year the report year
+     * @param month the report month (1-12)
+     */
     private void requestTimeReport(int year, int month) {
         TimeReportDTO dto = new TimeReportDTO();
         dto.setYear(year);
@@ -138,6 +185,15 @@ public class TimeReportController implements ClientResponseHandler {
 
     /* ======================= Response ======================= */
 
+    /**
+     * Receives and processes asynchronous server responses.
+     * <p>
+     * On a successful response containing {@link TimeReportDTO}, the controller updates both charts.
+     * UI updates are performed on the JavaFX Application Thread using {@link Platform#runLater(Runnable)}.
+     * </p>
+     *
+     * @param response the server response wrapper
+     */
     @Override
     public void handleResponse(ResponseDTO response) {
         if (response == null || !response.isSuccess()) return;
@@ -151,12 +207,18 @@ public class TimeReportController implements ClientResponseHandler {
 
     /* ======================= Summaries ======================= */
 
+    /**
+     * Updates the arrival summary title and description text for the selected month.
+     */
     private void updateArrivalSummary() {
         lblSummaryTitle.setText("Arrival Status: " + reportMonth.format(MONTH_FORMATTER));
         txtSummaryText.setText(
                 "Displays the distribution of customer arrival times, showing on-time arrivals and delays.");
     }
 
+    /**
+     * Updates the stay-duration summary title and description text for the selected month.
+     */
     private void updateStaySummary() {
         lblStaySummaryTitle.setText("Stay Duration: " + reportMonth.format(MONTH_FORMATTER));
         txtStaySummaryText.setText(
@@ -165,6 +227,11 @@ public class TimeReportController implements ClientResponseHandler {
 
     /* ======================= Charts ======================= */
 
+    /**
+     * Draws the arrival status PieChart and updates the related KPI labels.
+     *
+     * @param dto the report data transfer object containing arrival status counts
+     */
     private void drawArrivalStatus(TimeReportDTO dto) {
         int onTime = dto.getOnTimeCount();
         int minor = dto.getMinorDelayCount();
@@ -182,6 +249,12 @@ public class TimeReportController implements ClientResponseHandler {
         lblMajorDelay.setText("● Significant Delay (≥ 10 min): " + major + " (" + percent(major, total) + ")");
     }
 
+    /**
+     * Draws the stay-duration BarChart for the selected month and updates summary labels
+     * (monthly average, longest day, shortest day).
+     *
+     * @param dto the report data transfer object containing stay duration metrics
+     */
     private void drawStayDuration(TimeReportDTO dto) {
         timesChart.getData().clear();
 
@@ -202,12 +275,26 @@ public class TimeReportController implements ClientResponseHandler {
                 " (" + dto.getMinAvgMinutes() + " min)");
     }
 
+    /**
+     * Formats a percentage string for the given value out of a total.
+     *
+     * @param value the part value
+     * @param total the total value
+     * @return a formatted percentage string (e.g., "12.5%")
+     */
     private String percent(int value, int total) {
         return total == 0 ? "0%" : String.format("%.1f%%", (value * 100.0) / total);
     }
 
     /* ======================= Navigation ======================= */
 
+    /**
+     * Navigates back to the reports menu screen.
+     * <p>
+     * Clears this controller as the active response handler and reuses the existing {@link Scene}
+     * by replacing its root node.
+     * </p>
+     */
     @FXML
     private void onBackClicked() {
         try {
@@ -225,7 +312,6 @@ public class TimeReportController implements ClientResponseHandler {
             Stage stage = (Stage) rootPane.getScene().getWindow();
             Scene scene = stage.getScene();
 
-            // ✅ לפי הכלל: לא מחליפים Scene
             scene.setRoot(root);
             stage.centerOnScreen();
             stage.show();
@@ -235,6 +321,15 @@ public class TimeReportController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Called when a connection error occurs while this controller is active.
+     *
+     * @param e the connection exception
+     */
     @Override public void handleConnectionError(Exception e) {}
+
+    /**
+     * Called when the server connection is closed while this controller is active.
+     */
     @Override public void handleConnectionClosed() {}
 }
