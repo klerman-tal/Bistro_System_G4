@@ -25,6 +25,7 @@ public class ForgotCodeController implements ClientResponseHandler{
     public void setClient(ChatClient chatClient) {
         this.chatClient = chatClient;
         this.api = new ClientAPI(chatClient);
+        chatClient.setResponseHandler(this);
     }
 
     @FXML
