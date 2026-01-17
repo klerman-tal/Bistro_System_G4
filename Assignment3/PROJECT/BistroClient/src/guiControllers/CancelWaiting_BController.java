@@ -51,7 +51,6 @@ public class CancelWaiting_BController implements ClientResponseHandler {
         }
     }
 
-    // שימושי כשמגיעים עם קוד מוכן (למשל מטבלה)
     public void setClient(User user, ChatClient chatClient, String confirmationCode) {
         setClient(user, chatClient);
         if (confirmationCode != null && txtConfirmationCode != null) {
@@ -78,7 +77,7 @@ public class CancelWaiting_BController implements ClientResponseHandler {
 
         try {
             api.cancelWaiting(code.trim());
-            showInfo("Cancel request sent.");
+            // ❗ לא מציגים הודעה כאן – מחכים לשרת
         } catch (IOException e) {
             showError("Failed to send cancel request.");
             e.printStackTrace();
@@ -97,8 +96,7 @@ public class CancelWaiting_BController implements ClientResponseHandler {
         }
 
         try {
-            FXMLLoader loader =
-                    new FXMLLoader(getClass().getResource(backFxml));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(backFxml));
             Parent root = loader.load();
 
             Object controller = loader.getController();
@@ -134,13 +132,17 @@ public class CancelWaiting_BController implements ClientResponseHandler {
             if (response == null) return;
 
             if (response.isSuccess()) {
-                showSuccess(response.getMessage() != null
-                        ? response.getMessage()
-                        : "Cancelled successfully.");
+                showSuccess(
+                        response.getMessage() != null
+                                ? response.getMessage()
+                                : "Waiting cancelled successfully"
+                );
             } else {
-                showError(response.getMessage() != null
-                        ? response.getMessage()
-                        : "Cancel failed.");
+                showError(
+                        response.getMessage() != null
+                                ? response.getMessage()
+                                : "Cancel failed."
+                );
             }
         });
     }
@@ -157,12 +159,6 @@ public class CancelWaiting_BController implements ClientResponseHandler {
     private void showSuccess(String msg) {
         lblMessage.setText(msg);
         lblMessage.setStyle("-fx-text-fill: green;");
-        lblMessage.setVisible(true);
-    }
-
-    private void showInfo(String msg) {
-        lblMessage.setText(msg);
-        lblMessage.setStyle("-fx-text-fill: #2e7d32;");
         lblMessage.setVisible(true);
     }
 
