@@ -25,6 +25,16 @@ import javafx.stage.Stage;
 import network.ClientAPI;
 import network.ClientResponseHandler;
 
+/**
+ * JavaFX controller for managing reservations (manager/agent view).
+ *
+ * <p>This screen displays all reservations in a table, supports refreshing the data from the server,
+ * and provides actions to create a new reservation or cancel an existing one. Navigation between screens
+ * is performed by swapping the current scene root to preserve the window instance and maximized state.</p>
+ *
+ * <p>The controller uses {@link ClientAPI} to send requests to the server and attaches a
+ * {@link ClientResponseHandler} to process asynchronous responses.</p>
+ */
 public class ManageReservationController implements Initializable {
 
     @FXML private BorderPane rootPane;
@@ -51,10 +61,22 @@ public class ManageReservationController implements Initializable {
     private final ObservableList<Reservation> reservationsList =
             FXCollections.observableArrayList();
 
+    /**
+     * Injects a {@link ClientActions} implementation for controllers that rely on GUI-to-client actions.
+     *
+     * @param clientActions the client actions bridge used by downstream controllers
+     */
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
     }
 
+    /**
+     * Injects the current session context, initializes {@link ClientAPI}, and installs a response handler
+     * that delegates responses to {@link #handleServerResponse(ResponseDTO)} on the JavaFX UI thread.
+     *
+     * @param user       the current logged-in user
+     * @param chatClient the network client used to communicate with the server
+     */
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
@@ -82,11 +104,20 @@ public class ManageReservationController implements Initializable {
         loadReservationsOnEnter();
     }
 
+    /**
+     * JavaFX lifecycle method (intentionally left empty).
+     *
+     * @param location  the location used to resolve relative paths for the root object, or {@code null} if unknown
+     * @param resources the resources used to localize the root object, or {@code null} if not localized
+     */
     @Override
     public void initialize(java.net.URL location, java.util.ResourceBundle resources) {
         // intentionally empty
     }
 
+    /**
+     * Configures the reservations table columns and binds the table to the observable data list.
+     */
     private void initializeTableBehavior() {
         colReservationId.setCellValueFactory(new PropertyValueFactory<>("reservationId"));
         colDateTime.setCellValueFactory(new PropertyValueFactory<>("reservationTime"));
@@ -99,6 +130,9 @@ public class ManageReservationController implements Initializable {
         tblReservations.setItems(reservationsList);
     }
 
+    /**
+     * Loads all reservations from the server when entering the screen.
+     */
     private void loadReservationsOnEnter() {
         hideMessage();
         if (clientAPI == null) return;
@@ -110,6 +144,14 @@ public class ManageReservationController implements Initializable {
         }
     }
 
+    /**
+     * Processes server responses related to reservation management.
+     *
+     * <p>If the response contains a list of reservations, the table is updated. For other successful
+     * operations (e.g., cancel), the method displays a success message and refreshes the data.</p>
+     *
+     * @param response the response received from the server
+     */
     public void handleServerResponse(ResponseDTO response) {
         if (response == null) return;
 
@@ -128,6 +170,9 @@ public class ManageReservationController implements Initializable {
         }
     }
 
+    /**
+     * Opens the "Add Reservation" screen and configures it to navigate back to this screen.
+     */
     @FXML
     private void onAddClicked() {
         try {
@@ -143,7 +188,6 @@ public class ManageReservationController implements Initializable {
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
 
-            // ✅ תצוגה בלבד
             Scene scene = stage.getScene();
             if (scene == null) {
                 stage.setScene(new Scene(root));
@@ -159,6 +203,11 @@ public class ManageReservationController implements Initializable {
         }
     }
 
+    /**
+     * Opens the cancel screen for the currently selected reservation.
+     *
+     * <p>If no reservation is selected, displays a message to the user.</p>
+     */
     @FXML
     private void onDeleteClicked() {
         Reservation selected = tblReservations.getSelectionModel().getSelectedItem();
@@ -169,6 +218,12 @@ public class ManageReservationController implements Initializable {
         openCancelWindow(selected);
     }
 
+    /**
+     * Loads the cancel reservation screen, injects session context and the confirmation code,
+     * and configures back navigation to this screen.
+     *
+     * @param reservation the reservation to cancel
+     */
     private void openCancelWindow(Reservation reservation) {
         try {
             FXMLLoader loader =
@@ -182,7 +237,6 @@ public class ManageReservationController implements Initializable {
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
 
-            // ✅ תצוגה בלבד
             Scene scene = stage.getScene();
             if (scene == null) {
                 stage.setScene(new Scene(root));
@@ -198,11 +252,23 @@ public class ManageReservationController implements Initializable {
         }
     }
 
+    /**
+     * Navigates back to the restaurant management screen.
+     */
     @FXML
     private void onBackClicked() {
         openWindow("RestaurantManagement_B.fxml", "Management");
     }
 
+    /**
+     * Loads the requested FXML and swaps the current scene root to navigate between screens.
+     *
+     * <p>If the target controller defines {@code setClient(User, ChatClient)}, it will be invoked
+     * reflectively to preserve the session context.</p>
+     *
+     * @param fxmlName the target FXML file name under {@code /gui/}
+     * @param title    the window title suffix to display
+     */
     private void openWindow(String fxmlName, String title) {
         try {
             FXMLLoader loader =
@@ -221,7 +287,6 @@ public class ManageReservationController implements Initializable {
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setTitle("Bistro - " + title);
 
-            // ✅ תצוגה בלבד
             Scene scene = stage.getScene();
             if (scene == null) {
                 stage.setScene(new Scene(root));
@@ -237,12 +302,20 @@ public class ManageReservationController implements Initializable {
         }
     }
 
+    /**
+     * Displays a status message in the UI.
+     *
+     * @param msg the message to display
+     */
     private void showMessage(String msg) {
         lblStatus.setText(msg);
         lblStatus.setVisible(true);
         lblStatus.setManaged(true);
     }
 
+    /**
+     * Hides the status message area.
+     */
     private void hideMessage() {
         lblStatus.setVisible(false);
         lblStatus.setManaged(false);

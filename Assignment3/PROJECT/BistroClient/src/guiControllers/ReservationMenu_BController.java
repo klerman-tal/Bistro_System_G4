@@ -10,6 +10,15 @@ import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
+/**
+ * JavaFX controller for the reservation menu screen.
+ *
+ * <p>This screen provides navigation shortcuts for common guest/subscriber flows:
+ * creating a reservation, canceling a reservation, joining the waiting list, and canceling a waiting entry.</p>
+ *
+ * <p>The controller preserves the current session by passing {@link User} and {@link ChatClient}
+ * to the next screens, and performs navigation by swapping the current scene root.</p>
+ */
 public class ReservationMenu_BController {
 
     @FXML
@@ -19,19 +28,29 @@ public class ReservationMenu_BController {
     private ChatClient chatClient;
     private ClientActions clientActions;
 
-    /* ================= SETTERS ================= */
-
+    /**
+     * Injects the current session context.
+     *
+     * @param user       the current logged-in user
+     * @param chatClient the client used to communicate with the server
+     */
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
     }
 
+    /**
+     * Injects an optional API interface that other screens may require.
+     *
+     * @param clientActions a client-side actions interface used by some controllers
+     */
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
     }
 
-    /* ================= BUTTON ACTIONS ================= */
-
+    /**
+     * Opens the "Create Reservation" screen and injects the current session context.
+     */
     @FXML
     private void onCreateReservation() {
         try {
@@ -52,6 +71,9 @@ public class ReservationMenu_BController {
         }
     }
 
+    /**
+     * Opens the "Cancel Reservation" screen and injects the current session context.
+     */
     @FXML
     private void onCancelReservation() {
         try {
@@ -72,6 +94,9 @@ public class ReservationMenu_BController {
         }
     }
 
+    /**
+     * Opens the "Join Waiting List" screen and injects the current session context.
+     */
     @FXML
     private void onJoinWaiting() {
         try {
@@ -92,7 +117,9 @@ public class ReservationMenu_BController {
         }
     }
 
-
+    /**
+     * Opens the "Cancel Waiting" screen and injects the current session context.
+     */
     @FXML
     private void onCancelWaiting() {
         try {
@@ -113,14 +140,21 @@ public class ReservationMenu_BController {
         }
     }
 
-
+    /**
+     * Navigates back to the main menu screen.
+     */
     @FXML
     private void onBack() {
         openWindow("Menu_B.fxml", "Main Menu");
     }
 
-    /* ================= NAVIGATION ================= */
-
+    /**
+     * Loads an FXML screen from {@code /gui/}, injects session context and optional {@link ClientActions},
+     * then navigates by swapping the current scene root.
+     *
+     * @param fxmlName the FXML file name under {@code /gui/}
+     * @param title    the window title suffix
+     */
     private void openWindow(String fxmlName, String title) {
         try {
             FXMLLoader loader =
@@ -152,8 +186,13 @@ public class ReservationMenu_BController {
         }
     }
 
-    /* ================= SCENE HANDLING (FIX) ================= */
-
+    /**
+     * Replaces the current scene root with the provided root node.
+     * This navigation approach keeps the same stage and preserves window state.
+     *
+     * @param root  the new root node to display
+     * @param title the window title to set
+     */
     private void switchRoot(Parent root, String title) {
         Stage stage = (Stage) rootPane.getScene().getWindow();
         Scene scene = stage.getScene();

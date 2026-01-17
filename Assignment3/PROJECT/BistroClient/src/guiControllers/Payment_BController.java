@@ -21,6 +21,22 @@ import javafx.stage.Stage;
 import network.ClientAPI;
 import network.ClientResponseHandler;
 
+/**
+ * JavaFX controller that allows a user to load a receipt by confirmation code and complete a payment.
+ *
+ * <p>The flow is split into two steps:</p>
+ * <ol>
+ *   <li>Load a receipt by entering a confirmation code and requesting the amount from the server.</li>
+ *   <li>Pay the loaded receipt using either credit card details or cash.</li>
+ * </ol>
+ *
+ * <p>Server communication is performed through {@link ClientAPI}. This controller implements
+ * {@link ClientResponseHandler} and uses a small internal state machine ({@link PendingAction})
+ * to determine whether the current response belongs to a "load" request or a "pay" request.</p>
+ *
+ * <p>The controller stores and restores the previous response handler so it does not break
+ * other screens when navigating away.</p>
+ */
 public class Payment_BController implements ClientResponseHandler {
 
     private User user;
@@ -30,7 +46,11 @@ public class Payment_BController implements ClientResponseHandler {
     private Receipt loadedReceipt;
     private String loadedCode;
 
+    /**
+     * Identifies which request is currently awaiting a server response.
+     */
     private enum PendingAction { NONE, LOAD, PAY }
+
     private PendingAction pending = PendingAction.NONE;
 
     @FXML private BorderPane rootPane;
@@ -47,14 +67,17 @@ public class Payment_BController implements ClientResponseHandler {
     @FXML private Button btnBack;
     @FXML private Label lblMessage;
 
+    /**
+     * Initializes UI defaults, input constraints, and listeners.
+     * This method is invoked automatically by JavaFX after FXML injection.
+     */
     @FXML
     private void initialize() {
         rbCreditCard.setSelected(true);
 
-        // הגבלת אורך תווים ומספרים בלבד בזמן אמת
         addTextLimiter(txtLast4Digits, 4, false);
         addTextLimiter(txtCVV, 3, false);
-        addTextLimiter(txtExpiryDate, 5, true); // תומך בלוכסן
+        addTextLimiter(txtExpiryDate, 5, true);
 
         paymentTypeGroup.selectedToggleProperty().addListener((obs, oldToggle, newToggle) -> {
             updateCardFieldsState();
@@ -65,6 +88,15 @@ public class Payment_BController implements ClientResponseHandler {
         setBillLoaded(false);
     }
 
+    /**
+     * Adds a real-time input sanitizer/limiter to a {@link TextField}.
+     * The limiter enforces numeric input only, optionally allowing "/" for MM/YY fields,
+     * and truncates input to the given maximum length.
+     *
+     * @param tf         the text field to limit
+     * @param maxLength  maximum allowed length
+     * @param allowSlash whether to allow "/" in the input
+     */
     private void addTextLimiter(TextField tf, int maxLength, boolean allowSlash) {
         tf.textProperty().addListener((ov, oldValue, newValue) -> {
             if (newValue == null) return;
@@ -78,6 +110,9 @@ public class Payment_BController implements ClientResponseHandler {
         });
     }
 
+    /**
+     * Enables/disables credit card fields based on the selected payment type.
+     */
     private void updateCardFieldsState() {
         boolean creditSelected = rbCreditCard.isSelected();
         txtLast4Digits.setDisable(!creditSelected);
@@ -85,6 +120,12 @@ public class Payment_BController implements ClientResponseHandler {
         txtCVV.setDisable(!creditSelected);
     }
 
+    /**
+     * Updates the UI state based on whether a receipt is currently loaded.
+     * When not loaded, payment is disabled and cached receipt data is cleared.
+     *
+     * @param loaded {@code true} to enable payment actions; {@code false} to reset state
+     */
     private void setBillLoaded(boolean loaded) {
         btnPay.setDisable(!loaded);
         if (!loaded) {
@@ -94,6 +135,13 @@ public class Payment_BController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Injects the session context and sets up the API.
+     * Saves the previously active response handler and replaces it with this controller.
+     *
+     * @param user       the current logged-in user
+     * @param chatClient the active client connection used to communicate with the server
+     */
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
@@ -102,6 +150,10 @@ public class Payment_BController implements ClientResponseHandler {
         chatClient.setResponseHandler(this);
     }
 
+    /**
+     * Loads a receipt from the server using the confirmation code entered by the user.
+     * Disables payment until a receipt is successfully loaded.
+     */
     @FXML
     private void onLoadClicked() {
         clearMessage();
@@ -122,6 +174,10 @@ public class Payment_BController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Validates user input according to the selected payment type and sends a payment request.
+     * Requires a previously loaded receipt.
+     */
     @FXML
     private void onPayClicked() {
         clearMessage();
@@ -155,6 +211,13 @@ public class Payment_BController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Validates that the provided MM/YY string is well-formed and represents
+     * the current month or a future month.
+     *
+     * @param dateStr expiry date in the format MM/YY
+     * @return {@code true} if the date is valid and not in the past; otherwise {@code false}
+     */
     private boolean isValidFutureDate(String dateStr) {
         if (!dateStr.matches("(0[1-9]|1[0-2])/[0-9]{2}")) return false;
         try {
@@ -166,6 +229,11 @@ public class Payment_BController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Sends the payment request to the server and marks the pending action as {@link PendingAction#PAY}.
+     *
+     * @param dto the payment DTO to send
+     */
     private void sendPayment(PayReceiptDTO dto) {
         try {
             pending = PendingAction.PAY;
@@ -176,6 +244,11 @@ public class Payment_BController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Routes the server response to the appropriate handler based on {@link #pending}.
+     *
+     * @param response the response received from the server
+     */
     @Override
     public void handleResponse(ResponseDTO response) {
         if (response == null) return;
@@ -187,6 +260,11 @@ public class Payment_BController implements ClientResponseHandler {
         pending = PendingAction.NONE;
     }
 
+    /**
+     * Handles the response of a "load receipt" request. On success, caches the receipt and enables payment.
+     *
+     * @param response server response containing the loaded {@link Receipt} on success
+     */
     private void handleLoadResponse(ResponseDTO response) {
         if (!response.isSuccess() || !(response.getData() instanceof Receipt receipt)) {
             lblAmount.setText("—");
@@ -201,6 +279,11 @@ public class Payment_BController implements ClientResponseHandler {
         showMessage("Receipt loaded.");
     }
 
+    /**
+     * Handles the response of a payment request. On success, clears the loaded receipt state.
+     *
+     * @param response server response indicating payment success/failure
+     */
     private void handlePayResponse(ResponseDTO response) {
         if (!response.isSuccess()) {
             showMessage(response.getMessage());
@@ -210,12 +293,22 @@ public class Payment_BController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Restores the previous response handler (if available) and navigates back to the "My Visit" menu.
+     */
     @FXML
     private void onBackClicked() {
         if (chatClient != null) chatClient.setResponseHandler(prevHandler);
         openWindow("MyVisitMenu_B.fxml", "My Visit");
     }
 
+    /**
+     * Loads the given FXML and navigates by swapping the current scene root.
+     * Attempts to inject (User, ChatClient) to the destination controller via reflection.
+     *
+     * @param fxmlName the FXML file name located under /gui/
+     * @param title    the screen title suffix
+     */
     private void openWindow(String fxmlName, String title) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
@@ -248,16 +341,30 @@ public class Payment_BController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Safely returns a trimmed text value from a {@link TextInputControl}.
+     *
+     * @param c the control to read from
+     * @return trimmed text, or an empty string if null/empty
+     */
     private String safeText(TextInputControl c) {
         return (c == null || c.getText() == null) ? "" : c.getText().trim();
     }
 
+    /**
+     * Displays a message label with the given text.
+     *
+     * @param text message to display
+     */
     private void showMessage(String text) {
         lblMessage.setText(text);
         lblMessage.setVisible(true);
         lblMessage.setManaged(true);
     }
 
+    /**
+     * Hides the message label.
+     */
     private void clearMessage() {
         lblMessage.setVisible(false);
         lblMessage.setManaged(false);

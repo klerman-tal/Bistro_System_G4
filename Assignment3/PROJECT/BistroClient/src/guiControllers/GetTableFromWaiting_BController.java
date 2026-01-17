@@ -26,6 +26,16 @@ import javafx.stage.Stage;
 import network.ClientAPI;
 import network.ClientResponseHandler;
 
+/**
+ * JavaFX controller for confirming arrival from the waiting list and receiving a table assignment.
+ *
+ * <p>This screen allows a user to enter a waiting-list confirmation code and confirm arrival.
+ * For non-random users, it can also display a table of the user's active waiting entries and
+ * allows selecting a row to prefill the confirmation code.</p>
+ *
+ * <p>The controller communicates with the server through {@link ClientAPI} and processes asynchronous
+ * responses via {@link ClientResponseHandler}.</p>
+ */
 public class GetTableFromWaiting_BController implements ClientResponseHandler {
 
     @FXML private BorderPane rootPane;
@@ -34,7 +44,6 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
     @FXML private Label lblInfo;
     @FXML private Label lblError;
 
-    // ✅ Table (visible for: Subscriber / Agent / Manager; hidden only for RandomClient)
     @FXML private VBox boxMyActive;
     @FXML private TableView<Waiting> tblMyActive;
     @FXML private TableColumn<Waiting, LocalDate> colDate;
@@ -48,6 +57,13 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
     private ClientActions clientActions;
     private ClientAPI api;
 
+    /**
+     * Injects the current session context, initializes {@link ClientAPI}, registers this controller
+     * as the active response handler, and initializes the "My Active Waitings" table.
+     *
+     * @param user       the current logged-in user
+     * @param chatClient the network client used to communicate with the server
+     */
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
@@ -59,10 +75,21 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
         loadMyActiveIfAllowed();
     }
 
+    /**
+     * Injects a {@link ClientActions} implementation for controllers that rely on GUI-to-client actions.
+     *
+     * @param clientActions the client actions bridge used by downstream controllers
+     */
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
     }
 
+    /**
+     * Initializes the table that displays the user's active waiting entries.
+     *
+     * <p>Configures column value factories and attaches a listener to prefill the confirmation code
+     * input field when a row is selected.</p>
+     */
     private void initMyActiveTable() {
         if (tblMyActive == null) return;
 
@@ -85,7 +112,6 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
 
         tblMyActive.setItems(myActiveWaitings);
 
-        // ✅ click row → fill confirmation code
         tblMyActive.getSelectionModel().selectedItemProperty().addListener((obs, oldV, selected) -> {
             if (selected != null && selected.getConfirmationCode() != null) {
                 txtCode.setText(selected.getConfirmationCode());
@@ -94,10 +120,9 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
     }
 
     /**
-     * ✅ SHOW TABLE FOR:
-     * Subscriber / RestaurantAgent / RestaurantManager
-     * ❌ HIDE ONLY FOR:
-     * RandomClient
+     * Loads active waiting entries for the current user if the role allows it and toggles table visibility.
+     *
+     * <p>The active waitings table is hidden for {@link UserRole#RandomClient} and shown for other roles.</p>
      */
     private void loadMyActiveIfAllowed() {
         boolean show =
@@ -114,11 +139,16 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
         try {
             api.getMyActiveWaitings(user.getUserId());
         } catch (Exception e) {
-            // table is optional – do not break screen
             e.printStackTrace();
         }
     }
 
+    /**
+     * Handles the Confirm button click.
+     *
+     * <p>Validates that the confirmation code is a 6-digit number and sends a confirm-arrival request
+     * to the server.</p>
+     */
     @FXML
     private void onConfirmClicked() {
         hideMessages();
@@ -146,6 +176,15 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Handles server responses for:
+     * <ul>
+     *   <li>Active waiting list data (to populate the table)</li>
+     *   <li>Confirm-arrival results (to show table assignment and success message)</li>
+     * </ul>
+     *
+     * @param response the response received from the server
+     */
     @Override
     public void handleResponse(ResponseDTO response) {
         Platform.runLater(() -> {
@@ -153,7 +192,6 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
 
             if (response == null) return;
 
-            // ✅ Case 1: list for table
             if (response.isSuccess() && response.getData() instanceof ArrayList<?> list) {
                 myActiveWaitings.clear();
                 for (Object o : list) {
@@ -164,7 +202,6 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
                 return;
             }
 
-            // ✅ Case 2: confirm arrival
             if (response.isSuccess()) {
 
                 Waiting w = null;
@@ -192,20 +229,41 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
         });
     }
 
+    /**
+     * Handles connection errors by displaying an error message on the UI thread.
+     *
+     * @param e the connection exception
+     */
     @Override
     public void handleConnectionError(Exception e) {
         Platform.runLater(() -> showError("Connection lost."));
     }
 
+    /**
+     * Handles connection closure events (no UI action defined in this controller).
+     */
     @Override
     public void handleConnectionClosed() {}
 
+    /**
+     * Navigates back to the table-choice screen and clears the active response handler.
+     */
     @FXML
     private void onBackClicked() {
         if (chatClient != null) chatClient.setResponseHandler(null);
         openWindow("GetTableChoice_B.fxml", "Get Table");
     }
 
+    /**
+     * Loads the requested FXML and swaps the current scene root to navigate between screens.
+     *
+     * <p>If the target controller defines {@code setClientActions(ClientActions)} and/or
+     * {@code setClient(User, ChatClient)}, these will be invoked reflectively to preserve
+     * session context.</p>
+     *
+     * @param fxmlName the target FXML file name under {@code /gui/}
+     * @param title    the window title suffix to display
+     */
     private void openWindow(String fxmlName, String title) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
@@ -232,7 +290,6 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
             Stage stage = (Stage) rootPane.getScene().getWindow();
             Scene scene = stage.getScene();
 
-            // ✅ ניווט למסך גדול – בלי Scene חדשה
             if (scene == null) {
                 stage.setScene(new Scene(root));
             } else {
@@ -248,9 +305,9 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
         }
     }
 
-
-    // ================= UI helpers =================
-
+    /**
+     * Hides both information and error messages.
+     */
     private void hideMessages() {
         lblError.setVisible(false);
         lblError.setManaged(false);
@@ -258,18 +315,34 @@ public class GetTableFromWaiting_BController implements ClientResponseHandler {
         lblInfo.setManaged(false);
     }
 
+    /**
+     * Displays an error message.
+     *
+     * @param msg the message to display
+     */
     private void showError(String msg) {
         lblError.setText(msg);
         lblError.setVisible(true);
         lblError.setManaged(true);
     }
 
+    /**
+     * Displays an informational message.
+     *
+     * @param msg the message to display
+     */
     private void showInfo(String msg) {
         lblInfo.setText(msg);
         lblInfo.setVisible(true);
         lblInfo.setManaged(true);
     }
 
+    /**
+     * Shows a success information alert dialog.
+     *
+     * @param title   the alert title
+     * @param content the alert content text
+     */
     private void showSuccessAlert(String title, String content) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);

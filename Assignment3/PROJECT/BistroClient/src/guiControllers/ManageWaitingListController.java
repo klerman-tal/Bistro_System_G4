@@ -26,6 +26,17 @@ import javafx.stage.Stage;
 import network.ClientAPI;
 import network.ClientResponseHandler;
 
+/**
+ * JavaFX controller for managing the waiting list (manager/agent view).
+ *
+ * <p>This screen displays all waiting entries in a table and supports adding a new waiting,
+ * cancelling an existing waiting, refreshing the list, and navigating back to the management screen.
+ * Data is loaded from the server using {@link ClientAPI}. The controller installs a
+ * {@link ClientResponseHandler} to update the UI when server responses arrive.</p>
+ *
+ * <p>Navigation is performed by swapping the current scene root to preserve the window instance
+ * and maximized state.</p>
+ */
 public class ManageWaitingListController {
 
     @FXML private BorderPane rootPane;
@@ -47,8 +58,13 @@ public class ManageWaitingListController {
     private final ObservableList<Waiting> waitingData =
             FXCollections.observableArrayList();
 
-    /* ================= SESSION ================= */
-
+    /**
+     * Injects the current session context, initializes {@link ClientAPI}, registers a response handler,
+     * and loads the initial waiting list.
+     *
+     * @param user       the current logged-in user
+     * @param chatClient the network client used to communicate with the server
+     */
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
@@ -75,8 +91,10 @@ public class ManageWaitingListController {
         loadWaitingList();
     }
 
-    /* ================= TABLE ================= */
-
+    /**
+     * Configures the waiting list table columns, binds it to the observable list,
+     * and applies row styling based on {@link WaitingStatus}.
+     */
     private void setupTable() {
         colWaitingId.setCellValueFactory(new PropertyValueFactory<>("waitingId"));
         colCreatedBy.setCellValueFactory(new PropertyValueFactory<>("createdByUserId"));
@@ -87,7 +105,6 @@ public class ManageWaitingListController {
         colTableNum.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
         colStatus.setCellValueFactory(new PropertyValueFactory<>("waitingStatus"));
 
-        // Row coloring by status
         tblWaitingList.setRowFactory(tv -> new TableRow<Waiting>() {
             @Override
             protected void updateItem(Waiting item, boolean empty) {
@@ -107,8 +124,9 @@ public class ManageWaitingListController {
         tblWaitingList.setItems(waitingData);
     }
 
-    /* ================= ACTIONS ================= */
-
+    /**
+     * Opens the "Join Waiting" screen and configures it to navigate back to this screen.
+     */
     @FXML
     private void onAddWaitingClicked() {
         openScreen("/gui/JoinWaiting_B.fxml", controller -> {
@@ -118,7 +136,11 @@ public class ManageWaitingListController {
         });
     }
 
-
+    /**
+     * Opens the "Cancel Waiting" screen for the selected waiting entry.
+     *
+     * <p>If no entry is selected, the method does nothing.</p>
+     */
     @FXML
     private void onCancelWaitingClicked() {
         Waiting selected = tblWaitingList.getSelectionModel().getSelectedItem();
@@ -131,13 +153,18 @@ public class ManageWaitingListController {
         });
     }
 
-
+    /**
+     * Clears the current table data and reloads the waiting list from the server.
+     */
     @FXML
     private void onRefreshClicked() {
         waitingData.clear();
         loadWaitingList();
     }
 
+    /**
+     * Requests the full waiting list from the server.
+     */
     private void loadWaitingList() {
         try {
             clientAPI.getWaitingList();
@@ -146,6 +173,9 @@ public class ManageWaitingListController {
         }
     }
 
+    /**
+     * Navigates back to the restaurant management screen.
+     */
     @FXML
     private void onBackClicked() {
         openScreen("/gui/RestaurantManagement_B.fxml", controller ->
@@ -154,8 +184,12 @@ public class ManageWaitingListController {
         );
     }
 
-    /* ================= NAVIGATION ================= */
-
+    /**
+     * Loads the requested FXML and swaps the current scene root to navigate between screens.
+     *
+     * @param fxmlPath  the classpath resource path of the target FXML
+     * @param injector  callback used to inject required context into the target controller
+     */
     private void openScreen(String fxmlPath, java.util.function.Consumer<Object> injector) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));

@@ -10,8 +10,20 @@ import javafx.stage.Stage;
 import java.io.IOException;
 import application.ClientUI;
 
+/**
+ * JavaFX controller for the login choice screen.
+ *
+ * <p>This controller routes the user to either the subscriber login screen or the guest login screen,
+ * and injects the shared {@link application.ChatClient} instance from {@link ClientUI} into the next controller.
+ * Navigation is performed by swapping the current scene root (without creating a new {@link Scene}).</p>
+ */
 public class Login_BController {
 
+    /**
+     * Navigates to the subscriber login screen and injects the shared client instance.
+     *
+     * @param event the JavaFX action event
+     */
     @FXML
     private void handleSubscriberChoice(ActionEvent event) {
 
@@ -24,7 +36,6 @@ public class Login_BController {
 
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
 
-            // ✅ תצוגה בלבד – בלי Scene חדשה
             Scene scene = stage.getScene();
             if (scene == null) {
                 stage.setScene(new Scene(root));
@@ -40,6 +51,11 @@ public class Login_BController {
         }
     }
 
+    /**
+     * Navigates to the guest login screen and injects the shared client instance.
+     *
+     * @param event the JavaFX action event
+     */
     @FXML
     private void handleGuestChoice(ActionEvent event) {
 
@@ -52,7 +68,6 @@ public class Login_BController {
 
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
 
-            // ✅ תצוגה בלבד – בלי Scene חדשה
             Scene scene = stage.getScene();
             if (scene == null) {
                 stage.setScene(new Scene(root));

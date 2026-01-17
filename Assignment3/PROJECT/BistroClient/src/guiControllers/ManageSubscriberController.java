@@ -32,6 +32,17 @@ import network.ClientAPI;
 import network.ClientResponseHandler;
 import utils.QRUtil;
 
+/**
+ * JavaFX controller for managing subscribers (manager/agent view).
+ *
+ * <p>This screen displays all subscribers in a table, allows selecting a subscriber to populate
+ * an editable form, and supports refreshing, updating, deleting, and creating subscribers.
+ * It communicates with the server via {@link ClientAPI} and processes asynchronous responses
+ * through a {@link ClientResponseHandler} registered on the current {@link ChatClient}.</p>
+ *
+ * <p>Navigation is performed by swapping the current scene root to preserve the window instance
+ * and maximized state.</p>
+ */
 public class ManageSubscriberController {
 
     @FXML private BorderPane rootPane;
@@ -62,10 +73,22 @@ public class ManageSubscriberController {
     private final ObservableList<Subscriber> subscribersList =
             FXCollections.observableArrayList();
 
+    /**
+     * Injects a {@link ClientActions} implementation for controllers that rely on GUI-to-client actions.
+     *
+     * @param clientActions the client actions bridge used by downstream controllers
+     */
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
     }
 
+    /**
+     * Injects the current session context, initializes {@link ClientAPI}, and registers a response handler
+     * that delegates server responses to {@link #handleServerResponse(ResponseDTO)} on the JavaFX UI thread.
+     *
+     * @param performedBy the user performing the management actions
+     * @param chatClient   the network client used to communicate with the server
+     */
     public void setClient(User performedBy, ChatClient chatClient) {
         this.performedBy = performedBy;
         this.chatClient = chatClient;
@@ -94,6 +117,10 @@ public class ManageSubscriberController {
         loadSubscribersOnEnter();
     }
 
+    /**
+     * Configures the subscribers table columns, binds the table to the observable list,
+     * and installs a selection listener to populate the form.
+     */
     private void initializeTableBehavior() {
         colSubscriberId.setCellValueFactory(new PropertyValueFactory<>("userId"));
         colUsername.setCellValueFactory(new PropertyValueFactory<>("username"));
@@ -112,6 +139,11 @@ public class ManageSubscriberController {
         });
     }
 
+    /**
+     * Fills the form fields with details from the selected subscriber.
+     *
+     * @param s the selected subscriber
+     */
     private void fillForm(Subscriber s) {
         txtSubscriberId.setText(String.valueOf(s.getUserId()));
         txtUsername.setText(s.getUsername());
@@ -122,6 +154,9 @@ public class ManageSubscriberController {
         txtRole.setText(s.getUserRole().name());
     }
 
+    /**
+     * Clears all form input fields.
+     */
     private void clearForm() {
         txtSubscriberId.clear();
         txtUsername.clear();
@@ -132,6 +167,9 @@ public class ManageSubscriberController {
         txtRole.clear();
     }
 
+    /**
+     * Requests the subscribers list from the server when entering the screen.
+     */
     private void loadSubscribersOnEnter() {
         hideMessage();
         try {
@@ -142,6 +180,19 @@ public class ManageSubscriberController {
         }
     }
 
+    /**
+     * Processes server responses related to subscriber management.
+     *
+     * <p>Supported response cases:</p>
+     * <ul>
+     *   <li>List of subscribers: updates the table.</li>
+     *   <li>Created subscriber ID (Integer): shows a QR popup and refreshes the list.</li>
+     *   <li>Update success message: shows confirmation and refreshes the list.</li>
+     *   <li>Delete success (null data): shows confirmation, clears the form, and refreshes the list.</li>
+     * </ul>
+     *
+     * @param response the response received from the server
+     */
     private void handleServerResponse(ResponseDTO response) {
         if (response == null) return;
 
@@ -177,11 +228,19 @@ public class ManageSubscriberController {
         }
     }
 
+    /**
+     * Refreshes the subscribers list.
+     */
     @FXML
     private void onRefreshClicked() {
         loadSubscribersOnEnter();
     }
 
+    /**
+     * Deletes the currently selected subscriber.
+     *
+     * <p>If no subscriber is selected, displays a message to the user.</p>
+     */
     @FXML
     private void onDeleteClicked() {
         Subscriber selected = tblSubscribers.getSelectionModel().getSelectedItem();
@@ -198,6 +257,11 @@ public class ManageSubscriberController {
         }
     }
 
+    /**
+     * Updates the currently selected subscriber using the values in the form fields.
+     *
+     * <p>Performs basic phone and email validation before sending the update request.</p>
+     */
     @FXML
     private void onUpdateClicked() {
         hideMessage();
@@ -236,11 +300,17 @@ public class ManageSubscriberController {
         }
     }
 
+    /**
+     * Navigates back to the restaurant management screen.
+     */
     @FXML
     private void onBackClicked() {
         navigateTo("/gui/RestaurantManagement_B.fxml", "Restaurant Management");
     }
 
+    /**
+     * Opens the "Create Subscriber" popup window and injects required context into the popup controller.
+     */
     @FXML
     private void onCreateSubscriberClicked() {
         hideMessage();
@@ -267,6 +337,15 @@ public class ManageSubscriberController {
         }
     }
 
+    /**
+     * Loads the requested FXML and swaps the current scene root to navigate between screens.
+     *
+     * <p>If the target controller defines {@code setClientActions(ClientActions)} and/or
+     * {@code setClient(User, ChatClient)}, these will be invoked reflectively to preserve context.</p>
+     *
+     * @param fxmlPath the classpath resource path of the target FXML
+     * @param title    the window title suffix to display
+     */
     private void navigateTo(String fxmlPath, String title) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
@@ -289,7 +368,6 @@ public class ManageSubscriberController {
             Stage stage = (Stage) rootPane.getScene().getWindow();
             stage.setTitle("Bistro - " + title);
 
-            // ✅ תצוגה בלבד – בלי Scene חדשה
             Scene scene = stage.getScene();
             if (scene == null) {
                 stage.setScene(new Scene(root));
@@ -306,18 +384,31 @@ public class ManageSubscriberController {
         }
     }
 
+    /**
+     * Displays a status message in the UI.
+     *
+     * @param msg the message to display
+     */
     private void showMessage(String msg) {
         lblStatus.setText(msg);
         lblStatus.setVisible(true);
         lblStatus.setManaged(true);
     }
 
+    /**
+     * Clears and hides the status message area.
+     */
     private void hideMessage() {
         lblStatus.setText("");
         lblStatus.setVisible(false);
         lblStatus.setManaged(false);
     }
 
+    /**
+     * Shows an information alert indicating a subscriber was created, including a QR code for the ID.
+     *
+     * @param createdId the created subscriber ID
+     */
     private void showSubscriberCreatedAlertWithQR(int createdId) {
         Image qrImage = QRUtil.generateQR(String.valueOf(createdId));
         ImageView qrView = new ImageView(qrImage);

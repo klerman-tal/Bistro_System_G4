@@ -22,6 +22,16 @@ import network.ClientResponseHandler;
 import java.io.IOException;
 import java.util.function.UnaryOperator;
 
+/**
+ * JavaFX controller for guest login.
+ *
+ * <p>This controller validates guest phone and email input, sends a guest login request to the server
+ * via {@link ClientAPI}, and on success stores the logged-in user in {@link ClientSession} before
+ * navigating to the main menu. It also opens a recovery popup for retrieving a guest confirmation code.</p>
+ *
+ * <p>The controller implements {@link ClientResponseHandler} to process asynchronous server responses
+ * and connection events.</p>
+ */
 public class GuestLoginController implements ClientResponseHandler {
 
     @FXML private TextField phoneField;
@@ -33,6 +43,11 @@ public class GuestLoginController implements ClientResponseHandler {
 
     private final String EMAIL_REGEX = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
 
+    /**
+     * Initializes the controller after FXML injection.
+     *
+     * <p>Applies a numeric-only input filter to the phone field and limits input length to 10 digits.</p>
+     */
     @FXML
     public void initialize() {
         UnaryOperator<TextFormatter.Change> filter = change -> {
@@ -43,6 +58,12 @@ public class GuestLoginController implements ClientResponseHandler {
         phoneField.setTextFormatter(new TextFormatter<>(filter));
     }
 
+    /**
+     * Injects the {@link ChatClient} into this controller, initializes {@link ClientAPI},
+     * and registers this controller as the active response handler.
+     *
+     * @param chatClient the network client used to send requests
+     */
     public void setClient(ChatClient chatClient) {
         this.chatClient = chatClient;
         if (chatClient != null) {
@@ -51,6 +72,13 @@ public class GuestLoginController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Handles the Guest Login action.
+     *
+     * <p>Validates the phone and email inputs and sends a guest login request to the server.</p>
+     *
+     * @param event the JavaFX action event
+     */
     @FXML
     private void handleGuestLogin(ActionEvent event) {
         hideError();
@@ -87,6 +115,14 @@ public class GuestLoginController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Handles the server response to the guest login request.
+     *
+     * <p>On success, stores the logged-in user in {@link ClientSession} and navigates to the menu.
+     * On failure, displays the error message.</p>
+     *
+     * @param response the response received from the server
+     */
     @Override
     public void handleResponse(ResponseDTO response) {
         Platform.runLater(() -> {
@@ -103,9 +139,11 @@ public class GuestLoginController implements ClientResponseHandler {
         });
     }
 
-    // =========================
-    // MAIN SCREEN navigation
-    // =========================
+    /**
+     * Navigates to the main menu screen while preserving the current session context.
+     *
+     * @param loggedInUser the user to inject into the menu controller
+     */
     private void goToMenu(User loggedInUser) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
@@ -115,7 +153,6 @@ public class GuestLoginController implements ClientResponseHandler {
 
             Stage stage = (Stage) phoneField.getScene().getWindow();
 
-            // ✅ תצוגה בלבד – בלי Scene חדשה
             Scene scene = stage.getScene();
             if (scene == null) {
                 stage.setScene(new Scene(root));
@@ -132,9 +169,13 @@ public class GuestLoginController implements ClientResponseHandler {
         }
     }
 
-    // =========================
-    // POPUP – לא נוגעים
-    // =========================
+    /**
+     * Opens a modal popup for recovering a guest reservation confirmation code.
+     *
+     * <p>After closing the popup, this controller is re-registered as the active response handler.</p>
+     *
+     * @param event the JavaFX action event
+     */
     @FXML
     private void handleForgotConfirmationCode(ActionEvent event) {
         try {
@@ -159,21 +200,28 @@ public class GuestLoginController implements ClientResponseHandler {
         }
     }
 
-    // =========================
-    // MAIN SCREEN navigation
-    // =========================
+    /**
+     * Handles the Back action by navigating to the login screen.
+     *
+     * @param event the JavaFX action event
+     */
     @FXML
     private void handleBackButton(ActionEvent event) {
         navigateTo(event, "/gui/Login_B.fxml");
     }
 
+    /**
+     * Navigates to a target FXML screen by swapping the current scene root.
+     *
+     * @param event    the JavaFX action event
+     * @param fxmlPath the classpath resource path to the FXML file
+     */
     private void navigateTo(ActionEvent event, String fxmlPath) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
             Parent root = loader.load();
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
 
-            // ✅ תצוגה בלבד – בלי Scene חדשה
             Scene scene = stage.getScene();
             if (scene == null) {
                 stage.setScene(new Scene(root));
@@ -189,6 +237,11 @@ public class GuestLoginController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Displays an error or status message in the UI label.
+     *
+     * @param msg the message to display
+     */
     private void showError(String msg) {
         if (lblMessage != null) {
             lblMessage.setText(msg);
@@ -197,6 +250,9 @@ public class GuestLoginController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Hides the message label area.
+     */
     private void hideError() {
         if (lblMessage != null) {
             lblMessage.setVisible(false);
@@ -204,11 +260,19 @@ public class GuestLoginController implements ClientResponseHandler {
         }
     }
 
+    /**
+     * Handles connection errors by displaying an error message on the UI thread.
+     *
+     * @param e the connection exception
+     */
     @Override
     public void handleConnectionError(Exception e) {
         Platform.runLater(() -> showError("Server connection lost."));
     }
 
+    /**
+     * Handles connection closure events (no UI action defined in this controller).
+     */
     @Override
     public void handleConnectionClosed() {}
 }
