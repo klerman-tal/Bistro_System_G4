@@ -1,11 +1,13 @@
 package guiControllers;
 
 import application.ChatClient;
+import entities.Enums;
 import entities.User;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
@@ -15,6 +17,9 @@ public class RestaurantManagement_BController {
     @FXML private BorderPane rootPane;
     @FXML private Label lblMessage;
 
+    // 🔑 כפתור הדוחות
+    @FXML private Button btnReports;
+
     private User user;
     private ChatClient chatClient;
 
@@ -23,6 +28,16 @@ public class RestaurantManagement_BController {
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
+
+        boolean isManager =
+                user != null &&
+                user.getUserRole() == Enums.UserRole.RestaurantManager;
+
+        // 🔒 Reports – Manager ONLY
+        btnReports.setVisible(isManager);
+        btnReports.setManaged(isManager);
+
+        hideMessage();
     }
 
     /* ================= NAVIGATION ================= */
@@ -85,6 +100,14 @@ public class RestaurantManagement_BController {
 
     @FXML
     private void onReportsClicked() {
+        // 🛑 HARD BLOCK – גם אם מישהו יגיע לכאן בטעות
+        if (user == null ||
+            user.getUserRole() != Enums.UserRole.RestaurantManager) {
+
+            showMessage("Access denied. Managers only.");
+            return;
+        }
+
         openWindow("ReportsMenu.fxml", "Reports");
     }
 
@@ -116,5 +139,10 @@ public class RestaurantManagement_BController {
         lblMessage.setText(msg);
         lblMessage.setVisible(true);
         lblMessage.setManaged(true);
+    }
+
+    private void hideMessage() {
+        lblMessage.setVisible(false);
+        lblMessage.setManaged(false);
     }
 }
