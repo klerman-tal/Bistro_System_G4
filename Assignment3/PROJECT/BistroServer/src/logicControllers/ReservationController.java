@@ -27,10 +27,29 @@ import dto.GetTableResultDTO;
 
 
 
+/**
+ * Handles reservation-related business logic and orchestration.
+ * <p>
+ * This controller acts as the main logic layer for creating, cancelling, finishing, and querying reservations.
+ * It coordinates between:
+ * <ul>
+ *   <li>{@link Reservation_DB_Controller} for reservation persistence</li>
+ *   <li>{@link RestaurantController} for table availability and slot locking/releasing</li>
+ *   <li>{@link Notification_DB_Controller} for scheduling customer notifications</li>
+ *   <li>{@link WaitingController} for waiting-list handling when a table becomes available</li>
+ *   <li>{@link ReceiptController} for creating receipts at check-in time</li>
+ * </ul>
+ * </p>
+ * <p>
+ * The controller also manages pending check-ins: if a customer arrives within the allowed check-in window
+ * but the assigned table is still occupied, the check-in request is stored and the customer is notified
+ * when the table is freed.
+ * </p>
+ */
 public class ReservationController {
 
     private final Reservation_DB_Controller db;
-    private final Notification_DB_Controller notificationDB; // ✅ scheduled notifications
+    private final Notification_DB_Controller notificationDB; 
     private final Restaurant restaurant;
     private final RestaurantServer server;
     private final RestaurantController restaurantController;
@@ -38,17 +57,30 @@ public class ReservationController {
 
 
 
-    // ✅ NEW: link to waiting logic for "table freed" scenario
     private WaitingController waitingController;
- // Pending check-ins: tableNumber -> pending reservation info
     private final Map<Integer, PendingReservationCheckin> pendingCheckins = new ConcurrentHashMap<>();
 
+    /**
+     * Holds a pending check-in request for a reservation whose assigned table is currently occupied.
+     * <p>
+     * When the table is freed, the controller sends a notification to the user so they can proceed
+     * with check-in using their confirmation code.
+     * </p>
+     */
     private static class PendingReservationCheckin {
         final int reservationId;
         final int userId;
         final String confirmationCode;
         final int tableNumber;
 
+        /**
+         * Constructs a pending check-in record.
+         *
+         * @param reservationId     reservation identifier
+         * @param userId            identifier of the user who created the reservation
+         * @param confirmationCode  reservation confirmation code
+         * @param tableNumber       assigned table number
+         */
         PendingReservationCheckin(int reservationId, int userId, String confirmationCode, int tableNumber) {
             this.reservationId = reservationId;
             this.userId = userId;
@@ -59,7 +91,14 @@ public class ReservationController {
 
 
     /**
-     * Constructor: connects controller to DB layer, server logger, and restaurant availability logic.
+     * Constructs a ReservationController and connects it to the DB layer, server logger,
+     * and table availability logic.
+     *
+     * @param db                database controller used for reservation persistence
+     * @param notificationDB    database controller used for scheduling and persisting notifications
+     * @param server            server instance used for logging
+     * @param rc                restaurant logic controller used for availability and slot management
+     * @param receiptController logic controller used for receipt creation at check-in
      */
     public ReservationController(Reservation_DB_Controller db,
             Notification_DB_Controller notificationDB,
@@ -77,20 +116,32 @@ public class ReservationController {
 
 
     /**
-     * ✅ NEW: connect waiting controller after construction (avoid circular constructor dependency).
+     * Connects the waiting controller after construction.
+     * <p>
+     * This setter exists to avoid circular constructor dependencies between controllers.
+     * </p>
+     *
+     * @param waitingController waiting-list controller to be used for "table freed" scenarios
      */
     public void setWaitingController(WaitingController waitingController) {
         this.waitingController = waitingController;
     }
 
-    // =====================================================
-    // NOTIFICATIONS (SCHEDULED)
-    // =====================================================
+    // ====NOTIFICATIONS (SCHEDULED)====
 
     /**
-     * Schedules reminder notifications 2 hours before reservation time (SMS + Email).
-     * English texts:
-     * - SMS/Email content: "Reminder: Your reservation is in 2 hours. Confirmation code: <CODE>"
+     * Schedules reminder notifications (SMS and Email) two hours before the reservation time.
+     * <p>
+     * The notification content follows the format:
+     * {@code "Reminder: Your reservation is in 2 hours. Confirmation code: <CODE>"}.
+     * </p>
+     * <p>
+     * If the scheduled time is already in the past, the reminder is not scheduled.
+     * </p>
+     *
+     * @param userId                the user who should receive the reminder
+     * @param reservationDateTime   the reservation date and time
+     * @param confirmationCode      reservation confirmation code to include in the reminder
      */
     private void scheduleReservationReminder2HoursBefore(int userId, LocalDateTime reservationDateTime, String confirmationCode) {
         try {
@@ -129,10 +180,25 @@ public class ReservationController {
         }
     }
 
-    // =====================================================
-    // AVAILABILITY HELPERS
-    // =====================================================
+    // ====AVAILABILITY HELPERS====
 
+    /**
+     * Fills an output list with available reservation start times for a specific day.
+     * <p>
+     * The method uses {@link RestaurantController#getOneAvailableTablePerSlot(LocalDate, int)} to get candidate slots,
+     * then filters them by:
+     * <ul>
+     *   <li>optional {@code fromTime} constraint</li>
+     *   <li>table existence per slot</li>
+     *   <li>free-for-two-hours validation using {@link RestaurantController#isTableFreeForTwoHours(LocalDateTime, int)}</li>
+     * </ul>
+     * </p>
+     *
+     * @param date         the requested reservation date
+     * @param guestsNumber number of guests
+     * @param fromTime     optional lower bound for the returned times (inclusive); may be {@code null}
+     * @param out          list to populate with available times (cleared before use)
+     */
     private void fillAvailableTimesForDay(
             LocalDate date,
             int guestsNumber,
@@ -167,6 +233,17 @@ public class ReservationController {
         }
     }
 
+    /**
+     * Attempts to reserve a two-hour window starting at {@code start} for the given table.
+     * <p>
+     * The two-hour window is represented by 4 consecutive 30-minute slots.
+     * If any slot cannot be locked, all previously locked slots are released.
+     * </p>
+     *
+     * @param start       start date-time of the reservation
+     * @param tableNumber table number to lock
+     * @return {@code true} if all 4 slots were successfully locked, {@code false} otherwise
+     */
     private boolean tryReserveForTwoHours(LocalDateTime start, int tableNumber) {
         ArrayList<LocalDateTime> locked = new ArrayList<>();
         LocalDateTime slot = start;
@@ -204,7 +281,13 @@ public class ReservationController {
     // =====================================================
 
     /**
-     * ✅ NEW: after cancel/finish releases a table, notify waiting list (scenario 2B).
+     * After a reservation cancellation/finish releases a table, triggers waiting-list logic.
+     * <p>
+     * The method attempts to resolve the freed {@link Table} from the {@link Restaurant} cache.
+     * If not found, it falls back to a minimal {@link Table} instance (with a best-effort seats amount).
+     * </p>
+     *
+     * @param tableNumber freed table number
      */
     private void notifyWaitingTableFreed(Integer tableNumber) {
         if (waitingController == null) return;
@@ -239,11 +322,31 @@ public class ReservationController {
             server.log("ERROR: notifyWaitingTableFreed failed. Table=" + tableNumber + ", Msg=" + e.getMessage());
         }
     }
+    
+    // ====CREATE / CANCEL RESERVATION====
 
-    // =====================================================
-    // CREATE / CANCEL RESERVATION
-    // =====================================================
-
+    /**
+     * Creates a new table reservation for a specific date/time and guest count.
+     * <p>
+     * Rules enforced by this method:
+     * <ul>
+     *   <li>Reservation time must be at least 1 hour from now</li>
+     *   <li>Reservation time must be within the next month</li>
+     *   <li>Assigned table must be available for a full two-hour window (4 slots)</li>
+     * </ul>
+     * </p>
+     * <p>
+     * If the requested time is unavailable, the method can optionally fill {@code availableTimesOut}
+     * with alternative times on the same day.
+     * </p>
+     * <p>
+     * On successful creation, the method schedules a 2-hour reminder notification.
+     * </p>
+     *
+     * @param dto               request data for creating the reservation
+     * @param availableTimesOut optional output list that will be populated with alternative times on failure
+     * @return a created {@link Reservation} instance on success, or {@code null} on failure
+     */
     public Reservation CreateTableReservation(
             CreateReservationDTO dto,
             ArrayList<LocalTime> availableTimesOut) {
@@ -304,7 +407,7 @@ public class ReservationController {
             }
             res.setReservationId(reservationId);
 
-            // ✅ schedule reminder 2 hours before
+            // schedule reminder 2 hours before
             scheduleReservationReminder2HoursBefore(dto.getUserId(), requested, res.getConfirmationCode());
 
         } catch (SQLException e) {
@@ -315,6 +418,22 @@ public class ReservationController {
 
         return res;
     }
+
+    /**
+     * Relocates or cancels upcoming active reservations when a table is deleted.
+     * <p>
+     * For each active reservation of the deleted table within the next {@code days}:
+     * <ul>
+     *   <li>Try to find an alternative available table (excluding the deleted one)</li>
+     *   <li>If no alternative exists or locking fails, cancel the reservation</li>
+     *   <li>If relocation succeeds, update the reservation table number in the database</li>
+     * </ul>
+     * </p>
+     *
+     * @param tableNumber deleted table number
+     * @param days        how many days ahead to scan for affected reservations
+     * @return number of reservations that were cancelled or successfully relocated
+     */
     public int relocateOrCancelReservationsForDeletedTable(int tableNumber, int days) {
         int affected = 0;
 
@@ -328,10 +447,8 @@ public class ReservationController {
                 LocalDateTime start = r.getReservationTime();
                 int guests = r.getGuestAmount();
 
-                // 1) מצא שולחן חלופי (לא כולל השולחן שנמחק)
                 Table newTable = restaurantController.getOneAvailableTableAtExcluding(start, guests, tableNumber);
 
-                // 2) אם אין חלופי -> בטל
                 if (newTable == null) {
                     server.log("DELETE TABLE: Cancelling reservation (no alternative table). Code=" +
                             r.getConfirmationCode() + " Time=" + start + " OldTable=" + tableNumber);
@@ -343,7 +460,6 @@ public class ReservationController {
 
                 int newTableNum = newTable.getTableNumber();
 
-                // 3) ודא 2 שעות פנויות + נעל
                 boolean locked = tryReserveForTwoHours(start, newTableNum);
                 if (!locked) {
                     server.log("DELETE TABLE: Cancelling reservation (failed locking new table). Code=" +
@@ -354,21 +470,17 @@ public class ReservationController {
                     continue;
                 }
 
-                // 4) שחרר 2 שעות מהשולחן הישן
                 for (int i = 0; i < 4; i++) {
                     try { restaurantController.releaseSlot(start.plusMinutes(30L * i), tableNumber); }
                     catch (Exception ignore) {}
                 }
 
-                // 5) עדכן DB לשולחן החדש
                 boolean updated = db.updateReservationTableNumber(r.getReservationId(), newTableNum);
                 if (!updated) {
-                    // אם נכשל עדכון DB: rollback לוגי
                     for (int i = 0; i < 4; i++) {
                         try { restaurantController.releaseSlot(start.plusMinutes(30L * i), newTableNum); }
                         catch (Exception ignore) {}
                     }
-                    // ואת הישנה נחזיר לתפוס כדי לא “לשחרר בטעות”
                     for (int i = 0; i < 4; i++) {
                         try { restaurantController.tryReserveSlot(start.plusMinutes(30L * i), tableNumber); }
                         catch (Exception ignore) {}
@@ -392,7 +504,20 @@ public class ReservationController {
         return affected;
     }
 
-
+    /**
+     * Creates a reservation directly from the waiting list flow.
+     * <p>
+     * The method locks a two-hour window for the specified table, inserts a reservation row,
+     * and schedules the 2-hour reminder notification.
+     * </p>
+     *
+     * @param confirmationCode reservation confirmation code
+     * @param start            reservation start time
+     * @param guests           number of guests
+     * @param user             user creating the reservation
+     * @param tableNumber      table number to assign
+     * @return {@code true} if the reservation was created successfully, {@code false} otherwise
+     */
     public boolean createReservationFromWaiting(
             String confirmationCode,
             LocalDateTime start,
@@ -435,6 +560,21 @@ public class ReservationController {
         }
     }
 
+    /**
+     * Cancels an active reservation by its confirmation code.
+     * <p>
+     * The cancellation process:
+     * <ul>
+     *   <li>Validates that the reservation exists and is active</li>
+     *   <li>Releases the two-hour slot window (4 slots) for the assigned table</li>
+     *   <li>Updates the database to mark the reservation as cancelled</li>
+     *   <li>Schedules a cancellation notification and triggers waiting/pending-checkin handlers</li>
+     * </ul>
+     * </p>
+     *
+     * @param confirmationCode reservation confirmation code
+     * @return {@code true} if successfully cancelled, {@code false} otherwise
+     */
     public boolean CancelReservation(String confirmationCode) {
 
         try {
@@ -482,6 +622,13 @@ public class ReservationController {
             return false;
         }
     }
+
+    /**
+     * Schedules an immediate cancellation notification (shown on user login) for a cancelled reservation.
+     *
+     * @param r      cancelled reservation
+     * @param reason optional cancellation reason message
+     */
     private void scheduleReservationCancelledPopupForLogin(Reservation r, String reason) {
         if (notificationDB == null || r == null) return;
 
@@ -508,6 +655,12 @@ public class ReservationController {
 
    
 
+    /**
+     * Rolls back a reservation attempt by releasing the two-hour slot window (4 slots).
+     *
+     * @param requested   requested reservation time
+     * @param tableNumber table number whose slots should be released
+     */
     private void rollbackReservation(LocalDateTime requested, int tableNumber) {
         server.log("Rolling back: releasing 2 hours (4 slots) for table " + tableNumber);
         for (int i = 0; i < 4; i++) {
@@ -520,6 +673,8 @@ public class ReservationController {
     
     /**
      * Returns current diners (checked-in but not checked-out).
+     *
+     * @return list of current diners; empty list on error
      */
     public ArrayList<Reservation> getCurrentDiners() {
         try {
@@ -531,10 +686,14 @@ public class ReservationController {
     }
 
 
-    // =====================================================
-    // READ (QUERIES)
-    // =====================================================
+    // ====READ (QUERIES)====
 
+    /**
+     * Retrieves all reservations created by a specific user.
+     *
+     * @param userId user identifier
+     * @return list of reservations for the user; empty list on error
+     */
     public ArrayList<Reservation> getReservationsForUser(int userId) {
         try {
             return db.getReservationsByUser(userId);
@@ -545,6 +704,11 @@ public class ReservationController {
         }
     }
 
+    /**
+     * Retrieves all active reservations.
+     *
+     * @return list of active reservations, or {@code null} on database error
+     */
     public ArrayList<Reservation> getAllActiveReservations() {
         try {
             return db.getActiveReservations();
@@ -554,6 +718,11 @@ public class ReservationController {
         }
     }
 
+    /**
+     * Retrieves full reservations history from the database.
+     *
+     * @return list of all reservations, or {@code null} on database error
+     */
     public ArrayList<Reservation> getAllReservationsHistory() {
         try {
             return db.getAllReservations();
@@ -563,6 +732,12 @@ public class ReservationController {
         }
     }
 
+    /**
+     * Finds a reservation by its confirmation code.
+     *
+     * @param confirmationCode reservation confirmation code
+     * @return matching reservation, or {@code null} if not found / on error
+     */
     public Reservation getReservationByConfirmationCode(String confirmationCode) {
         try {
             return db.getReservationByConfirmationCode(confirmationCode);
@@ -573,10 +748,15 @@ public class ReservationController {
         }
     }
 
-    // =====================================================
-    // UPDATE
-    // =====================================================
+    // ====UPDATE====
 
+    /**
+     * Updates the reservation status in the database.
+     *
+     * @param reservationId reservation identifier
+     * @param status        new reservation status
+     * @return {@code true} if updated successfully, {@code false} otherwise
+     */
     public boolean updateReservationStatus(int reservationId, ReservationStatus status) {
         try {
             boolean updated = db.updateReservationStatus(reservationId, status);
@@ -596,6 +776,13 @@ public class ReservationController {
         }
     }
 
+    /**
+     * Updates the confirmation flag ({@code is_confirmed}) for a reservation.
+     *
+     * @param reservationId reservation identifier
+     * @param isConfirmed   new confirmation value
+     * @return {@code true} if updated successfully, {@code false} otherwise
+     */
     public boolean updateReservationConfirmation(int reservationId, boolean isConfirmed) {
         try {
             boolean updated = db.updateIsConfirmed(reservationId, isConfirmed);
@@ -615,6 +802,13 @@ public class ReservationController {
         }
     }
 
+    /**
+     * Updates the check-in time for a reservation.
+     *
+     * @param reservationId reservation identifier
+     * @param checkinTime   check-in timestamp to set
+     * @return {@code true} if updated successfully, {@code false} otherwise
+     */
     public boolean updateCheckinTime(int reservationId, LocalDateTime checkinTime) {
         try {
             boolean updated = db.updateCheckinTime(reservationId, checkinTime);
@@ -634,6 +828,13 @@ public class ReservationController {
         }
     }
 
+    /**
+     * Updates the check-out time for a reservation.
+     *
+     * @param reservationId reservation identifier
+     * @param checkoutTime  check-out timestamp to set
+     * @return {@code true} if updated successfully, {@code false} otherwise
+     */
     public boolean updateCheckoutTime(int reservationId, LocalDateTime checkoutTime) {
         try {
             boolean updated = db.updateCheckoutTime(reservationId, checkoutTime);
@@ -653,6 +854,21 @@ public class ReservationController {
         }
     }
 
+    /**
+     * Marks an active reservation as finished and releases its reserved table slots.
+     * <p>
+     * The finish process:
+     * <ul>
+     *   <li>Validates that the reservation exists and is active</li>
+     *   <li>Releases the two-hour slot window (4 slots)</li>
+     *   <li>Updates the database (finished + checkout time + inactive)</li>
+     *   <li>Triggers waiting-list notification for freed table</li>
+     * </ul>
+     * </p>
+     *
+     * @param confirmationCode reservation confirmation code
+     * @return {@code true} if finished successfully, {@code false} otherwise
+     */
     public boolean FinishReservation(String confirmationCode) {
 
         try {
@@ -688,7 +904,7 @@ public class ReservationController {
             if (finished) {
                 server.log("Reservation finished. Code=" + confirmationCode + ", Checkout=" + checkoutTime);
 
-                // ✅ NEW: after payment/finish -> try to notify waiting list
+                //after payment/finish -> try to notify waiting list
                 notifyWaitingTableFreed(tableNum);
 
                 return true;
@@ -705,6 +921,14 @@ public class ReservationController {
 
     // ========= recovery helpers (kept as-is) =========
 
+    /**
+     * Attempts to find a guest reservation by contact details and reservation time.
+     *
+     * @param phone     guest phone number (optional)
+     * @param email     guest email address (optional)
+     * @param dateTime  reservation date-time to match
+     * @return matching reservation, or {@code null} if not found / on error
+     */
     public Reservation findGuestReservationByContactAndTime(
             String phone,
             String email,
@@ -724,6 +948,14 @@ public class ReservationController {
         }
     }
 
+    /**
+     * Recovers a guest reservation confirmation code using contact details and reservation date-time.
+     *
+     * @param phone                 guest phone number (optional)
+     * @param email                 guest email address (optional)
+     * @param reservationDateTime   reservation date-time to match
+     * @return confirmation code if found, or {@code null} otherwise
+     */
     public String recoverGuestConfirmationCode(
             String phone,
             String email,
@@ -752,6 +984,20 @@ public class ReservationController {
         }
     }
 
+    /**
+     * Creates an immediate reservation from the waiting list at the current time.
+     * <p>
+     * The method searches for an available table while excluding tables currently locked by waiting logic.
+     * If a suitable table is found, a two-hour window is locked, the reservation is inserted,
+     * and a reminder notification is scheduled.
+     * </p>
+     *
+     * @param start            reservation start time
+     * @param guests           number of guests
+     * @param user             user creating the reservation
+     * @param confirmationCode confirmation code to assign
+     * @return created reservation, or {@code null} on failure
+     */
     public Reservation createNowReservationFromWaiting(
             LocalDateTime start,
             int guests,
@@ -818,10 +1064,31 @@ public class ReservationController {
     }
     
 
- // =====================================================
- // CHECK-IN (GET TABLE) FROM RESERVATION
- // Rule: allowed only from reservation time until +15 minutes
- // =====================================================
+ // ====CHECK-IN (GET TABLE) FROM RESERVATION====
+ // ====Rule: allowed only from reservation time until +15 minutes====
+
+    /**
+     * Performs check-in by confirmation code and returns the assigned table number when allowed.
+     * <p>
+     * Check-in rules:
+     * <ul>
+     *   <li>Allowed starting at reservation time (not earlier)</li>
+     *   <li>Expires 15 minutes after reservation time</li>
+     *   <li>If the assigned table is occupied, check-in is marked as pending and a notification is scheduled later</li>
+     * </ul>
+     * </p>
+     * <p>
+     * If check-in succeeds, the method:
+     * <ul>
+     *   <li>Updates check-in time in the database</li>
+     *   <li>Sets bill due time to check-in + 2 hours</li>
+     *   <li>Creates a receipt via {@link ReceiptController} (if configured)</li>
+     * </ul>
+     * </p>
+     *
+     * @param confirmationCode reservation confirmation code
+     * @return a {@link GetTableResultDTO} describing the result and (when allowed) the table number
+     */
     public GetTableResultDTO checkinReservationByCode(String confirmationCode) {
 
         if (confirmationCode == null || confirmationCode.isBlank()) {
@@ -914,7 +1181,6 @@ public class ReservationController {
                 );
             }
 
-            // Table is occupied -> remember pending check-in and notify later when table freed
             pendingCheckins.put(tableNumber, new PendingReservationCheckin(
                     r.getReservationId(),
                     r.getCreatedByUserId(),
@@ -937,6 +1203,15 @@ public class ReservationController {
 
 
 
+    /**
+     * Notifies a user with a pending check-in that their reserved table is now available.
+     * <p>
+     * This method is triggered when a table is freed (after cancellation/finish) and a pending check-in exists
+     * for that table number.
+     * </p>
+     *
+     * @param tableNumber table number that has become available
+     */
     private void notifyPendingReservationCheckins(Integer tableNumber) {
         if (tableNumber == null) return;
 
@@ -981,7 +1256,10 @@ public class ReservationController {
 
     
     /**
-     * ✅ NEW: Updates the full reservation details based on manager input.
+     * Updates full reservation details based on manager input.
+     *
+     * @param res reservation instance containing updated fields
+     * @return {@code true} if the update succeeded, {@code false} otherwise
      */
     public boolean updateReservationFromManager(Reservation res) {
         if (res == null || res.getReservationId() <= 0) return false;
@@ -998,13 +1276,23 @@ public class ReservationController {
         }
     }
 
+    /**
+     * Retrieves available reservation times for a specific date and guest count.
+     * <p>
+     * If {@code date} is today, returned times are constrained to start at least one hour from now,
+     * rounded up to the next half-hour slot.
+     * </p>
+     *
+     * @param date   reservation date
+     * @param guests number of guests
+     * @return list of available start times for the given day (may be empty)
+     */
     public ArrayList<LocalTime> getAvailableTimesForDay(LocalDate date, int guests) {
         ArrayList<LocalTime> out = new ArrayList<>();
         if (date == null || guests <= 0) return out;
 
         LocalTime fromTime = null;
 
-        // אם זה היום - רק משעה+1 קדימה, מעוגל לחצי שעה
         if (date.equals(LocalDate.now())) {
             LocalDateTime rounded =
                     restaurantController.roundUpToNextHalfHour(LocalDateTime.now().plusHours(1));
@@ -1015,9 +1303,18 @@ public class ReservationController {
         return out;
     }
     
- // =====================================================
- // AUTO-CANCEL: reservations without check-in (15 min)
- // =====================================================
+ // ====AUTO-CANCEL: reservations without check-in (15 min)=====
+
+
+    /**
+     * Automatically cancels reservations that were not checked-in within the grace period.
+     * <p>
+     * The grace period is 15 minutes after the reservation time. For each expired reservation,
+     * {@link #CancelReservation(String)} is invoked (which releases table slots and updates the DB).
+     * </p>
+     *
+     * @return number of reservations cancelled due to missing check-in after 15 minutes
+     */
  public int cancelReservationsWithoutCheckinAfterGracePeriod() {
 
      int cancelledCount = 0;
@@ -1025,8 +1322,7 @@ public class ReservationController {
      try {
          LocalDateTime now = LocalDateTime.now();
 
-         // מביא רק הזמנות שעברו 15 דק' ממועד ההזמנה
-         // ועדיין אין להן check-in
+        
          ArrayList<String> expiredCodes =
                  db.getReservationsWithoutCheckinExpired(now.minusMinutes(15));
 
@@ -1037,7 +1333,6 @@ public class ReservationController {
              if (cancelled) {
                  cancelledCount++;
 
-                 // ✅ לוג פשוט וברור – בדיוק כמו שביקשת
                  server.log(
                      "Reservation auto-cancelled (no check-in after 15 min): " + code
                  );
@@ -1056,6 +1351,20 @@ public class ReservationController {
 
 
 
+    /**
+     * Cancels active reservations that become invalid due to an opening-hours change.
+     * <p>
+     * The method scans active reservations on the specified {@code date} (limited to one month ahead),
+     * determines whether each reservation time is outside the new opening hours, and cancels invalid reservations.
+     * When cancellation occurs, the customer is notified via SMS and Email.
+     * </p>
+     *
+     * @param date      date whose reservations should be evaluated
+     * @param newOpen   new opening time (ignored if {@code isClosed} is {@code true})
+     * @param newClose  new closing time (ignored if {@code isClosed} is {@code true})
+     * @param isClosed  whether the restaurant is closed for the specified date
+     * @return number of reservations cancelled due to opening-hours change
+     */
     public int cancelReservationsDueToOpeningHoursChange(
             LocalDate date,
             LocalTime newOpen,
@@ -1066,7 +1375,6 @@ public class ReservationController {
         int cancelledCount = 0;
 
         try {
-            // בטיחות: רק חודש קדימה
             if (date.isAfter(LocalDate.now().plusMonths(1))) {
                 server.log("Skip cancel: date beyond 1 month: " + date);
                 return 0;
@@ -1091,7 +1399,6 @@ public class ReservationController {
 
                 if (!invalid) continue;
 
-                // משתמשים בלוגיקה הקיימת שלך
                 boolean cancelled = CancelReservation(r.getConfirmationCode());
 
                 if (cancelled) {
@@ -1108,6 +1415,11 @@ public class ReservationController {
         return cancelledCount;
     }
     
+    /**
+     * Sends cancellation notifications (SMS and Email) for a reservation cancelled due to opening-hours changes.
+     *
+     * @param r cancelled reservation
+     */
     private void notifyReservationCancelledOpeningHours(Reservation r) {
 
         if (notificationDB == null || r == null) return;
@@ -1148,6 +1460,12 @@ public class ReservationController {
 		}
     }
 
+    /**
+     * Retrieves all active reservations for a specific user.
+     *
+     * @param userId user identifier
+     * @return list of active reservations for the user; empty list on error
+     */
     public ArrayList<Reservation> getActiveReservationsForUser(int userId) {
         try {
             return db.getActiveReservationsByUser(userId);

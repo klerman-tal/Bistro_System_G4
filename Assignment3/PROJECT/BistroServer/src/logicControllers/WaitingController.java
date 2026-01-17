@@ -17,6 +17,27 @@ import entities.Table;
 import entities.User;
 import entities.Waiting;
 
+/**
+ * Handles waiting-list business logic for walk-in customers and table assignment workflows.
+ * <p>
+ * This controller provides a logic layer above {@link Waiting_DB_Controller} and coordinates with:
+ * <ul>
+ *   <li>{@link RestaurantController} for opening hours checks and time rounding utilities</li>
+ *   <li>{@link ReservationController} for creating reservations when a waiting entry is seated</li>
+ *   <li>{@link Notification_DB_Controller} for notifying users about table availability and cancellations</li>
+ * </ul>
+ * </p>
+ * <p>
+ * Core responsibilities include:
+ * <ul>
+ *   <li>Joining the waiting list (with opening-hours enforcement)</li>
+ *   <li>Immediate seating when possible (creating a reservation right away)</li>
+ *   <li>Assigning a freed table to the next waiting entry (FIFO and seat-capacity based)</li>
+ *   <li>Confirming arrival within a grace period (15 minutes) to create a reservation</li>
+ *   <li>Auto-cancelling expired waitings and end-of-day cancellations with notifications</li>
+ * </ul>
+ * </p>
+ */
 public class WaitingController {
 
     private final Waiting_DB_Controller db;
@@ -26,6 +47,15 @@ public class WaitingController {
     private final RestaurantController restaurantController;
     private final ReservationController reservationController;
 
+    /**
+     * Constructs a WaitingController with its required dependencies.
+     *
+     * @param db                    database controller for waiting-list persistence
+     * @param notificationDB        database controller for notification persistence
+     * @param server                server instance used for logging
+     * @param restaurantController  restaurant logic controller (opening hours, rounding, etc.)
+     * @param reservationController reservation logic controller used when converting waiting to reservations
+     */
     public WaitingController(
             Waiting_DB_Controller db,
             Notification_DB_Controller notificationDB,
@@ -40,16 +70,31 @@ public class WaitingController {
         this.reservationController = reservationController;
     }
 
-    // ✅ NEW: exception to pass accurate reason to handler
+    /**
+     * Exception thrown when joining the waiting list is blocked due to business rules
+     * (e.g., restaurant is closed or outside opening hours).
+     */
     public static class JoinWaitingBlockedException extends Exception {
         private static final long serialVersionUID = 1L;
 
+        /**
+         * Constructs the exception with a human-readable reason.
+         *
+         * @param message explanation of why joining was blocked
+         */
         public JoinWaitingBlockedException(String message) {
             super(message);
         }
     }
 
-    // ✅ NEW: Handler will call this to get accurate message
+    /**
+     * Attempts to join the waiting list immediately; throws an exception if joining is blocked.
+     *
+     * @param guestsNumber number of guests
+     * @param user         user requesting to join
+     * @return a created {@link Waiting} entry (possibly already seated)
+     * @throws JoinWaitingBlockedException if the restaurant is closed or joining is blocked
+     */
     public Waiting joinWaitingListNowOrThrow(int guestsNumber, User user) throws JoinWaitingBlockedException {
         Waiting w = joinWaitingListNow(guestsNumber, user);
         if (w == null) {
@@ -58,39 +103,48 @@ public class WaitingController {
         return w;
     }
 
+    /**
+     * Adds the user to the waiting list if business rules allow it.
+     * <p>
+     * The method blocks joining when the restaurant is closed or when the current time is outside
+     * of effective opening hours for today.
+     * </p>
+     * <p>
+     * If the user can be seated immediately, this method attempts to create an immediate reservation
+     * (scenario 1) and marks the waiting entry as seated.
+     * </p>
+     *
+     * @param guestsNumber number of guests
+     * @param user         user requesting to join
+     * @return the created {@link Waiting} entry, or {@code null} if blocked or on failure
+     */
     public Waiting joinWaitingListNow(int guestsNumber, User user) {
 
-        // ===== Block join if restaurant is closed =====
         try {
             LocalDate today = LocalDate.now();
 
             OpeningHouers oh =
                     restaurantController.getEffectiveOpeningHoursForDate(today);
 
-            // If closed / missing hours -> block
             if (oh == null || oh.getOpenTime() == null || oh.getCloseTime() == null) {
                 server.log("JOIN_WAITING blocked: restaurant closed (no opening hours).");
                 return null;
             }
 
-            // times like "HH:mm" or "HH:mm:ss" -> take first 5 chars
             LocalTime open = LocalTime.parse(oh.getOpenTime().substring(0, 5));
             LocalTime close = LocalTime.parse(oh.getCloseTime().substring(0, 5));
             LocalTime now = LocalTime.now();
 
-            // Outside business hours -> block
             if (now.isBefore(open) || now.isAfter(close)) {
                 server.log("JOIN_WAITING blocked: outside business hours. now=" + now + ", open=" + open + ", close=" + close);
                 return null;
             }
 
         } catch (Exception e) {
-            // Safest: if we cannot determine hours -> block
             server.log("JOIN_WAITING blocked: failed checking opening hours. " + e.getMessage());
             return null;
         }
 
-        // ===== Existing validation =====
         if (user == null || guestsNumber <= 0) return null;
 
         Waiting w = new Waiting();
@@ -120,7 +174,6 @@ public class WaitingController {
             return null;
         }
 
-        // immediate seating (scenario 1)
         LocalDateTime nowSlot = restaurantController.roundUpToNextHalfHour(LocalDateTime.now());
 
         var res = reservationController.createNowReservationFromWaiting(
@@ -148,6 +201,11 @@ public class WaitingController {
         return w;
     }
 
+    /**
+     * Retrieves the active waiting list entries.
+     *
+     * @return list of active waiting entries (empty list on error)
+     */
     public ArrayList<Waiting> getActiveWaitingList() {
         try {
             return db.getAllWaitings();
@@ -157,6 +215,15 @@ public class WaitingController {
         }
     }
 
+    /**
+     * Cancels a waiting entry by confirmation code.
+     * <p>
+     * If a reservation exists with the same confirmation code, the method attempts to cancel it as well.
+     * </p>
+     *
+     * @param confirmationCode waiting confirmation code
+     * @return {@code true} if cancellation succeeded, {@code false} otherwise
+     */
     public boolean leaveWaitingList(String confirmationCode) {
         if (confirmationCode == null || confirmationCode.isBlank()) return false;
 
@@ -170,7 +237,6 @@ public class WaitingController {
                 return false;
             }
 
-            // if reservation exists with same code - cancel it too
             try { reservationController.CancelReservation(code); } catch (Exception ignore) {}
 
             server.log("Waiting cancelled. ConfirmationCode=" + code);
@@ -182,6 +248,20 @@ public class WaitingController {
         }
     }
 
+    /**
+     * Confirms customer arrival for a waiting entry and attempts to create a reservation.
+     * <p>
+     * Arrival is valid only if:
+     * <ul>
+     *   <li>The waiting entry is in {@link WaitingStatus#Waiting}</li>
+     *   <li>A table was assigned (table number and freed time exist)</li>
+     *   <li>The customer arrives within 15 minutes from the table-freed timestamp</li>
+     * </ul>
+     * </p>
+     *
+     * @param confirmationCode waiting confirmation code
+     * @return {@code true} if the waiting entry was marked seated, {@code false} otherwise
+     */
     public boolean confirmArrival(String confirmationCode) {
         if (confirmationCode == null || confirmationCode.isBlank()) return false;
 
@@ -228,6 +308,11 @@ public class WaitingController {
         }
     }
 
+    /**
+     * Cancels waiting entries that expired (e.g., no arrival confirmation within allowed time).
+     *
+     * @return number of cancelled waiting entries, or 0 on error
+     */
     public int cancelExpiredWaitings() {
 
         try {
@@ -257,21 +342,24 @@ public class WaitingController {
         }
     }
 
-
-
-
     /**
-     * handleTableFreed (scenario 2B):
-     * - assigns table to next waiting (FIFO)
-     * - updates waiting row with freed time + table number
-     * - schedules notifications (EMAIL + SMS) immediately (scheduled_for = NOW)
-     * - DOES NOT create reservation here
+     * Handles the "table freed" workflow (scenario 2B).
+     * <p>
+     * The method:
+     * <ul>
+     *   <li>Finds the next waiting entry that fits the freed table capacity</li>
+     *   <li>Updates the waiting entry with the freed time and assigned table number</li>
+     *   <li>Schedules immediate notifications (SMS and Email)</li>
+     * </ul>
+     * </p>
+     * <p>
+     * This method does not create a reservation directly; the user must confirm arrival
+     * within the grace period to convert waiting to a reservation.
+     * </p>
      *
-     * English texts:
-     * - Popup (safe, no code): "A table is now available. Please arrive within 15 minutes to avoid cancellation."
-     * - SMS/Email (includes code): "A table is now available. Your waiting code is: <CODE>. Please arrive within 15 minutes to avoid cancellation."
+     * @param freedTable table that became available
+     * @return {@code true} if a waiting entry was assigned and updated, {@code false} otherwise
      */
-
     public boolean handleTableFreed(Table freedTable) {
         if (freedTable == null) return false;
 
@@ -322,6 +410,12 @@ public class WaitingController {
         }
     }
 
+    /**
+     * Retrieves a waiting entry by confirmation code.
+     *
+     * @param confirmationCode waiting confirmation code
+     * @return the matching {@link Waiting}, or {@code null} if not found or on error
+     */
     public Waiting getWaitingByCode(String confirmationCode) {
         if (confirmationCode == null || confirmationCode.isBlank()) return null;
         try {
@@ -332,6 +426,12 @@ public class WaitingController {
         }
     }
 
+    /**
+     * Retrieves active waiting entries for a specific user.
+     *
+     * @param userId user identifier
+     * @return list of active waiting entries (empty list on error)
+     */
     public ArrayList<Waiting> getActiveWaitingsForUser(int userId) {
         try {
             return db.getActiveWaitingsByUser(userId);
@@ -341,18 +441,20 @@ public class WaitingController {
         }
     }
 
-    // ✅ End of day: cancel by joined_at date + send SMS/EMAIL
+    /**
+     * Cancels all active waiting entries for a given date (end-of-day workflow) and notifies users.
+     *
+     * @param date date to cancel waitings by (based on joined-at date)
+     * @return number of cancelled entries, or 0 on error
+     */
     public int cancelAllWaitingsEndOfDay(LocalDate date) {
         if (date == null) return 0;
 
         try {
-            // 1) take snapshot of who is going to be cancelled (for notifications)
             ArrayList<Waiting> toCancel = db.getActiveWaitingsByDate(date);
 
-            // 2) cancel in DB (no delete)
             int count = db.cancelAllWaitingsByDate(date);
 
-            // 3) notify each user
             if (count > 0 && notificationDB != null && toCancel != null) {
                 LocalDateTime now = LocalDateTime.now();
 
@@ -380,17 +482,22 @@ public class WaitingController {
             }
 
             if (count > 0) {
-                server.log("🌙 End of day: cancelled waitings + notifications sent. Date=" + date + ", Count=" + count);
+                server.log("End of day: cancelled waitings + notifications sent. Date=" + date + ", Count=" + count);
             }
 
             return count;
 
         } catch (Exception e) {
-            server.log("❌ cancelAllWaitingsEndOfDay failed. Date=" + date + ", Msg=" + e.getMessage());
+            server.log("cancelAllWaitingsEndOfDay failed. Date=" + date + ", Msg=" + e.getMessage());
             return 0;
         }
     }
     
+    /**
+     * Retrieves a list of table numbers currently locked by waiting/reservation allocation logic.
+     *
+     * @return list of locked table numbers (empty list on error)
+     */
     public ArrayList<Integer> getLockedTableNumbersNow() {
         try {
             return db.getLockedTableNumbersNow();

@@ -14,12 +14,18 @@ import java.time.Duration;
 import java.util.*;
 
 /**
- * ReportsController
- *
- * Responsible for building all monthly reports: - Time Report - Subscribers
- * Report
- *
- * Data is aggregated directly from DB controllers.
+ * Handles monthly report generation for the restaurant management system.
+ * <p>
+ * This controller aggregates data from the relevant DB controllers and builds:
+ * <ul>
+ *   <li>Time Report (arrival status and stay duration analytics)</li>
+ *   <li>Subscribers Report (active/inactive subscribers, waiting list activity, and reservations trend)</li>
+ * </ul>
+ * </p>
+ * <p>
+ * The controller acts as a logic layer that performs computations and grouping on
+ * raw database results, returning structured DTO objects for the UI layer.
+ * </p>
  */
 public class ReportsController {
 
@@ -27,6 +33,13 @@ public class ReportsController {
 	private final Waiting_DB_Controller waitingDB;
 	private final User_DB_Controller userDB;
 
+	/**
+	 * Constructs a ReportsController with the required database controllers.
+	 *
+	 * @param reservationDB database controller used to fetch reservation-related report data
+	 * @param waitingDB     database controller used to fetch waiting-list report data
+	 * @param userDB        database controller used to fetch subscriber-related report data
+	 */
 	public ReportsController(Reservation_DB_Controller reservationDB, Waiting_DB_Controller waitingDB,
 			User_DB_Controller userDB) {
 		this.reservationDB = reservationDB;
@@ -39,10 +52,23 @@ public class ReportsController {
 	// =====================================================
 
 	/**
-	 * Builds Time Report for a given month.
+	 * Builds the monthly Time Report for the given year and month.
+	 * <p>
+	 * The report includes:
+	 * <ul>
+	 *   <li><b>Arrival status</b>: counts of on-time, minor delay, and significant delay check-ins</li>
+	 *   <li><b>Stay duration</b>: average stay duration per day and overall monthly summary (min/max day averages)</li>
+	 * </ul>
+	 * </p>
+	 * <p>
+	 * Only finished reservations for the given month are included. Reservations with missing
+	 * relevant timestamps are skipped.
+	 * </p>
 	 *
 	 * @param year  report year (e.g. 2025)
 	 * @param month report month (1–12)
+	 * @return a populated {@link TimeReportDTO} containing computed monthly analytics
+	 * @throws SQLException if a database error occurs while fetching reservations
 	 */
 	public TimeReportDTO buildTimeReport(int year, int month) throws SQLException {
 
@@ -146,9 +172,24 @@ public class ReportsController {
 	// =====================================================
 
 	/**
-	 * Builds Subscribers Report for a given month.
+	 * Builds the monthly Subscribers Report for the given year and month.
+	 * <p>
+	 * The report includes:
+	 * <ul>
+	 *   <li><b>Active vs. inactive subscribers</b> during the selected month</li>
+	 *   <li><b>Waiting list activity</b>: number of subscriber waiting-list entries per day</li>
+	 *   <li><b>Reservations trend</b>: number of subscriber reservations per day</li>
+	 * </ul>
+	 * </p>
+	 * <p>
+	 * Subscriber-related rows are identified using {@code created_by_role = Subscriber}
+	 * on the relevant database queries.
+	 * </p>
 	 *
-	 * Subscribers are identified by: created_by_role = Subscriber
+	 * @param year  report year
+	 * @param month report month (1–12)
+	 * @return a populated {@link SubscribersReportDTO} containing computed monthly analytics
+	 * @throws SQLException if a database error occurs while fetching report data
 	 */
 	public SubscribersReportDTO buildSubscribersReport(int year, int month) throws SQLException {
 
