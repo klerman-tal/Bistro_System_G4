@@ -43,7 +43,7 @@ public class ClientUI extends Application implements ChatIF, ClientActions {
             Platform.exit();
             return;
         }
-
+//test
         String host = result.get().trim();
 
         try {
