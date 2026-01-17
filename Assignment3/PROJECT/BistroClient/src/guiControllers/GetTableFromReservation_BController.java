@@ -228,14 +228,24 @@ public class GetTableFromReservation_BController implements ClientResponseHandle
             }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
+            Scene scene = stage.getScene();
+
+            // ✅ ניווט למסך גדול – בלי Scene חדשה
+            if (scene == null) {
+                stage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
             stage.setTitle("Bistro - " + title);
-            stage.setScene(new Scene(root));
+            stage.setMaximized(true);
             stage.show();
 
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
+
 
     private void hideMessages() {
         lblError.setText("");

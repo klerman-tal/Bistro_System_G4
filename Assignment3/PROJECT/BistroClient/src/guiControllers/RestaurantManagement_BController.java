@@ -23,6 +23,8 @@ public class RestaurantManagement_BController {
         this.chatClient = chatClient;
     }
 
+    /* ===================== NAVIGATION ===================== */
+
     private void openWindow(String fxmlName, String title) {
         try {
             FXMLLoader loader =
@@ -30,22 +32,28 @@ public class RestaurantManagement_BController {
             Parent root = loader.load();
 
             Object controller = loader.getController();
-            System.out.println("Loaded controller: " + controller.getClass().getName());
 
-            // Try to call setClient(User, ChatClient)
-            try {
-                var m = controller.getClass().getDeclaredMethod("setClient", User.class, ChatClient.class);
-                m.setAccessible(true);
-                m.invoke(controller, user, chatClient);
-                System.out.println("setClient(User, ChatClient) invoked successfully");
-            } catch (Exception e) {
-                System.out.println("Failed to call setClient(User, ChatClient)");
-                e.printStackTrace();
+            // Pass client if supported
+            if (controller != null && user != null && chatClient != null) {
+                try {
+                    controller.getClass()
+                            .getMethod("setClient", User.class, ChatClient.class)
+                            .invoke(controller, user, chatClient);
+                } catch (Exception ignored) {}
             }
 
             Stage stage = (Stage) rootPane.getScene().getWindow();
+            Scene scene = stage.getScene();
+
+            // ✅ Full Screen navigation – NO new Scene
+            if (scene == null) {
+                stage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
             stage.setTitle("Bistro - " + title);
-            stage.setScene(new Scene(root));
+            stage.setMaximized(true);
             stage.show();
 
         } catch (Exception e) {
@@ -54,47 +62,44 @@ public class RestaurantManagement_BController {
         }
     }
 
-    @FXML
-    private void onUpdateTablesClicked() {
+    /* ===================== BUTTONS ===================== */
+
+    @FXML private void onUpdateTablesClicked() {
         openWindow("UpdateTables.fxml", "Update Tables");
     }
 
-    @FXML
-    private void onWaitingListClicked() {
+    @FXML private void onWaitingListClicked() {
         openWindow("ManageWaitingList.fxml", "Waiting List");
     }
 
-    @FXML
-    private void onUpdateOpeningHoursClicked() {
+    @FXML private void onUpdateOpeningHoursClicked() {
         openWindow("opening.fxml", "Opening Hours");
     }
 
-    @FXML
-    private void onManageUsersClicked() {
+    @FXML private void onManageUsersClicked() {
         openWindow("manageSubscriber.fxml", "Manage Subscribers");
     }
 
-    @FXML
-    private void onManageReservationClicked() {
+    @FXML private void onManageReservationClicked() {
         openWindow("ManageReservation.fxml", "Manage Reservations");
     }
 
-    @FXML
-    private void onManageCurrentDinersClicked() {
+    @FXML private void onManageCurrentDinersClicked() {
         openWindow("ManageCurrentDiners.fxml", "Current Diners");
     }
 
-    @FXML
-    private void onReportsClicked() {
+    @FXML private void onReportsClicked() {
         openWindow("ReportsMenu.fxml", "Reports");
     }
 
-    @FXML
-    private void onBackToMenuClicked() {
+    @FXML private void onBackToMenuClicked() {
         openWindow("Menu_B.fxml", "Main Menu");
     }
 
+    /* ===================== UI ===================== */
+
     private void showMessage(String msg) {
+        if (lblMessage == null) return;
         lblMessage.setText(msg);
         lblMessage.setVisible(true);
         lblMessage.setManaged(true);
