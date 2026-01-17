@@ -111,21 +111,26 @@ public class ManageWaitingListController {
 
     @FXML
     private void onAddWaitingClicked() {
-        openScreen("/gui/JoinWaiting_B.fxml", controller ->
-                ((JoinWaiting_BController) controller).setClient(user, chatClient)
-        );
+        openScreen("/gui/JoinWaiting_B.fxml", controller -> {
+            JoinWaiting_BController c = (JoinWaiting_BController) controller;
+            c.setClient(user, chatClient);
+            c.setBackFxml("/gui/ManageWaitingList.fxml");
+        });
     }
+
 
     @FXML
     private void onCancelWaitingClicked() {
         Waiting selected = tblWaitingList.getSelectionModel().getSelectedItem();
         if (selected == null) return;
 
-        openScreen("/gui/CancelWaiting_B.fxml", controller ->
-                ((CancelWaiting_BController) controller)
-                        .setClient(user, chatClient, selected.getConfirmationCode())
-        );
+        openScreen("/gui/CancelWaiting_B.fxml", controller -> {
+            CancelWaiting_BController c = (CancelWaiting_BController) controller;
+            c.setClient(user, chatClient, selected.getConfirmationCode());
+            c.setBackFxml("/gui/ManageWaitingList.fxml");
+        });
     }
+
 
     @FXML
     private void onRefreshClicked() {

@@ -74,13 +74,45 @@ public class ReservationMenu_BController {
 
     @FXML
     private void onJoinWaiting() {
-        openWindow("JoinWaiting_B.fxml", "Join Waiting List");
+        try {
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/JoinWaiting_B.fxml"));
+            Parent root = loader.load();
+
+            JoinWaiting_BController controller = loader.getController();
+            if (controller != null) {
+                controller.setClient(user, chatClient);
+                controller.setBackFxml("/gui/ReservationMenu_B.fxml");
+            }
+
+            switchRoot(root, "Bistro - Join Waiting List");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
+
 
     @FXML
     private void onCancelWaiting() {
-        openWindow("CancelWaiting_B.fxml", "Cancel Waiting List");
+        try {
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/gui/CancelWaiting_B.fxml"));
+            Parent root = loader.load();
+
+            CancelWaiting_BController controller = loader.getController();
+            if (controller != null) {
+                controller.setClient(user, chatClient);
+                controller.setBackFxml("/gui/ReservationMenu_B.fxml");
+            }
+
+            switchRoot(root, "Bistro - Cancel Waiting List");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
+
 
     @FXML
     private void onBack() {

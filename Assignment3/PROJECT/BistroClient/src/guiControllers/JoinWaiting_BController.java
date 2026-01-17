@@ -26,23 +26,38 @@ import network.ClientResponseHandler;
 
 public class JoinWaiting_BController implements ClientResponseHandler {
 
+    /* =======================
+       FXML
+       ======================= */
     @FXML private BorderPane rootPane;
     @FXML private TextField txtGuests;
     @FXML private Button btnJoin;
-    @FXML private Button btnImHere;
     @FXML private Label lblInfo;
     @FXML private Label lblError;
 
+    /* =======================
+       Context
+       ======================= */
     private User user;
     private ChatClient chatClient;
     private ClientActions clientActions;
     private ClientAPI api;
 
+    /* =======================
+       Navigation
+       ======================= */
+    private String backFxml;
+
+    /* =======================
+       Waiting state
+       ======================= */
     private String confirmationCode;
     private Timeline pollingTimeline;
-
     private boolean didShowJoinPopup = false;
 
+    /* =======================
+       Setters
+       ======================= */
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
@@ -54,6 +69,13 @@ public class JoinWaiting_BController implements ClientResponseHandler {
         this.clientActions = clientActions;
     }
 
+    public void setBackFxml(String backFxml) {
+        this.backFxml = backFxml;
+    }
+
+    /* =======================
+       Actions
+       ======================= */
     @FXML
     private void onJoinClicked() {
         hideMessages();
@@ -84,28 +106,57 @@ public class JoinWaiting_BController implements ClientResponseHandler {
         } catch (IOException e) {
             btnJoin.setDisable(false);
             showError("Failed to send request to server.");
-            e.printStackTrace();
         }
     }
 
+    /* =======================
+       Back
+       ======================= */
     @FXML
-    private void onImHereClicked() {
-        hideMessages();
+    private void onBackClicked() {
+        stopPolling();
 
-        if (confirmationCode == null || confirmationCode.isBlank()) {
-            showError("Missing confirmation code.");
+        if (chatClient != null) {
+            chatClient.setResponseHandler(null);
+        }
+
+        if (backFxml == null) {
+            System.err.println("JoinWaiting_BController: backFxml not set");
             return;
         }
 
         try {
-            api.confirmWaitingArrival(confirmationCode);
-            showInfo("Arrival confirmation sent.");
-        } catch (IOException e) {
-            showError("Failed to confirm arrival.");
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource(backFxml));
+            Parent root = loader.load();
+
+            Object controller = loader.getController();
+            if (controller != null) {
+                controller.getClass()
+                        .getMethod("setClient", User.class, ChatClient.class)
+                        .invoke(controller, user, chatClient);
+            }
+
+            Stage stage = (Stage) rootPane.getScene().getWindow();
+            Scene scene = stage.getScene();
+
+            if (scene == null) {
+                stage.setScene(new Scene(root));
+            } else {
+                scene.setRoot(root);
+            }
+
+            stage.setMaximized(true);
+            stage.show();
+
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
+    /* =======================
+       Polling
+       ======================= */
     private void startPollingEvery10Seconds() {
         stopPolling();
         pollingTimeline = new Timeline(
@@ -131,6 +182,9 @@ public class JoinWaiting_BController implements ClientResponseHandler {
         }
     }
 
+    /* =======================
+       Server responses
+       ======================= */
     @Override
     public void handleResponse(ResponseDTO response) {
         Platform.runLater(() -> {
@@ -148,37 +202,22 @@ public class JoinWaiting_BController implements ClientResponseHandler {
 
             if (data instanceof Waiting w) {
 
-                if (w.getConfirmationCode() != null && !w.getConfirmationCode().isBlank()) {
-                    this.confirmationCode = w.getConfirmationCode();
-                }
+                confirmationCode = w.getConfirmationCode();
 
-                if (this.confirmationCode != null && !this.confirmationCode.isBlank()) {
+                if (confirmationCode != null && !confirmationCode.isBlank()) {
                     startPollingEvery10Seconds();
                 }
 
                 if (!didShowJoinPopup) {
                     didShowJoinPopup = true;
-                    showSuccessAlert("Joined Waiting List",
-                            "Your confirmation code is: " + this.confirmationCode);
+                    showSuccessAlert(
+                            "Joined Waiting List",
+                            "Your confirmation code is: " + confirmationCode
+                    );
                 }
 
                 updateUIFromWaiting(w);
                 btnJoin.setDisable(false);
-                return;
-            }
-
-            if (data instanceof String code) {
-                this.confirmationCode = code;
-                btnJoin.setDisable(false);
-
-                if (!didShowJoinPopup) {
-                    didShowJoinPopup = true;
-                    showSuccessAlert("Joined Waiting List",
-                            "Your confirmation code is: " + code);
-                }
-
-                startPollingEvery10Seconds();
-                showInfo("You are in the waiting list.");
             }
         });
     }
@@ -191,59 +230,29 @@ public class JoinWaiting_BController implements ClientResponseHandler {
 
         if (status == WaitingStatus.Seated) {
             stopPolling();
-            showSuccessAlert("Table Assigned",
+            showSuccessAlert(
+                    "Table Assigned",
                     "You are seated at table " +
-                    (tableNum != null ? tableNum : "") +
-                    ".\nConfirmation Code: " + w.getConfirmationCode());
+                            (tableNum != null ? tableNum : "") +
+                            "\nConfirmation Code: " + w.getConfirmationCode()
+            );
             showInfo("You are seated.");
             return;
         }
 
-        if (status == WaitingStatus.Waiting && tableNum != null && w.getTableFreedTime() != null) {
-            showInfo("A table is ready! Please arrive within 15 minutes and press “I’m here”.");
+        if (status == WaitingStatus.Waiting &&
+                tableNum != null &&
+                w.getTableFreedTime() != null) {
+            showInfo("A table is ready! Please arrive within 15 minutes.");
             return;
         }
 
         showInfo("You are in the waiting list.");
     }
 
-    @FXML
-    private void onBackClicked() {
-        stopPolling();
-        if (chatClient != null) {
-            chatClient.setResponseHandler(null);
-        }
-
-        try {
-            FXMLLoader loader =
-                    new FXMLLoader(getClass().getResource("/gui/ReservationMenu_B.fxml"));
-            Parent root = loader.load();
-
-            ReservationMenu_BController controller =
-                    loader.getController();
-
-            if (controller != null) {
-                controller.setClient(user, chatClient);
-            }
-
-            Stage stage = (Stage) rootPane.getScene().getWindow();
-
-            // ✅ תצוגה בלבד – בלי Scene חדשה
-            Scene scene = stage.getScene();
-            if (scene == null) {
-                stage.setScene(new Scene(root));
-            } else {
-                scene.setRoot(root);
-            }
-
-            stage.setMaximized(true);
-            stage.show();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
+    /* =======================
+       UI helpers
+       ======================= */
     private void hideMessages() {
         lblError.setVisible(false);
         lblError.setManaged(false);
@@ -265,19 +274,22 @@ public class JoinWaiting_BController implements ClientResponseHandler {
 
     private void showSuccessAlert(String title, String content) {
         javafx.scene.control.Alert alert =
-                new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
+                new javafx.scene.control.Alert(
+                        javafx.scene.control.Alert.AlertType.INFORMATION);
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(content);
         alert.showAndWait();
     }
 
-    @Override public void handleConnectionError(Exception e) {
+    @Override
+    public void handleConnectionError(Exception e) {
         stopPolling();
         Platform.runLater(() -> showError("Connection lost."));
     }
 
-    @Override public void handleConnectionClosed() {
+    @Override
+    public void handleConnectionClosed() {
         stopPolling();
     }
 }
