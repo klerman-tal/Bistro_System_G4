@@ -490,6 +490,26 @@ public class RestaurantServer extends AbstractServer {
             log("❌ Failed to create monthly report notification: " + e.getMessage());
         }
     }
+    
+ // =====================================================
+    // טיפול במקרים של סגירת חלון (X) או שגיאות חיבור
+    // =====================================================
+    @Override
+    protected synchronized void clientException(ConnectionToClient client, Throwable exception) {
+        touchActivity();
+
+        String ip = (client.getInetAddress() != null) 
+                    ? client.getInetAddress().getHostAddress() 
+                    : "UNKNOWN";
+
+        // הסרת הלקוח מהרישום כדי שלא יישאר "תקוע" כמחובר בשרת
+        if (onlineUsersRegistry != null) {
+            onlineUsersRegistry.removeClient(client);
+        }
+
+        // הדפסה ללוג - זה מה שיופיע כשאתה סוגר את הקליינט בלי Logout מסודר
+        log("⚠️ Client connection lost (Window closed or crash) | IP: " + ip);
+    }
 
     // ================= Main =================
     public static void main(String[] args) {
