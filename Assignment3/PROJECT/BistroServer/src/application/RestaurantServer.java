@@ -424,7 +424,7 @@ public class RestaurantServer extends AbstractServer {
 	        onlineUsersRegistry.removeClient(client);
 	    }
 
-	    log("🔌 Client disconnected (Logout or window closed) | IP: " + ip);
+	    log("🔌 Client disconnected | IP: " + ip);
 	}
 
 	
@@ -569,7 +569,7 @@ public class RestaurantServer extends AbstractServer {
 	        onlineUsersRegistry.removeClient(client);
 	    }
 
-	    log("⚠️ Client connection lost (Window closed or crash) | IP: " + ip);
+	    log("⚠️ Client connection lost | IP: " + ip);
 	}
 
 
