@@ -102,21 +102,28 @@ public class GuestLoginController implements ClientResponseHandler {
 		String phone = phoneField.getText() != null ? phoneField.getText().trim() : "";
 		String email = emailField.getText() != null ? emailField.getText().trim() : "";
 
-		if (phone.isEmpty() || email.isEmpty()) {
+		if (phone.isEmpty() && email.isEmpty()) {
 			showError("Please enter both phone and email.");
 			return;
 		}
 
-		if (!phone.startsWith("05") || phone.length() != 10) {
-			showError("Phone must start with '05' and be exactly 10 digits.");
-			return;
+		
+		if (!phone.isEmpty()) {
+			if (!phone.startsWith("05") || phone.length() != 10) {
+				showError("Phone must start with '05' and be exactly 10 digits.");
+				return;
+		}
 		}
 
-		if (!email.matches(EMAIL_REGEX)) {
-			showError("Invalid email address (check for special characters or typos).");
-			return;
-		}
+		if (!email.isEmpty()) {
+		
+			if (!email.matches(EMAIL_REGEX)) {
+				showError("Invalid email address (check for special characters or typos).");
+				return;
+			}
 
+		}
+		
 		if (api != null) {
 			try {
 				api.loginGuest(phone, email);
