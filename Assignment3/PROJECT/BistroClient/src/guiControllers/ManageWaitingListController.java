@@ -34,274 +34,284 @@ import network.ClientResponseHandler;
 /**
  * JavaFX controller for managing the waiting list (manager/agent view).
  *
- * <p>This screen displays all waiting entries in a table and supports adding a new waiting,
- * cancelling an existing waiting, refreshing the list, and navigating back to the management screen.
- * Data is loaded from the server using {@link ClientAPI}. The controller installs a
- * {@link ClientResponseHandler} to update the UI when server responses arrive.</p>
+ * <p>
+ * This screen displays all waiting entries in a table and supports adding a new
+ * waiting, cancelling an existing waiting, refreshing the list, and navigating
+ * back to the management screen. Data is loaded from the server using
+ * {@link ClientAPI}. The controller installs a {@link ClientResponseHandler} to
+ * update the UI when server responses arrive.
+ * </p>
  *
- * <p>Navigation is performed by swapping the current scene root to preserve the window instance
- * and maximized state.</p>
+ * <p>
+ * Navigation is performed by swapping the current scene root to preserve the
+ * window instance and maximized state.
+ * </p>
  */
 public class ManageWaitingListController {
 
-    @FXML private BorderPane rootPane;
+	@FXML
+	private BorderPane rootPane;
 
-    // ===== FILTER =====
-    @FXML private TextField txtFilter;
-    @FXML private ComboBox<String> cmbMatchMode;
+	// ===== FILTER =====
+	@FXML
+	private TextField txtFilter;
+	@FXML
+	private ComboBox<String> cmbMatchMode;
 
-    @FXML private TableView<Waiting> tblWaitingList;
-    @FXML private TableColumn<Waiting, Integer> colWaitingId;
-    @FXML private TableColumn<Waiting, Integer> colCreatedBy;
-    @FXML private TableColumn<Waiting, UserRole> colRole;
-    @FXML private TableColumn<Waiting, Integer> colGuests;
-    @FXML private TableColumn<Waiting, String> colCode;
-    @FXML private TableColumn<Waiting, LocalDateTime> colFreedTime;
-    @FXML private TableColumn<Waiting, Integer> colTableNum;
-    @FXML private TableColumn<Waiting, WaitingStatus> colStatus;
+	@FXML
+	private TableView<Waiting> tblWaitingList;
+	@FXML
+	private TableColumn<Waiting, Integer> colWaitingId;
+	@FXML
+	private TableColumn<Waiting, Integer> colCreatedBy;
+	@FXML
+	private TableColumn<Waiting, UserRole> colRole;
+	@FXML
+	private TableColumn<Waiting, Integer> colGuests;
+	@FXML
+	private TableColumn<Waiting, String> colCode;
+	@FXML
+	private TableColumn<Waiting, LocalDateTime> colFreedTime;
+	@FXML
+	private TableColumn<Waiting, Integer> colTableNum;
+	@FXML
+	private TableColumn<Waiting, WaitingStatus> colStatus;
 
-    private User user;
-    private ChatClient chatClient;
-    private ClientAPI clientAPI;
+	private User user;
+	private ChatClient chatClient;
+	private ClientAPI clientAPI;
 
-    private final ObservableList<Waiting> waitingData =
-            FXCollections.observableArrayList();
+	private final ObservableList<Waiting> waitingData = FXCollections.observableArrayList();
 
-    private FilteredList<Waiting> filteredWaiting;
+	private FilteredList<Waiting> filteredWaiting;
 
-    public void setClient(User user, ChatClient chatClient) {
-        this.user = user;
-        this.chatClient = chatClient;
-        this.clientAPI = new ClientAPI(chatClient);
+	public void setClient(User user, ChatClient chatClient) {
+		this.user = user;
+		this.chatClient = chatClient;
+		this.clientAPI = new ClientAPI(chatClient);
 
-        chatClient.setResponseHandler(new ClientResponseHandler() {
-            @Override
-            public void handleResponse(ResponseDTO response) {
-                if (response.isSuccess() && response.getData() instanceof List<?>) {
-                    Platform.runLater(() -> {
-                        @SuppressWarnings("unchecked")
-                        List<Waiting> list = (List<Waiting>) response.getData();
-                        waitingData.setAll(list);
-                        tblWaitingList.refresh();
-                    });
-                }
-            }
+		chatClient.setResponseHandler(new ClientResponseHandler() {
+			@Override
+			public void handleResponse(ResponseDTO response) {
+				if (response.isSuccess() && response.getData() instanceof List<?>) {
+					Platform.runLater(() -> {
+						@SuppressWarnings("unchecked")
+						List<Waiting> list = (List<Waiting>) response.getData();
+						waitingData.setAll(list);
+						tblWaitingList.refresh();
+					});
+				}
+			}
 
-            @Override public void handleConnectionError(Exception e) {}
-            @Override public void handleConnectionClosed() {}
-        });
+			@Override
+			public void handleConnectionError(Exception e) {
+			}
 
-        setupTable();
-        loadWaitingList();
-    }
+			@Override
+			public void handleConnectionClosed() {
+			}
+		});
 
-    private void setupTable() {
-        colWaitingId.setCellValueFactory(new PropertyValueFactory<>("waitingId"));
-        colCreatedBy.setCellValueFactory(new PropertyValueFactory<>("createdByUserId"));
-        colRole.setCellValueFactory(new PropertyValueFactory<>("createdByRole"));
-        colGuests.setCellValueFactory(new PropertyValueFactory<>("guestAmount"));
-        colCode.setCellValueFactory(new PropertyValueFactory<>("confirmationCode"));
-        colFreedTime.setCellValueFactory(new PropertyValueFactory<>("tableFreedTime"));
-        colTableNum.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
-        colStatus.setCellValueFactory(new PropertyValueFactory<>("waitingStatus"));
+		setupTable();
+		loadWaitingList();
+	}
 
-        // ===== STATUS COLORING (NEW) =====
-        installStatusColoring();
+	private void setupTable() {
+		colWaitingId.setCellValueFactory(new PropertyValueFactory<>("waitingId"));
+		colCreatedBy.setCellValueFactory(new PropertyValueFactory<>("createdByUserId"));
+		colRole.setCellValueFactory(new PropertyValueFactory<>("createdByRole"));
+		colGuests.setCellValueFactory(new PropertyValueFactory<>("guestAmount"));
+		colCode.setCellValueFactory(new PropertyValueFactory<>("confirmationCode"));
+		colFreedTime.setCellValueFactory(new PropertyValueFactory<>("tableFreedTime"));
+		colTableNum.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
+		colStatus.setCellValueFactory(new PropertyValueFactory<>("waitingStatus"));
 
-        // ===== ROW STYLING (EXISTING) =====
-        tblWaitingList.setRowFactory(tv -> new TableRow<Waiting>() {
-            @Override
-            protected void updateItem(Waiting item, boolean empty) {
-                super.updateItem(item, empty);
-                getStyleClass().removeAll("row-cancelled", "row-seated");
+		// ===== STATUS COLORING (NEW) =====
+		installStatusColoring();
 
-                if (item != null && !empty) {
-                    if (item.getWaitingStatus() == WaitingStatus.Cancelled) {
-                        getStyleClass().add("row-cancelled");
-                    } else if (item.getWaitingStatus() == WaitingStatus.Seated) {
-                        getStyleClass().add("row-seated");
-                    }
-                }
-            }
-        });
+		// ===== ROW STYLING (EXISTING) =====
+		tblWaitingList.setRowFactory(tv -> new TableRow<Waiting>() {
+			@Override
+			protected void updateItem(Waiting item, boolean empty) {
+				super.updateItem(item, empty);
+				getStyleClass().removeAll("row-cancelled", "row-seated");
 
-        // ===== FILTER + SORT =====
-        filteredWaiting = new FilteredList<>(waitingData, w -> true);
+				if (item != null && !empty) {
+					if (item.getWaitingStatus() == WaitingStatus.Cancelled) {
+						getStyleClass().add("row-cancelled");
+					} else if (item.getWaitingStatus() == WaitingStatus.Seated) {
+						getStyleClass().add("row-seated");
+					}
+				}
+			}
+		});
 
-        SortedList<Waiting> sorted = new SortedList<>(filteredWaiting);
-        sorted.comparatorProperty().bind(tblWaitingList.comparatorProperty());
+		// ===== FILTER + SORT =====
+		filteredWaiting = new FilteredList<>(waitingData, w -> true);
 
-        tblWaitingList.setItems(sorted);
+		SortedList<Waiting> sorted = new SortedList<>(filteredWaiting);
+		sorted.comparatorProperty().bind(tblWaitingList.comparatorProperty());
 
-        // ===== MATCH MODE (Exact default) =====
-        if (cmbMatchMode != null) {
-            cmbMatchMode.getItems().setAll("Contains", "Exact");
-            cmbMatchMode.getSelectionModel().select("Exact");
-        }
+		tblWaitingList.setItems(sorted);
 
-        // ===== LISTENERS =====
-        if (txtFilter != null) {
-            txtFilter.textProperty().addListener((obs, oldVal, newVal) -> applyFilter());
-        }
-        if (cmbMatchMode != null) {
-            cmbMatchMode.valueProperty().addListener((obs, oldVal, newVal) -> applyFilter());
-        }
-    }
+		// ===== MATCH MODE (Exact default) =====
+		if (cmbMatchMode != null) {
+			cmbMatchMode.getItems().setAll("Contains", "Exact");
+			cmbMatchMode.getSelectionModel().select("Exact");
+		}
 
-    /**
-     * Colors only the text in the Status column:
-     * Waiting -> blue, Seated -> green, Cancelled -> red.
-     */
-    private void installStatusColoring() {
-        colStatus.setCellFactory(col -> new TableCell<Waiting, WaitingStatus>() {
-            @Override
-            protected void updateItem(WaitingStatus status, boolean empty) {
-                super.updateItem(status, empty);
+		// ===== LISTENERS =====
+		if (txtFilter != null) {
+			txtFilter.textProperty().addListener((obs, oldVal, newVal) -> applyFilter());
+		}
+		if (cmbMatchMode != null) {
+			cmbMatchMode.valueProperty().addListener((obs, oldVal, newVal) -> applyFilter());
+		}
+	}
 
-                if (empty || status == null) {
-                    setText(null);
-                    setStyle("");
-                    return;
-                }
+	/**
+	 * Colors only the text in the Status column: Waiting -> blue, Seated -> green,
+	 * Cancelled -> red.
+	 */
+	private void installStatusColoring() {
+		colStatus.setCellFactory(col -> new TableCell<Waiting, WaitingStatus>() {
+			@Override
+			protected void updateItem(WaitingStatus status, boolean empty) {
+				super.updateItem(status, empty);
 
-                setText(status.toString());
-                setStyle(""); // reset
+				if (empty || status == null) {
+					setText(null);
+					setStyle("");
+					return;
+				}
 
-                if (status == WaitingStatus.Cancelled) {
-                    setStyle("-fx-text-fill: #C62828; -fx-font-weight: bold;");
-                } else if (status == WaitingStatus.Seated) {
-                    setStyle("-fx-text-fill: #2E7D32; -fx-font-weight: bold;");
-                } else if (status == WaitingStatus.Waiting) {
-                    setStyle("-fx-text-fill: #1565C0; -fx-font-weight: bold;");
-                }
-            }
-        });
-    }
+				setText(status.toString());
+				setStyle(""); // reset
 
-    private void applyFilter() {
-        String input = (txtFilter == null || txtFilter.getText() == null) ? "" : txtFilter.getText();
-        String filter = input.trim().toLowerCase();
+				if (status == WaitingStatus.Cancelled) {
+					setStyle("-fx-text-fill: #C62828; -fx-font-weight: bold;");
+				} else if (status == WaitingStatus.Seated) {
+					setStyle("-fx-text-fill: #2E7D32; -fx-font-weight: bold;");
+				} else if (status == WaitingStatus.Waiting) {
+					setStyle("-fx-text-fill: #1565C0; -fx-font-weight: bold;");
+				}
+			}
+		});
+	}
 
-        String mode = (cmbMatchMode == null || cmbMatchMode.getValue() == null)
-                ? "Exact"
-                : cmbMatchMode.getValue();
+	private void applyFilter() {
+		String input = (txtFilter == null || txtFilter.getText() == null) ? "" : txtFilter.getText();
+		String filter = input.trim().toLowerCase();
 
-        boolean exact = mode.equalsIgnoreCase("Exact");
+		String mode = (cmbMatchMode == null || cmbMatchMode.getValue() == null) ? "Exact" : cmbMatchMode.getValue();
 
-        if (filter.isEmpty()) {
-            filteredWaiting.setPredicate(w -> true);
-            return;
-        }
+		boolean exact = mode.equalsIgnoreCase("Exact");
 
-        filteredWaiting.setPredicate(w -> {
-            String id = String.valueOf(w.getWaitingId());
-            String createdBy = String.valueOf(w.getCreatedByUserId());
-            String role = (w.getCreatedByRole() == null) ? "" : w.getCreatedByRole().toString().toLowerCase();
-            String guests = String.valueOf(w.getGuestAmount());
-            String code = safeLower(w.getConfirmationCode());
-            String freed = (w.getTableFreedTime() == null) ? "" : w.getTableFreedTime().toString().toLowerCase();
-            String tableNo = (w.getTableNumber() == null) ? "" : String.valueOf(w.getTableNumber());
-            String status = (w.getWaitingStatus() == null) ? "" : w.getWaitingStatus().toString().toLowerCase();
+		if (filter.isEmpty()) {
+			filteredWaiting.setPredicate(w -> true);
+			return;
+		}
 
-            if (exact) {
-                return id.equals(filter)
-                        || createdBy.equals(filter)
-                        || role.equals(filter)
-                        || guests.equals(filter)
-                        || code.equals(filter)
-                        || freed.equals(filter)
-                        || tableNo.equals(filter)
-                        || status.equals(filter);
-            }
+		filteredWaiting.setPredicate(w -> {
+			String id = String.valueOf(w.getWaitingId());
+			String createdBy = String.valueOf(w.getCreatedByUserId());
+			String role = (w.getCreatedByRole() == null) ? "" : w.getCreatedByRole().toString().toLowerCase();
+			String guests = String.valueOf(w.getGuestAmount());
+			String code = safeLower(w.getConfirmationCode());
+			String freed = (w.getTableFreedTime() == null) ? "" : w.getTableFreedTime().toString().toLowerCase();
+			String tableNo = (w.getTableNumber() == null) ? "" : String.valueOf(w.getTableNumber());
+			String status = (w.getWaitingStatus() == null) ? "" : w.getWaitingStatus().toString().toLowerCase();
 
-            return id.contains(filter)
-                    || createdBy.contains(filter)
-                    || role.contains(filter)
-                    || guests.contains(filter)
-                    || code.contains(filter)
-                    || freed.contains(filter)
-                    || tableNo.contains(filter)
-                    || status.contains(filter);
-        });
-    }
+			if (exact) {
+				return id.equals(filter) || createdBy.equals(filter) || role.equals(filter) || guests.equals(filter)
+						|| code.equals(filter) || freed.equals(filter) || tableNo.equals(filter)
+						|| status.equals(filter);
+			}
 
-    private String safeLower(String s) {
-        return (s == null) ? "" : s.toLowerCase();
-    }
+			return id.contains(filter) || createdBy.contains(filter) || role.contains(filter) || guests.contains(filter)
+					|| code.contains(filter) || freed.contains(filter) || tableNo.contains(filter)
+					|| status.contains(filter);
+		});
+	}
 
-    @FXML
-    private void onClearFilter() {
-        if (txtFilter != null) txtFilter.clear();
-        if (cmbMatchMode != null) cmbMatchMode.getSelectionModel().select("Exact");
-    }
+	private String safeLower(String s) {
+		return (s == null) ? "" : s.toLowerCase();
+	}
 
-    @FXML
-    private void onAddWaitingClicked() {
-        openScreen("/gui/JoinWaiting_B.fxml", controller -> {
-            JoinWaiting_BController c = (JoinWaiting_BController) controller;
-            c.setClient(user, chatClient);
-            c.setBackFxml("/gui/ManageWaitingList.fxml");
-        });
-    }
+	@FXML
+	private void onClearFilter() {
+		if (txtFilter != null)
+			txtFilter.clear();
+		if (cmbMatchMode != null)
+			cmbMatchMode.getSelectionModel().select("Exact");
+	}
 
-    @FXML
-    private void onCancelWaitingClicked() {
-        Waiting selected = tblWaitingList.getSelectionModel().getSelectedItem();
-        if (selected == null) return;
+	@FXML
+	private void onAddWaitingClicked() {
+		openScreen("/gui/JoinWaiting_B.fxml", controller -> {
+			JoinWaiting_BController c = (JoinWaiting_BController) controller;
+			c.setClient(user, chatClient);
+			c.setBackFxml("/gui/ManageWaitingList.fxml");
+		});
+	}
 
-        openScreen("/gui/CancelWaiting_B.fxml", controller -> {
-            CancelWaiting_BController c = (CancelWaiting_BController) controller;
-            c.setClient(user, chatClient, selected.getConfirmationCode());
-            c.setBackFxml("/gui/ManageWaitingList.fxml");
-        });
-    }
+	@FXML
+	private void onCancelWaitingClicked() {
+		Waiting selected = tblWaitingList.getSelectionModel().getSelectedItem();
+		if (selected == null)
+			return;
 
-    @FXML
-    private void onRefreshClicked() {
-        waitingData.clear();
-        loadWaitingList();
-    }
+		openScreen("/gui/CancelWaiting_B.fxml", controller -> {
+			CancelWaiting_BController c = (CancelWaiting_BController) controller;
+			c.setClient(user, chatClient, selected.getConfirmationCode());
+			c.setBackFxml("/gui/ManageWaitingList.fxml");
+		});
+	}
 
-    private void loadWaitingList() {
-        try {
-            clientAPI.getWaitingList();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+	@FXML
+	private void onRefreshClicked() {
+		waitingData.clear();
+		loadWaitingList();
+	}
 
-    @FXML
-    private void onBackClicked() {
-        openScreen("/gui/RestaurantManagement_B.fxml", controller ->
-                ((RestaurantManagement_BController) controller)
-                        .setClient(user, chatClient)
-        );
-    }
+	private void loadWaitingList() {
+		try {
+			clientAPI.getWaitingList();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 
-    private void openScreen(String fxmlPath, java.util.function.Consumer<Object> injector) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
-            Parent root = loader.load();
+	@FXML
+	private void onBackClicked() {
+		openScreen("/gui/RestaurantManagement_B.fxml",
+				controller -> ((RestaurantManagement_BController) controller).setClient(user, chatClient));
+	}
 
-            Object controller = loader.getController();
-            if (controller != null && injector != null) {
-                injector.accept(controller);
-            }
+	private void openScreen(String fxmlPath, java.util.function.Consumer<Object> injector) {
+		try {
+			FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
+			Parent root = loader.load();
 
-            Stage stage = (Stage) rootPane.getScene().getWindow();
-            Scene scene = stage.getScene();
+			Object controller = loader.getController();
+			if (controller != null && injector != null) {
+				injector.accept(controller);
+			}
 
-            if (scene == null) {
-                stage.setScene(new Scene(root));
-            } else {
-                scene.setRoot(root);
-            }
+			Stage stage = (Stage) rootPane.getScene().getWindow();
+			Scene scene = stage.getScene();
 
-            stage.setMaximized(true);
-            stage.show();
+			if (scene == null) {
+				stage.setScene(new Scene(root));
+			} else {
+				scene.setRoot(root);
+			}
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+			stage.setMaximized(true);
+			stage.show();
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 }
