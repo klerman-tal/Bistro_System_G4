@@ -41,7 +41,12 @@ public class GetTimeReportHandler implements RequestHandler {
 
 		TimeReportDTO result = reportsController.buildTimeReport(req.getYear(), req.getMonth());
 
+
+		System.out.println("📤 Sending TimeReportDTO to client: " + "onTime=" + result.getOnTimeCount() + ", minor="
+				+ result.getMinorDelayCount() + ", major=" + result.getSignificantDelayCount());
+
 		System.out.println("Sending Time Reports to client");
+
 
 		client.sendToClient(new ResponseDTO(true, "Time report loaded", result));
 	}
