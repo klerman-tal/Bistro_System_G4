@@ -30,347 +30,348 @@ import network.ClientResponseHandler;
 /**
  * JavaFX controller for managing reservations (manager/agent view).
  *
- * <p>This screen displays all reservations in a table, supports refreshing the data from the server,
- * and provides actions to create a new reservation or cancel an existing one. Navigation between screens
- * is performed by swapping the current scene root to preserve the window instance and maximized state.</p>
+ * <p>
+ * This screen displays all reservations in a table, supports refreshing the
+ * data from the server, and provides actions to create a new reservation or
+ * cancel an existing one. Navigation between screens is performed by swapping
+ * the current scene root to preserve the window instance and maximized state.
+ * </p>
  *
- * <p>The controller uses {@link ClientAPI} to send requests to the server and attaches a
- * {@link ClientResponseHandler} to process asynchronous responses.</p>
+ * <p>
+ * The controller uses {@link ClientAPI} to send requests to the server and
+ * attaches a {@link ClientResponseHandler} to process asynchronous responses.
+ * </p>
  */
 public class ManageReservationController implements Initializable {
 
-    @FXML private BorderPane rootPane;
-    @FXML private Label lblStatus;
+	@FXML
+	private BorderPane rootPane;
+	@FXML
+	private Label lblStatus;
 
-    // ===== FILTER (NEW) =====
-    @FXML private TextField txtFilter;
-    @FXML private ComboBox<String> cmbMatchMode;
+	// ===== FILTER =====
+	@FXML
+	private TextField txtFilter;
+	@FXML
+	private ComboBox<String> cmbMatchMode;
 
-    @FXML private TableView<Reservation> tblReservations;
-    @FXML private TableColumn<Reservation, Integer> colReservationId;
-    @FXML private TableColumn<Reservation, LocalDateTime> colDateTime;
-    @FXML private TableColumn<Reservation, Integer> colGuests;
-    @FXML private TableColumn<Reservation, String> colCode;
-    @FXML private TableColumn<Reservation, Integer> colCreatedBy;
-    @FXML private TableColumn<Reservation, ReservationStatus> colStatus;
-    @FXML private TableColumn<Reservation, Integer> colTableNumber;
+	@FXML
+	private TableView<Reservation> tblReservations;
+	@FXML
+	private TableColumn<Reservation, Integer> colReservationId;
+	@FXML
+	private TableColumn<Reservation, LocalDateTime> colDateTime;
+	@FXML
+	private TableColumn<Reservation, Integer> colGuests;
+	@FXML
+	private TableColumn<Reservation, String> colCode;
+	@FXML
+	private TableColumn<Reservation, Integer> colCreatedBy;
+	@FXML
+	private TableColumn<Reservation, ReservationStatus> colStatus;
+	@FXML
+	private TableColumn<Reservation, Integer> colTableNumber;
 
-    @FXML private Button btnAdd;
-    @FXML private Button btnDelete;
-    @FXML private Button btnBack;
+	@FXML
+	private Button btnAdd;
+	@FXML
+	private Button btnDelete;
+	@FXML
+	private Button btnBack;
 
-    private ClientActions clientActions;
-    private User user;
-    private ChatClient chatClient;
-    private ClientAPI clientAPI;
+	private ClientActions clientActions;
+	private User user;
+	private ChatClient chatClient;
+	private ClientAPI clientAPI;
 
-    private final ObservableList<Reservation> reservationsList =
-            FXCollections.observableArrayList();
+	private final ObservableList<Reservation> reservationsList = FXCollections.observableArrayList();
 
-    // ===== FILTER DATA (NEW) =====
-    private FilteredList<Reservation> filteredReservations;
+	private FilteredList<Reservation> filteredReservations;
 
-    /**
-     * Injects a {@link ClientActions} implementation for controllers that rely on GUI-to-client actions.
-     *
-     * @param clientActions the client actions bridge used by downstream controllers
-     */
-    public void setClientActions(ClientActions clientActions) {
-        this.clientActions = clientActions;
-    }
+	public void setClientActions(ClientActions clientActions) {
+		this.clientActions = clientActions;
+	}
 
-    /**
-     * Injects the current session context, initializes {@link ClientAPI}, and installs a response handler
-     * that delegates responses to {@link #handleServerResponse(ResponseDTO)} on the JavaFX UI thread.
-     *
-     * @param user       the current logged-in user
-     * @param chatClient the network client used to communicate with the server
-     */
-    public void setClient(User user, ChatClient chatClient) {
-        this.user = user;
-        this.chatClient = chatClient;
+	public void setClient(User user, ChatClient chatClient) {
+		this.user = user;
+		this.chatClient = chatClient;
 
-        if (chatClient != null) {
-            this.clientAPI = new ClientAPI(chatClient);
-            chatClient.setResponseHandler(new ClientResponseHandler() {
-                @Override
-                public void handleResponse(ResponseDTO response) {
-                    Platform.runLater(() -> handleServerResponse(response));
-                }
+		if (chatClient != null) {
+			this.clientAPI = new ClientAPI(chatClient);
+			chatClient.setResponseHandler(new ClientResponseHandler() {
+				@Override
+				public void handleResponse(ResponseDTO response) {
+					Platform.runLater(() -> handleServerResponse(response));
+				}
 
-                @Override
-                public void handleConnectionError(Exception exception) {
-                    Platform.runLater(() ->
-                            showMessage("Connection error: " + exception.getMessage()));
-                }
+				@Override
+				public void handleConnectionError(Exception exception) {
+					Platform.runLater(() -> showMessage("Connection error: " + exception.getMessage()));
+				}
 
-                @Override
-                public void handleConnectionClosed() {}
-            });
-        }
+				@Override
+				public void handleConnectionClosed() {
+				}
+			});
+		}
 
-        initializeTableBehavior();
-        loadReservationsOnEnter();
-    }
+		initializeTableBehavior();
+		loadReservationsOnEnter();
+	}
 
-    @Override
-    public void initialize(java.net.URL location, java.util.ResourceBundle resources) {
-        // intentionally empty
-    }
+	@Override
+	public void initialize(java.net.URL location, java.util.ResourceBundle resources) {
+		// intentionally empty
+	}
 
-    /**
-     * Configures the reservations table columns and binds the table to the observable data list.
-     */
-    private void initializeTableBehavior() {
-        colReservationId.setCellValueFactory(new PropertyValueFactory<>("reservationId"));
-        colDateTime.setCellValueFactory(new PropertyValueFactory<>("reservationTime"));
-        colGuests.setCellValueFactory(new PropertyValueFactory<>("guestAmount"));
-        colCode.setCellValueFactory(new PropertyValueFactory<>("confirmationCode"));
-        colCreatedBy.setCellValueFactory(new PropertyValueFactory<>("createdByUserId"));
-        colStatus.setCellValueFactory(new PropertyValueFactory<>("reservationStatus"));
-        colTableNumber.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
+	private void initializeTableBehavior() {
+		colReservationId.setCellValueFactory(new PropertyValueFactory<>("reservationId"));
+		colDateTime.setCellValueFactory(new PropertyValueFactory<>("reservationTime"));
+		colGuests.setCellValueFactory(new PropertyValueFactory<>("guestAmount"));
+		colCode.setCellValueFactory(new PropertyValueFactory<>("confirmationCode"));
+		colCreatedBy.setCellValueFactory(new PropertyValueFactory<>("createdByUserId"));
+		colStatus.setCellValueFactory(new PropertyValueFactory<>("reservationStatus"));
+		colTableNumber.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
 
-        // ===== FILTER + SORT (NEW) =====
-        filteredReservations = new FilteredList<>(reservationsList, r -> true);
+		// ===== STATUS COLORING (NEW) =====
+		installStatusColoring();
 
-        SortedList<Reservation> sorted = new SortedList<>(filteredReservations);
-        sorted.comparatorProperty().bind(tblReservations.comparatorProperty());
+		// ===== FILTER + SORT =====
+		filteredReservations = new FilteredList<>(reservationsList, r -> true);
 
-        tblReservations.setItems(sorted);
+		SortedList<Reservation> sorted = new SortedList<>(filteredReservations);
+		sorted.comparatorProperty().bind(tblReservations.comparatorProperty());
 
-        // ===== MATCH MODE (Exact default) (NEW) =====
-        if (cmbMatchMode != null) {
-            cmbMatchMode.getItems().setAll("Contains", "Exact");
-            cmbMatchMode.getSelectionModel().select("Exact");
-        }
+		tblReservations.setItems(sorted);
 
-        // ===== LISTENERS (NEW) =====
-        if (txtFilter != null) {
-            txtFilter.textProperty().addListener((obs, oldVal, newVal) -> applyFilter());
-        }
-        if (cmbMatchMode != null) {
-            cmbMatchMode.valueProperty().addListener((obs, oldVal, newVal) -> applyFilter());
-        }
-    }
+		// ===== MATCH MODE (Exact default) =====
+		if (cmbMatchMode != null) {
+			cmbMatchMode.getItems().setAll("Contains", "Exact");
+			cmbMatchMode.getSelectionModel().select("Exact");
+		}
 
-    /**
-     * Applies a general filter across multiple reservation fields. (NEW)
-     */
-    private void applyFilter() {
-        String input = (txtFilter == null || txtFilter.getText() == null) ? "" : txtFilter.getText();
-        String filter = input.trim().toLowerCase();
+		// ===== LISTENERS =====
+		if (txtFilter != null) {
+			txtFilter.textProperty().addListener((obs, oldVal, newVal) -> applyFilter());
+		}
+		if (cmbMatchMode != null) {
+			cmbMatchMode.valueProperty().addListener((obs, oldVal, newVal) -> applyFilter());
+		}
+	}
 
-        String mode = (cmbMatchMode == null || cmbMatchMode.getValue() == null)
-                ? "Exact"
-                : cmbMatchMode.getValue();
+	/**
+	 * Colors only the text in the Status column: Active -> green, Cancelled -> red,
+	 * Finished -> default.
+	 */
+	private void installStatusColoring() {
+		colStatus.setCellFactory(col -> new TableCell<Reservation, ReservationStatus>() {
+			@Override
+			protected void updateItem(ReservationStatus status, boolean empty) {
+				super.updateItem(status, empty);
 
-        boolean exact = mode.equalsIgnoreCase("Exact");
+				if (empty || status == null) {
+					setText(null);
+					setStyle("");
+					return;
+				}
 
-        if (filter.isEmpty()) {
-            filteredReservations.setPredicate(r -> true);
-            return;
-        }
+				setText(status.toString());
+				setStyle(""); // reset
 
-        filteredReservations.setPredicate(r -> {
-            String id = String.valueOf(r.getReservationId());
-            String code = safeLower(r.getConfirmationCode());
-            String createdBy = String.valueOf(r.getCreatedByUserId());
-            String status = (r.getReservationStatus() == null) ? "" : r.getReservationStatus().toString().toLowerCase();
-            String tableNo = (r.getTableNumber() == null) ? "" : String.valueOf(r.getTableNumber());
-            String guests = String.valueOf(r.getGuestAmount());
-            String time = (r.getReservationTime() == null) ? "" : r.getReservationTime().toString().toLowerCase();
+				if (status == ReservationStatus.Active) {
+					setStyle("-fx-text-fill: #2E7D32; -fx-font-weight: bold;");
+				} else if (status == ReservationStatus.Cancelled) {
+					setStyle("-fx-text-fill: #C62828; -fx-font-weight: bold;");
+				}
+				// Finished -> default (no style)
+			}
+		});
+	}
 
-            if (exact) {
-                return id.equals(filter)
-                        || code.equals(filter)
-                        || createdBy.equals(filter)
-                        || status.equals(filter)
-                        || tableNo.equals(filter)
-                        || guests.equals(filter)
-                        || time.equals(filter);
-            }
+	private void applyFilter() {
+		String input = (txtFilter == null || txtFilter.getText() == null) ? "" : txtFilter.getText();
+		String filter = input.trim().toLowerCase();
 
-            return id.contains(filter)
-                    || code.contains(filter)
-                    || createdBy.contains(filter)
-                    || status.contains(filter)
-                    || tableNo.contains(filter)
-                    || guests.contains(filter)
-                    || time.contains(filter);
-        });
-    }
+		String mode = (cmbMatchMode == null || cmbMatchMode.getValue() == null) ? "Exact" : cmbMatchMode.getValue();
 
-    private String safeLower(String s) {
-        return (s == null) ? "" : s.toLowerCase();
-    }
+		boolean exact = mode.equalsIgnoreCase("Exact");
 
-    /**
-     * Clears filter input and restores default match mode (Exact). (NEW)
-     */
-    @FXML
-    private void onClearFilter() {
-        if (txtFilter != null) txtFilter.clear();
-        if (cmbMatchMode != null) cmbMatchMode.getSelectionModel().select("Exact");
-    }
+		if (filter.isEmpty()) {
+			filteredReservations.setPredicate(r -> true);
+			return;
+		}
 
-    /**
-     * Loads all reservations from the server when entering the screen.
-     */
-    private void loadReservationsOnEnter() {
-        hideMessage();
-        if (clientAPI == null) return;
+		filteredReservations.setPredicate(r -> {
+			String id = String.valueOf(r.getReservationId());
+			String code = safeLower(r.getConfirmationCode());
+			String createdBy = String.valueOf(r.getCreatedByUserId());
+			String status = (r.getReservationStatus() == null) ? "" : r.getReservationStatus().toString().toLowerCase();
+			String tableNo = (r.getTableNumber() == null) ? "" : String.valueOf(r.getTableNumber());
+			String guests = String.valueOf(r.getGuestAmount());
+			String time = (r.getReservationTime() == null) ? "" : r.getReservationTime().toString().toLowerCase();
 
-        try {
-            clientAPI.getAllReservations();
-        } catch (IOException e) {
-            showMessage("Failed to load reservations");
-        }
-    }
+			if (exact) {
+				return id.equals(filter) || code.equals(filter) || createdBy.equals(filter) || status.equals(filter)
+						|| tableNo.equals(filter) || guests.equals(filter) || time.equals(filter);
+			}
 
-    /**
-     * Processes server responses related to reservation management.
-     */
-    public void handleServerResponse(ResponseDTO response) {
-        if (response == null) return;
+			return id.contains(filter) || code.contains(filter) || createdBy.contains(filter) || status.contains(filter)
+					|| tableNo.contains(filter) || guests.contains(filter) || time.contains(filter);
+		});
+	}
 
-        if (response.isSuccess() && response.getData() instanceof List<?>) {
-            @SuppressWarnings("unchecked")
-            List<Reservation> list = (List<Reservation>) response.getData();
-            reservationsList.setAll(list);
-            hideMessage();
-        }
-        else if (response.isSuccess()) {
-            showMessage("Success: " + response.getMessage());
-            loadReservationsOnEnter();
-        }
-        else {
-            showMessage("Error: " + response.getMessage());
-        }
-    }
+	private String safeLower(String s) {
+		return (s == null) ? "" : s.toLowerCase();
+	}
 
-    /**
-     * Opens the "Add Reservation" screen and configures it to navigate back to this screen.
-     */
-    @FXML
-    private void onAddClicked() {
-        try {
-            FXMLLoader loader =
-                    new FXMLLoader(getClass().getResource("/gui/TableReservation_B.fxml"));
-            Parent root = loader.load();
+	@FXML
+	private void onClearFilter() {
+		if (txtFilter != null)
+			txtFilter.clear();
+		if (cmbMatchMode != null)
+			cmbMatchMode.getSelectionModel().select("Exact");
+	}
 
-            TableReservation_BController controller = loader.getController();
-            if (controller != null) {
-                controller.setClient(user, chatClient);
-                controller.setBackFxml("/gui/ManageReservation.fxml");
-            }
+	private void loadReservationsOnEnter() {
+		hideMessage();
+		if (clientAPI == null)
+			return;
 
-            Stage stage = (Stage) rootPane.getScene().getWindow();
+		try {
+			clientAPI.getAllReservations();
+		} catch (IOException e) {
+			showMessage("Failed to load reservations");
+		}
+	}
 
-            Scene scene = stage.getScene();
-            if (scene == null) {
-                stage.setScene(new Scene(root));
-            } else {
-                scene.setRoot(root);
-            }
+	public void handleServerResponse(ResponseDTO response) {
+		if (response == null)
+			return;
 
-            stage.setMaximized(true);
-            stage.show();
+		if (response.isSuccess() && response.getData() instanceof List<?>) {
+			@SuppressWarnings("unchecked")
+			List<Reservation> list = (List<Reservation>) response.getData();
+			reservationsList.setAll(list);
+			hideMessage();
+		} else if (response.isSuccess()) {
+			showMessage("Success: " + response.getMessage());
+			loadReservationsOnEnter();
+		} else {
+			showMessage("Error: " + response.getMessage());
+		}
+	}
 
-        } catch (Exception e) {
-            showMessage("Error opening Add screen");
-        }
-    }
+	@FXML
+	private void onAddClicked() {
+		try {
+			FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/TableReservation_B.fxml"));
+			Parent root = loader.load();
 
-    /**
-     * Opens the cancel screen for the currently selected reservation.
-     */
-    @FXML
-    private void onDeleteClicked() {
-        Reservation selected = tblReservations.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showMessage("Please select a reservation to cancel.");
-            return;
-        }
-        openCancelWindow(selected);
-    }
+			TableReservation_BController controller = loader.getController();
+			if (controller != null) {
+				controller.setClient(user, chatClient);
+				controller.setBackFxml("/gui/ManageReservation.fxml");
+			}
 
-    private void openCancelWindow(Reservation reservation) {
-        try {
-            FXMLLoader loader =
-                    new FXMLLoader(getClass().getResource("/gui/CancelReservation_B.fxml"));
-            Parent root = loader.load();
+			Stage stage = (Stage) rootPane.getScene().getWindow();
 
-            CancelReservation_BController controller = loader.getController();
-            controller.setClient(user, chatClient);
-            controller.setConfirmationCode(reservation.getConfirmationCode());
-            controller.setBackFxml("/gui/ManageReservation.fxml");
+			Scene scene = stage.getScene();
+			if (scene == null) {
+				stage.setScene(new Scene(root));
+			} else {
+				scene.setRoot(root);
+			}
 
-            Stage stage = (Stage) rootPane.getScene().getWindow();
+			stage.setMaximized(true);
+			stage.show();
 
-            Scene scene = stage.getScene();
-            if (scene == null) {
-                stage.setScene(new Scene(root));
-            } else {
-                scene.setRoot(root);
-            }
+		} catch (Exception e) {
+			showMessage("Error opening Add screen");
+		}
+	}
 
-            stage.setMaximized(true);
-            stage.show();
+	@FXML
+	private void onDeleteClicked() {
+		Reservation selected = tblReservations.getSelectionModel().getSelectedItem();
+		if (selected == null) {
+			showMessage("Please select a reservation to cancel.");
+			return;
+		}
+		openCancelWindow(selected);
+	}
 
-        } catch (Exception e) {
-            showMessage("Error opening cancel screen");
-        }
-    }
+	private void openCancelWindow(Reservation reservation) {
+		try {
+			FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/CancelReservation_B.fxml"));
+			Parent root = loader.load();
 
-    /**
-     * Navigates back to the restaurant management screen.
-     */
-    @FXML
-    private void onBackClicked() {
-        openWindow("RestaurantManagement_B.fxml", "Management");
-    }
+			CancelReservation_BController controller = loader.getController();
+			controller.setClient(user, chatClient);
+			controller.setConfirmationCode(reservation.getConfirmationCode());
+			controller.setBackFxml("/gui/ManageReservation.fxml");
 
-    private void openWindow(String fxmlName, String title) {
-        try {
-            FXMLLoader loader =
-                    new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
-            Parent root = loader.load();
+			Stage stage = (Stage) rootPane.getScene().getWindow();
 
-            Object controller = loader.getController();
-            if (controller != null) {
-                try {
-                    controller.getClass()
-                            .getMethod("setClient", User.class, ChatClient.class)
-                            .invoke(controller, user, chatClient);
-                } catch (Exception ignored) {}
-            }
+			Scene scene = stage.getScene();
+			if (scene == null) {
+				stage.setScene(new Scene(root));
+			} else {
+				scene.setRoot(root);
+			}
 
-            Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setTitle("Bistro - " + title);
+			stage.setMaximized(true);
+			stage.show();
 
-            Scene scene = stage.getScene();
-            if (scene == null) {
-                stage.setScene(new Scene(root));
-            } else {
-                scene.setRoot(root);
-            }
+		} catch (Exception e) {
+			showMessage("Error opening cancel screen");
+		}
+	}
 
-            stage.setMaximized(true);
-            stage.show();
+	@FXML
+	private void onBackClicked() {
+		openWindow("RestaurantManagement_B.fxml", "Management");
+	}
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+	private void openWindow(String fxmlName, String title) {
+		try {
+			FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
+			Parent root = loader.load();
 
-    private void showMessage(String msg) {
-        lblStatus.setText(msg);
-        lblStatus.setVisible(true);
-        lblStatus.setManaged(true);
-    }
+			Object controller = loader.getController();
+			if (controller != null) {
+				try {
+					controller.getClass().getMethod("setClient", User.class, ChatClient.class).invoke(controller, user,
+							chatClient);
+				} catch (Exception ignored) {
+				}
+			}
 
-    private void hideMessage() {
-        lblStatus.setVisible(false);
-        lblStatus.setManaged(false);
-    }
+			Stage stage = (Stage) rootPane.getScene().getWindow();
+			stage.setTitle("Bistro - " + title);
+
+			Scene scene = stage.getScene();
+			if (scene == null) {
+				stage.setScene(new Scene(root));
+			} else {
+				scene.setRoot(root);
+			}
+
+			stage.setMaximized(true);
+			stage.show();
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	private void showMessage(String msg) {
+		lblStatus.setText(msg);
+		lblStatus.setVisible(true);
+		lblStatus.setManaged(true);
+	}
+
+	private void hideMessage() {
+		lblStatus.setVisible(false);
+		lblStatus.setManaged(false);
+	}
 }
