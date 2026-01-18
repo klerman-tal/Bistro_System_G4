@@ -46,7 +46,7 @@ public class GetSubscribersReportHandler implements RequestHandler {
                         req.getMonth()
                 );
 
-        System.out.println("Sending Subscribers Report to client");
+        System.out.println("Sending Subscribers Reports to client");
 
         client.sendToClient(
                 new ResponseDTO(
