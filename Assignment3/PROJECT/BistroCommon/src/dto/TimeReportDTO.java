@@ -83,6 +83,37 @@ public class TimeReportDTO implements Serializable {
     public void setMonth(int month) {
         this.month = month;
     }
+    
+ // ================= Month-over-Month Delta =================
+
+    private Integer onTimeDelta;
+    private Integer minorDelayDelta;
+    private Integer significantDelayDelta;
+
+    public Integer getOnTimeDelta() {
+        return onTimeDelta;
+    }
+
+    public void setOnTimeDelta(Integer onTimeDelta) {
+        this.onTimeDelta = onTimeDelta;
+    }
+
+    public Integer getMinorDelayDelta() {
+        return minorDelayDelta;
+    }
+
+    public void setMinorDelayDelta(Integer minorDelayDelta) {
+        this.minorDelayDelta = minorDelayDelta;
+    }
+
+    public Integer getSignificantDelayDelta() {
+        return significantDelayDelta;
+    }
+
+    public void setSignificantDelayDelta(Integer significantDelayDelta) {
+        this.significantDelayDelta = significantDelayDelta;
+    }
+
 
     public int getOnTimeCount() {
         return onTimeCount;
@@ -155,4 +186,15 @@ public class TimeReportDTO implements Serializable {
     public void setMinAvgMinutes(int minAvgMinutes) {
         this.minAvgMinutes = minAvgMinutes;
     }
+    
+    private Integer monthlyAvgDelta;
+
+    public Integer getMonthlyAvgDelta() {
+        return monthlyAvgDelta;
+    }
+
+    public void setMonthlyAvgDelta(Integer monthlyAvgDelta) {
+        this.monthlyAvgDelta = monthlyAvgDelta;
+    }
+
 }
