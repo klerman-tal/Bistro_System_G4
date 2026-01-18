@@ -46,12 +46,7 @@ public class GetSubscribersReportHandler implements RequestHandler {
                         req.getMonth()
                 );
 
-        System.out.println("📤 Sending SubscribersReportDTO to client: "
-                + "active=" + result.getActiveSubscribersCount()
-                + ", inactive=" + result.getInactiveSubscribersCount()
-                + ", waitingDays=" + (result.getWaitingListPerDay() == null ? 0 : result.getWaitingListPerDay().size())
-                + ", reservationDays=" + (result.getReservationsPerDay() == null ? 0 : result.getReservationsPerDay().size())
-        );
+        System.out.println("Sending Subscribers Reports to client");
 
         client.sendToClient(
                 new ResponseDTO(
