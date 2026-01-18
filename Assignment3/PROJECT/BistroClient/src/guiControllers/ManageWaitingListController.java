@@ -13,13 +13,21 @@ import entities.Enums.WaitingStatus;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
+import javafx.collections.transformation.SortedList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
+import javafx.scene.control.Button;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
@@ -41,6 +49,10 @@ public class ManageWaitingListController {
 
     @FXML private BorderPane rootPane;
 
+    // ===== FILTER (NEW) =====
+    @FXML private TextField txtFilter;
+    @FXML private ComboBox<String> cmbMatchMode;
+
     @FXML private TableView<Waiting> tblWaitingList;
     @FXML private TableColumn<Waiting, Integer> colWaitingId;
     @FXML private TableColumn<Waiting, Integer> colCreatedBy;
@@ -57,6 +69,9 @@ public class ManageWaitingListController {
 
     private final ObservableList<Waiting> waitingData =
             FXCollections.observableArrayList();
+
+    // ===== FILTER DATA (NEW) =====
+    private FilteredList<Waiting> filteredWaiting;
 
     /**
      * Injects the current session context, initializes {@link ClientAPI}, registers a response handler,
@@ -93,7 +108,7 @@ public class ManageWaitingListController {
 
     /**
      * Configures the waiting list table columns, binds it to the observable list,
-     * and applies row styling based on {@link WaitingStatus}.
+     * applies row styling based on {@link WaitingStatus}, and installs filtering. (UPDATED)
      */
     private void setupTable() {
         colWaitingId.setCellValueFactory(new PropertyValueFactory<>("waitingId"));
@@ -121,7 +136,90 @@ public class ManageWaitingListController {
             }
         });
 
-        tblWaitingList.setItems(waitingData);
+        // ===== FILTER + SORT (NEW) =====
+        filteredWaiting = new FilteredList<>(waitingData, w -> true);
+
+        SortedList<Waiting> sorted = new SortedList<>(filteredWaiting);
+        sorted.comparatorProperty().bind(tblWaitingList.comparatorProperty());
+
+        tblWaitingList.setItems(sorted);
+
+        // ===== MATCH MODE (Exact default) (NEW) =====
+        if (cmbMatchMode != null) {
+            cmbMatchMode.getItems().setAll("Contains", "Exact");
+            cmbMatchMode.getSelectionModel().select("Exact");
+        }
+
+        // ===== LISTENERS (NEW) =====
+        if (txtFilter != null) {
+            txtFilter.textProperty().addListener((obs, oldVal, newVal) -> applyFilter());
+        }
+        if (cmbMatchMode != null) {
+            cmbMatchMode.valueProperty().addListener((obs, oldVal, newVal) -> applyFilter());
+        }
+    }
+
+    /**
+     * Applies a general filter across multiple waiting fields. (NEW)
+     */
+    private void applyFilter() {
+        String input = (txtFilter == null || txtFilter.getText() == null) ? "" : txtFilter.getText();
+        String filter = input.trim().toLowerCase();
+
+        String mode = (cmbMatchMode == null || cmbMatchMode.getValue() == null)
+                ? "Exact"
+                : cmbMatchMode.getValue();
+
+        boolean exact = mode.equalsIgnoreCase("Exact");
+
+        if (filter.isEmpty()) {
+            filteredWaiting.setPredicate(w -> true);
+            return;
+        }
+
+        filteredWaiting.setPredicate(w -> {
+            String id = String.valueOf(w.getWaitingId());
+            String createdBy = String.valueOf(w.getCreatedByUserId());
+            String role = (w.getCreatedByRole() == null) ? "" : w.getCreatedByRole().toString().toLowerCase();
+            String guests = String.valueOf(w.getGuestAmount());
+            String code = safeLower(w.getConfirmationCode());
+            String freed = (w.getTableFreedTime() == null) ? "" : w.getTableFreedTime().toString().toLowerCase();
+            String tableNo = (w.getTableNumber() == null) ? "" : String.valueOf(w.getTableNumber());
+            String status = (w.getWaitingStatus() == null) ? "" : w.getWaitingStatus().toString().toLowerCase();
+
+            if (exact) {
+                return id.equals(filter)
+                        || createdBy.equals(filter)
+                        || role.equals(filter)
+                        || guests.equals(filter)
+                        || code.equals(filter)
+                        || freed.equals(filter)
+                        || tableNo.equals(filter)
+                        || status.equals(filter);
+            }
+
+            return id.contains(filter)
+                    || createdBy.contains(filter)
+                    || role.contains(filter)
+                    || guests.contains(filter)
+                    || code.contains(filter)
+                    || freed.contains(filter)
+                    || tableNo.contains(filter)
+                    || status.contains(filter);
+        });
+    }
+
+    private String safeLower(String s) {
+        return (s == null) ? "" : s.toLowerCase();
+    }
+
+    /**
+     * Clears filter input and restores default match mode (Exact). (NEW)
+     */
+    @FXML
+    private void onClearFilter() {
+        if (txtFilter != null) txtFilter.clear();
+        if (cmbMatchMode != null) cmbMatchMode.getSelectionModel().select("Exact");
     }
 
     /**
@@ -138,8 +236,6 @@ public class ManageWaitingListController {
 
     /**
      * Opens the "Cancel Waiting" screen for the selected waiting entry.
-     *
-     * <p>If no entry is selected, the method does nothing.</p>
      */
     @FXML
     private void onCancelWaitingClicked() {
@@ -186,9 +282,6 @@ public class ManageWaitingListController {
 
     /**
      * Loads the requested FXML and swaps the current scene root to navigate between screens.
-     *
-     * @param fxmlPath  the classpath resource path of the target FXML
-     * @param injector  callback used to inject required context into the target controller
      */
     private void openScreen(String fxmlPath, java.util.function.Consumer<Object> injector) {
         try {

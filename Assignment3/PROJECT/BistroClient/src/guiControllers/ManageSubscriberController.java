@@ -11,12 +11,15 @@ import interfaces.ClientActions;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
+import javafx.collections.transformation.SortedList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -48,6 +51,10 @@ public class ManageSubscriberController {
     @FXML private BorderPane rootPane;
     @FXML private Label lblStatus;
 
+    // ===== FILTER =====
+    @FXML private TextField txtFilter;
+    @FXML private ComboBox<String> cmbMatchMode;
+
     @FXML private TableView<Subscriber> tblSubscribers;
     @FXML private TableColumn<Subscriber, Integer> colSubscriberId;
     @FXML private TableColumn<Subscriber, String> colUsername;
@@ -72,6 +79,8 @@ public class ManageSubscriberController {
 
     private final ObservableList<Subscriber> subscribersList =
             FXCollections.observableArrayList();
+
+    private FilteredList<Subscriber> filteredSubscribers;
 
     /**
      * Injects a {@link ClientActions} implementation for controllers that rely on GUI-to-client actions.
@@ -119,7 +128,7 @@ public class ManageSubscriberController {
 
     /**
      * Configures the subscribers table columns, binds the table to the observable list,
-     * and installs a selection listener to populate the form.
+     * installs a filter (Exact/Contains), and installs a selection listener to populate the form.
      */
     private void initializeTableBehavior() {
         colSubscriberId.setCellValueFactory(new PropertyValueFactory<>("userId"));
@@ -130,13 +139,93 @@ public class ManageSubscriberController {
         colEmail.setCellValueFactory(new PropertyValueFactory<>("email"));
         colRole.setCellValueFactory(new PropertyValueFactory<>("userRole"));
 
-        tblSubscribers.setItems(subscribersList);
+        // ===== FILTER + SORT =====
+        filteredSubscribers = new FilteredList<>(subscribersList, s -> true);
 
+        SortedList<Subscriber> sorted = new SortedList<>(filteredSubscribers);
+        sorted.comparatorProperty().bind(tblSubscribers.comparatorProperty());
+        tblSubscribers.setItems(sorted);
+
+        // ===== MATCH MODE (Exact default) =====
+        if (cmbMatchMode != null) {
+            cmbMatchMode.getItems().setAll("Contains", "Exact");
+            cmbMatchMode.getSelectionModel().select("Exact");
+        }
+
+        // ===== LISTENERS =====
+        if (txtFilter != null) {
+            txtFilter.textProperty().addListener((obs, oldVal, newVal) -> applyFilter());
+        }
+        if (cmbMatchMode != null) {
+            cmbMatchMode.valueProperty().addListener((obs, oldVal, newVal) -> applyFilter());
+        }
+
+        // ===== SELECTION -> FILL FORM =====
         tblSubscribers.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, selected) -> {
             if (selected != null) {
                 fillForm(selected);
             }
         });
+    }
+
+    /**
+     * Applies a general filter across multiple subscriber fields.
+     */
+    private void applyFilter() {
+        String input = (txtFilter == null || txtFilter.getText() == null) ? "" : txtFilter.getText();
+        String filter = input.trim().toLowerCase();
+
+        String mode = (cmbMatchMode == null || cmbMatchMode.getValue() == null)
+                ? "Exact"
+                : cmbMatchMode.getValue();
+
+        boolean exact = mode.equalsIgnoreCase("Exact");
+
+        if (filter.isEmpty()) {
+            filteredSubscribers.setPredicate(s -> true);
+            return;
+        }
+
+        filteredSubscribers.setPredicate(s -> {
+            String id = String.valueOf(s.getUserId());
+            String username = safeLower(s.getUsername());
+            String first = safeLower(s.getFirstName());
+            String last = safeLower(s.getLastName());
+            String phone = safeLower(s.getPhoneNumber());
+            String email = safeLower(s.getEmail());
+            String role = (s.getUserRole() == null) ? "" : s.getUserRole().toString().toLowerCase();
+
+            if (exact) {
+                return id.equals(filter)
+                        || username.equals(filter)
+                        || first.equals(filter)
+                        || last.equals(filter)
+                        || phone.equals(filter)
+                        || email.equals(filter)
+                        || role.equals(filter);
+            }
+
+            return id.contains(filter)
+                    || username.contains(filter)
+                    || first.contains(filter)
+                    || last.contains(filter)
+                    || phone.contains(filter)
+                    || email.contains(filter)
+                    || role.contains(filter);
+        });
+    }
+
+    private String safeLower(String s) {
+        return (s == null) ? "" : s.toLowerCase();
+    }
+
+    /**
+     * Clears filter input and restores default match mode (Exact).
+     */
+    @FXML
+    private void onClearFilter() {
+        if (txtFilter != null) txtFilter.clear();
+        if (cmbMatchMode != null) cmbMatchMode.getSelectionModel().select("Exact");
     }
 
     /**
@@ -182,16 +271,6 @@ public class ManageSubscriberController {
 
     /**
      * Processes server responses related to subscriber management.
-     *
-     * <p>Supported response cases:</p>
-     * <ul>
-     *   <li>List of subscribers: updates the table.</li>
-     *   <li>Created subscriber ID (Integer): shows a QR popup and refreshes the list.</li>
-     *   <li>Update success message: shows confirmation and refreshes the list.</li>
-     *   <li>Delete success (null data): shows confirmation, clears the form, and refreshes the list.</li>
-     * </ul>
-     *
-     * @param response the response received from the server
      */
     private void handleServerResponse(ResponseDTO response) {
         if (response == null) return;
@@ -228,19 +307,11 @@ public class ManageSubscriberController {
         }
     }
 
-    /**
-     * Refreshes the subscribers list.
-     */
     @FXML
     private void onRefreshClicked() {
         loadSubscribersOnEnter();
     }
 
-    /**
-     * Deletes the currently selected subscriber.
-     *
-     * <p>If no subscriber is selected, displays a message to the user.</p>
-     */
     @FXML
     private void onDeleteClicked() {
         Subscriber selected = tblSubscribers.getSelectionModel().getSelectedItem();
@@ -257,11 +328,6 @@ public class ManageSubscriberController {
         }
     }
 
-    /**
-     * Updates the currently selected subscriber using the values in the form fields.
-     *
-     * <p>Performs basic phone and email validation before sending the update request.</p>
-     */
     @FXML
     private void onUpdateClicked() {
         hideMessage();
@@ -300,17 +366,11 @@ public class ManageSubscriberController {
         }
     }
 
-    /**
-     * Navigates back to the restaurant management screen.
-     */
     @FXML
     private void onBackClicked() {
         navigateTo("/gui/RestaurantManagement_B.fxml", "Restaurant Management");
     }
 
-    /**
-     * Opens the "Create Subscriber" popup window and injects required context into the popup controller.
-     */
     @FXML
     private void onCreateSubscriberClicked() {
         hideMessage();
@@ -337,15 +397,6 @@ public class ManageSubscriberController {
         }
     }
 
-    /**
-     * Loads the requested FXML and swaps the current scene root to navigate between screens.
-     *
-     * <p>If the target controller defines {@code setClientActions(ClientActions)} and/or
-     * {@code setClient(User, ChatClient)}, these will be invoked reflectively to preserve context.</p>
-     *
-     * @param fxmlPath the classpath resource path of the target FXML
-     * @param title    the window title suffix to display
-     */
     private void navigateTo(String fxmlPath, String title) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
@@ -384,31 +435,18 @@ public class ManageSubscriberController {
         }
     }
 
-    /**
-     * Displays a status message in the UI.
-     *
-     * @param msg the message to display
-     */
     private void showMessage(String msg) {
         lblStatus.setText(msg);
         lblStatus.setVisible(true);
         lblStatus.setManaged(true);
     }
 
-    /**
-     * Clears and hides the status message area.
-     */
     private void hideMessage() {
         lblStatus.setText("");
         lblStatus.setVisible(false);
         lblStatus.setManaged(false);
     }
 
-    /**
-     * Shows an information alert indicating a subscriber was created, including a QR code for the ID.
-     *
-     * @param createdId the created subscriber ID
-     */
     private void showSubscriberCreatedAlertWithQR(int createdId) {
         Image qrImage = QRUtil.generateQR(String.valueOf(createdId));
         ImageView qrView = new ImageView(qrImage);

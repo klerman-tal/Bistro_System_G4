@@ -13,6 +13,8 @@ import interfaces.ClientActions;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
+import javafx.collections.transformation.SortedList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
@@ -40,6 +42,10 @@ public class ManageReservationController implements Initializable {
     @FXML private BorderPane rootPane;
     @FXML private Label lblStatus;
 
+    // ===== FILTER (NEW) =====
+    @FXML private TextField txtFilter;
+    @FXML private ComboBox<String> cmbMatchMode;
+
     @FXML private TableView<Reservation> tblReservations;
     @FXML private TableColumn<Reservation, Integer> colReservationId;
     @FXML private TableColumn<Reservation, LocalDateTime> colDateTime;
@@ -60,6 +66,9 @@ public class ManageReservationController implements Initializable {
 
     private final ObservableList<Reservation> reservationsList =
             FXCollections.observableArrayList();
+
+    // ===== FILTER DATA (NEW) =====
+    private FilteredList<Reservation> filteredReservations;
 
     /**
      * Injects a {@link ClientActions} implementation for controllers that rely on GUI-to-client actions.
@@ -104,12 +113,6 @@ public class ManageReservationController implements Initializable {
         loadReservationsOnEnter();
     }
 
-    /**
-     * JavaFX lifecycle method (intentionally left empty).
-     *
-     * @param location  the location used to resolve relative paths for the root object, or {@code null} if unknown
-     * @param resources the resources used to localize the root object, or {@code null} if not localized
-     */
     @Override
     public void initialize(java.net.URL location, java.util.ResourceBundle resources) {
         // intentionally empty
@@ -127,7 +130,87 @@ public class ManageReservationController implements Initializable {
         colStatus.setCellValueFactory(new PropertyValueFactory<>("reservationStatus"));
         colTableNumber.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
 
-        tblReservations.setItems(reservationsList);
+        // ===== FILTER + SORT (NEW) =====
+        filteredReservations = new FilteredList<>(reservationsList, r -> true);
+
+        SortedList<Reservation> sorted = new SortedList<>(filteredReservations);
+        sorted.comparatorProperty().bind(tblReservations.comparatorProperty());
+
+        tblReservations.setItems(sorted);
+
+        // ===== MATCH MODE (Exact default) (NEW) =====
+        if (cmbMatchMode != null) {
+            cmbMatchMode.getItems().setAll("Contains", "Exact");
+            cmbMatchMode.getSelectionModel().select("Exact");
+        }
+
+        // ===== LISTENERS (NEW) =====
+        if (txtFilter != null) {
+            txtFilter.textProperty().addListener((obs, oldVal, newVal) -> applyFilter());
+        }
+        if (cmbMatchMode != null) {
+            cmbMatchMode.valueProperty().addListener((obs, oldVal, newVal) -> applyFilter());
+        }
+    }
+
+    /**
+     * Applies a general filter across multiple reservation fields. (NEW)
+     */
+    private void applyFilter() {
+        String input = (txtFilter == null || txtFilter.getText() == null) ? "" : txtFilter.getText();
+        String filter = input.trim().toLowerCase();
+
+        String mode = (cmbMatchMode == null || cmbMatchMode.getValue() == null)
+                ? "Exact"
+                : cmbMatchMode.getValue();
+
+        boolean exact = mode.equalsIgnoreCase("Exact");
+
+        if (filter.isEmpty()) {
+            filteredReservations.setPredicate(r -> true);
+            return;
+        }
+
+        filteredReservations.setPredicate(r -> {
+            String id = String.valueOf(r.getReservationId());
+            String code = safeLower(r.getConfirmationCode());
+            String createdBy = String.valueOf(r.getCreatedByUserId());
+            String status = (r.getReservationStatus() == null) ? "" : r.getReservationStatus().toString().toLowerCase();
+            String tableNo = (r.getTableNumber() == null) ? "" : String.valueOf(r.getTableNumber());
+            String guests = String.valueOf(r.getGuestAmount());
+            String time = (r.getReservationTime() == null) ? "" : r.getReservationTime().toString().toLowerCase();
+
+            if (exact) {
+                return id.equals(filter)
+                        || code.equals(filter)
+                        || createdBy.equals(filter)
+                        || status.equals(filter)
+                        || tableNo.equals(filter)
+                        || guests.equals(filter)
+                        || time.equals(filter);
+            }
+
+            return id.contains(filter)
+                    || code.contains(filter)
+                    || createdBy.contains(filter)
+                    || status.contains(filter)
+                    || tableNo.contains(filter)
+                    || guests.contains(filter)
+                    || time.contains(filter);
+        });
+    }
+
+    private String safeLower(String s) {
+        return (s == null) ? "" : s.toLowerCase();
+    }
+
+    /**
+     * Clears filter input and restores default match mode (Exact). (NEW)
+     */
+    @FXML
+    private void onClearFilter() {
+        if (txtFilter != null) txtFilter.clear();
+        if (cmbMatchMode != null) cmbMatchMode.getSelectionModel().select("Exact");
     }
 
     /**
@@ -146,11 +229,6 @@ public class ManageReservationController implements Initializable {
 
     /**
      * Processes server responses related to reservation management.
-     *
-     * <p>If the response contains a list of reservations, the table is updated. For other successful
-     * operations (e.g., cancel), the method displays a success message and refreshes the data.</p>
-     *
-     * @param response the response received from the server
      */
     public void handleServerResponse(ResponseDTO response) {
         if (response == null) return;
@@ -205,8 +283,6 @@ public class ManageReservationController implements Initializable {
 
     /**
      * Opens the cancel screen for the currently selected reservation.
-     *
-     * <p>If no reservation is selected, displays a message to the user.</p>
      */
     @FXML
     private void onDeleteClicked() {
@@ -218,12 +294,6 @@ public class ManageReservationController implements Initializable {
         openCancelWindow(selected);
     }
 
-    /**
-     * Loads the cancel reservation screen, injects session context and the confirmation code,
-     * and configures back navigation to this screen.
-     *
-     * @param reservation the reservation to cancel
-     */
     private void openCancelWindow(Reservation reservation) {
         try {
             FXMLLoader loader =
@@ -260,15 +330,6 @@ public class ManageReservationController implements Initializable {
         openWindow("RestaurantManagement_B.fxml", "Management");
     }
 
-    /**
-     * Loads the requested FXML and swaps the current scene root to navigate between screens.
-     *
-     * <p>If the target controller defines {@code setClient(User, ChatClient)}, it will be invoked
-     * reflectively to preserve the session context.</p>
-     *
-     * @param fxmlName the target FXML file name under {@code /gui/}
-     * @param title    the window title suffix to display
-     */
     private void openWindow(String fxmlName, String title) {
         try {
             FXMLLoader loader =
@@ -302,20 +363,12 @@ public class ManageReservationController implements Initializable {
         }
     }
 
-    /**
-     * Displays a status message in the UI.
-     *
-     * @param msg the message to display
-     */
     private void showMessage(String msg) {
         lblStatus.setText(msg);
         lblStatus.setVisible(true);
         lblStatus.setManaged(true);
     }
 
-    /**
-     * Hides the status message area.
-     */
     private void hideMessage() {
         lblStatus.setVisible(false);
         lblStatus.setManaged(false);
