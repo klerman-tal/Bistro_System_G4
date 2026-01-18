@@ -5,6 +5,8 @@ import java.net.UnknownHostException;
 import java.sql.Connection;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -82,6 +84,10 @@ public class RestaurantServer extends AbstractServer {
 	private static final long IDLE_TIMEOUT_MS = 30L * 60L * 1000L;
 	private volatile long lastActivityMs = System.currentTimeMillis();
 	private Runnable onAutoShutdown;
+	
+	private final Map<ConnectionToClient, String> clientIpMap =
+	        new ConcurrentHashMap<>();
+
 
 	// ================= UI =================
 
@@ -383,10 +389,17 @@ public class RestaurantServer extends AbstractServer {
 	 */
 	@Override
 	protected synchronized void clientConnected(ConnectionToClient client) {
-		touchActivity();
-		String ip = client.getInetAddress() != null ? client.getInetAddress().getHostAddress() : "UNKNOWN";
-		log("🔌 Client connected | IP: " + ip);
+	    touchActivity();
+
+	    String ip = (client.getInetAddress() != null)
+	            ? client.getInetAddress().getHostAddress()
+	            : "UNKNOWN";
+
+	    clientIpMap.put(client, ip);
+
+	    log("🔌 Client connected | IP: " + ip);
 	}
+
 
 	/**
 	 * Called when a client disconnects from the server.
@@ -398,20 +411,22 @@ public class RestaurantServer extends AbstractServer {
 	 *
 	 * @param client the disconnected client
 	 */
-	 @Override
-	    protected synchronized void clientDisconnected(ConnectionToClient client) {
-	        touchActivity();
+	@Override
+	protected synchronized void clientDisconnected(ConnectionToClient client) {
+	    touchActivity();
 
-	        String ip = client.getInetAddress() != null
-	                ? client.getInetAddress().getHostAddress()
-	                : "UNKNOWN";
-
-	        if (onlineUsersRegistry != null) {
-	            onlineUsersRegistry.removeClient(client);
-	        }
-
-	        log("🔌 Client disconnected (Logout or window closed) | IP: " + ip);
+	    String ip = clientIpMap.remove(client);
+	    if (ip == null) {
+	        ip = "UNKNOWN";
 	    }
+
+	    if (onlineUsersRegistry != null) {
+	        onlineUsersRegistry.removeClient(client);
+	    }
+
+	    log("🔌 Client disconnected | IP: " + ip);
+	}
+
 	
 
 	// ================= Shutdown =================
@@ -543,16 +558,20 @@ public class RestaurantServer extends AbstractServer {
 	 */
 	@Override
 	protected synchronized void clientException(ConnectionToClient client, Throwable exception) {
-		touchActivity();
+	    touchActivity();
 
-		String ip = (client.getInetAddress() != null) ? client.getInetAddress().getHostAddress() : "UNKNOWN";
+	    String ip = clientIpMap.remove(client);
+	    if (ip == null) {
+	        ip = "UNKNOWN";
+	    }
 
-		if (onlineUsersRegistry != null) {
-			onlineUsersRegistry.removeClient(client);
-		}
+	    if (onlineUsersRegistry != null) {
+	        onlineUsersRegistry.removeClient(client);
+	    }
 
-		log("⚠️ Client connection lost (Window closed or crash) | IP: " + ip);
+	    log("⚠️ Client connection lost | IP: " + ip);
 	}
+
 
 	// ================= Main =================
 
