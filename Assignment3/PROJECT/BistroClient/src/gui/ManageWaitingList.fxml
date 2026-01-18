@@ -36,6 +36,20 @@
 
             <children>
 
+                <!-- ===== FILTER BAR (NEW) ===== -->
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <TextField fx:id="txtFilter"
+                               promptText="Filter (id / code / created by / status / table...)"
+                               prefWidth="300"/>
+
+                    <ComboBox fx:id="cmbMatchMode"
+                              prefWidth="120"/>
+
+                    <Button text="X"
+                            prefWidth="35"
+                            onAction="#onClearFilter"/>
+                </HBox>
+
                 <!-- ===== WAITING LIST TABLE ===== -->
                 <TableView fx:id="tblWaitingList"
                            VBox.vgrow="ALWAYS">
