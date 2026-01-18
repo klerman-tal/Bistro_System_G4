@@ -10,13 +10,17 @@ import entities.User;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
+import javafx.collections.transformation.SortedList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.BorderPane;
 import network.ClientAPI;
@@ -37,6 +41,10 @@ public class ManageCurrentDinersController implements ClientResponseHandler {
     @FXML private BorderPane rootPane;
     @FXML private Label lblStatus;
 
+    // ===== FILTER (NEW) =====
+    @FXML private TextField txtFilter;
+    @FXML private ComboBox<String> cmbMatchMode;
+
     @FXML private TableView<CurrentDinerDTO> tblCurrentDiners;
     @FXML private TableColumn<CurrentDinerDTO, Integer> colCreatedBy;
     @FXML private TableColumn<CurrentDinerDTO, String> colCreatedByRole;
@@ -48,6 +56,9 @@ public class ManageCurrentDinersController implements ClientResponseHandler {
 
     private final ObservableList<CurrentDinerDTO> dinersList =
             FXCollections.observableArrayList();
+
+    // ===== FILTER DATA (NEW) =====
+    private FilteredList<CurrentDinerDTO> filteredDiners;
 
     /**
      * Injects the current session context, initializes {@link ClientAPI}, registers this controller
@@ -70,13 +81,83 @@ public class ManageCurrentDinersController implements ClientResponseHandler {
     }
 
     /**
-     * Initializes the table columns and binds the table to the observable data list.
+     * Initializes the table columns, binds the table to a sorted+filtered list,
+     * and installs filter listeners. (UPDATED)
      */
     private void initTable() {
         colCreatedBy.setCellValueFactory(new PropertyValueFactory<>("createdBy"));
         colCreatedByRole.setCellValueFactory(new PropertyValueFactory<>("createdByRole"));
         colTableNumber.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
-        tblCurrentDiners.setItems(dinersList);
+
+        // ===== FILTER + SORT (NEW) =====
+        filteredDiners = new FilteredList<>(dinersList, d -> true);
+
+        SortedList<CurrentDinerDTO> sorted = new SortedList<>(filteredDiners);
+        sorted.comparatorProperty().bind(tblCurrentDiners.comparatorProperty());
+
+        tblCurrentDiners.setItems(sorted);
+
+        // ===== MATCH MODE (Exact default) (NEW) =====
+        if (cmbMatchMode != null) {
+            cmbMatchMode.getItems().setAll("Contains", "Exact");
+            cmbMatchMode.getSelectionModel().select("Exact");
+        }
+
+        // ===== LISTENERS (NEW) =====
+        if (txtFilter != null) {
+            txtFilter.textProperty().addListener((obs, oldVal, newVal) -> applyFilter());
+        }
+        if (cmbMatchMode != null) {
+            cmbMatchMode.valueProperty().addListener((obs, oldVal, newVal) -> applyFilter());
+        }
+    }
+
+    /**
+     * Applies a general filter across diner fields. (NEW)
+     */
+    private void applyFilter() {
+        String input = (txtFilter == null || txtFilter.getText() == null) ? "" : txtFilter.getText();
+        String filter = input.trim().toLowerCase();
+
+        String mode = (cmbMatchMode == null || cmbMatchMode.getValue() == null)
+                ? "Exact"
+                : cmbMatchMode.getValue();
+
+        boolean exact = mode.equalsIgnoreCase("Exact");
+
+        if (filter.isEmpty()) {
+            filteredDiners.setPredicate(d -> true);
+            return;
+        }
+
+        filteredDiners.setPredicate(d -> {
+            String createdBy = String.valueOf(d.getCreatedBy());
+            String role = safeLower(d.getCreatedByRole());
+            String tableNo = String.valueOf(d.getTableNumber());
+
+            if (exact) {
+                return createdBy.equals(filter)
+                        || role.equals(filter)
+                        || tableNo.equals(filter);
+            }
+
+            return createdBy.contains(filter)
+                    || role.contains(filter)
+                    || tableNo.contains(filter);
+        });
+    }
+
+    private String safeLower(String s) {
+        return (s == null) ? "" : s.toLowerCase();
+    }
+
+    /**
+     * Clears filter input and restores default match mode (Exact). (NEW)
+     */
+    @FXML
+    private void onClearFilter() {
+        if (txtFilter != null) txtFilter.clear();
+        if (cmbMatchMode != null) cmbMatchMode.getSelectionModel().select("Exact");
     }
 
     /**
@@ -99,10 +180,6 @@ public class ManageCurrentDinersController implements ClientResponseHandler {
 
     /**
      * Handles server responses for the "current diners" request.
-     *
-     * <p>On success, replaces the table content with the received list.</p>
-     *
-     * @param response the response received from the server
      */
     @Override
     public void handleResponse(ResponseDTO response) {
@@ -128,37 +205,21 @@ public class ManageCurrentDinersController implements ClientResponseHandler {
         });
     }
 
-    /**
-     * Handles connection errors by displaying an error message on the UI thread.
-     *
-     * @param e the connection exception
-     */
     @Override
     public void handleConnectionError(Exception e) {
         Platform.runLater(() ->
                 showMessage("Connection error: " + e.getMessage()));
     }
 
-    /**
-     * Handles connection closure events (no UI action defined in this controller).
-     */
     @Override
     public void handleConnectionClosed() {}
 
-    /**
-     * Displays a status message in the UI.
-     *
-     * @param msg the message to display
-     */
     private void showMessage(String msg) {
         lblStatus.setText(msg);
         lblStatus.setVisible(true);
         lblStatus.setManaged(true);
     }
 
-    /**
-     * Hides the status message area.
-     */
     private void hideMessage() {
         lblStatus.setVisible(false);
         lblStatus.setManaged(false);

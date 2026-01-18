@@ -2,10 +2,12 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
@@ -58,6 +60,20 @@
                 <padding>
                     <Insets top="18" right="18" bottom="18" left="18"/>
                 </padding>
+
+                <!-- ===== FILTER BAR (NEW) ===== -->
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <TextField fx:id="txtFilter"
+                               promptText="Filter (created by / role / table...)"
+                               prefWidth="300"/>
+
+                    <ComboBox fx:id="cmbMatchMode"
+                              prefWidth="120"/>
+
+                    <Button text="X"
+                            prefWidth="35"
+                            onAction="#onClearFilter"/>
+                </HBox>
 
                 <TableView fx:id="tblCurrentDiners"
                            VBox.vgrow="ALWAYS">
