@@ -131,59 +131,98 @@ public class OpeningHoursController implements ClientResponseHandler {
 	@FXML
 	public void initialize() {
 
-		dayColumn.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getDayOfWeek()));
+	    dayColumn.setCellValueFactory(c ->
+	            new SimpleStringProperty(c.getValue().getDayOfWeek())
+	    );
 
-		openTimeColumn.setCellValueFactory(c -> {
-			String v = toHHMM(c.getValue().getOpenTime());
-			return new SimpleStringProperty(v.isBlank() ? "CLOSED" : v);
-		});
+	    openTimeColumn.setCellValueFactory(c -> {
+	        String v = toHHMM(c.getValue().getOpenTime());
+	        return new SimpleStringProperty(v.isBlank() ? "CLOSED" : v);
+	    });
 
-		closeTimeColumn.setCellValueFactory(c -> {
-			String v = toHHMM(c.getValue().getCloseTime());
-			return new SimpleStringProperty(v.isBlank() ? "CLOSED" : v);
-		});
+	    closeTimeColumn.setCellValueFactory(c -> {
+	        String v = toHHMM(c.getValue().getCloseTime());
+	        return new SimpleStringProperty(v.isBlank() ? "CLOSED" : v);
+	    });
 
-		openingHoursTable.addEventFilter(MouseEvent.MOUSE_CLICKED, e -> detectClickedColumn());
+	    openingHoursTable.addEventFilter(
+	            MouseEvent.MOUSE_CLICKED,
+	            e -> detectClickedColumn()
+	    );
 
-		openingHoursTable.getSelectionModel().selectedItemProperty().addListener((obs, oldV, selected) -> {
-			if (selected == null)
-				return;
-			openTimeField.setText(editTarget == EditTarget.OPEN_TIME ? toHHMM(selected.getOpenTime())
-					: toHHMM(selected.getCloseTime()));
-		});
+	    openingHoursTable.getSelectionModel()
+	            .selectedItemProperty()
+	            .addListener((obs, oldV, selected) -> {
+	                if (selected == null) return;
 
-		updateButton.setOnAction(e -> onUpdateClicked());
-		backButton.setOnAction(e -> onBackClicked());
+	                openTimeField.setText(
+	                        editTarget == EditTarget.OPEN_TIME
+	                                ? toHHMM(selected.getOpenTime())
+	                                : toHHMM(selected.getCloseTime())
+	                );
+	            });
 
-		// ===== Special opening hours =====
+	    updateButton.setOnAction(e -> onUpdateClicked());
+	    backButton.setOnAction(e -> onBackClicked());
 
-		specialDateColumn.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getSpecialDate().toString()));
+	    // ===== Special opening hours =====
 
-		specialOpenColumn.setCellValueFactory(c -> {
-			if (c.getValue().isClosed())
-				return new SimpleStringProperty("CLOSED");
-			Time t = c.getValue().getOpenTime();
-			return new SimpleStringProperty(t == null ? "" : t.toString().substring(0, 5));
-		});
+	    specialDateColumn.setCellValueFactory(c ->
+	            new SimpleStringProperty(
+	                    c.getValue().getSpecialDate().toString()
+	            )
+	    );
 
-		specialCloseColumn.setCellValueFactory(c -> {
-			if (c.getValue().isClosed())
-				return new SimpleStringProperty("CLOSED");
-			Time t = c.getValue().getCloseTime();
-			return new SimpleStringProperty(t == null ? "" : t.toString().substring(0, 5));
-		});
+	    specialOpenColumn.setCellValueFactory(c -> {
+	        if (c.getValue().isClosed())
+	            return new SimpleStringProperty("CLOSED");
 
-		specialClosedCheck.selectedProperty().addListener((obs, o, isClosed) -> {
-			specialOpenField.setDisable(isClosed);
-			specialCloseField.setDisable(isClosed);
-			if (isClosed) {
-				specialOpenField.clear();
-				specialCloseField.clear();
-			}
-		});
+	        Time t = c.getValue().getOpenTime();
+	        return new SimpleStringProperty(
+	                t == null ? "" : t.toString().substring(0, 5)
+	        );
+	    });
 
-		addSpecialButton.setOnAction(e -> onSaveSpecialClicked());
+	    specialCloseColumn.setCellValueFactory(c -> {
+	        if (c.getValue().isClosed())
+	            return new SimpleStringProperty("CLOSED");
+
+	        Time t = c.getValue().getCloseTime();
+	        return new SimpleStringProperty(
+	                t == null ? "" : t.toString().substring(0, 5)
+	        );
+	    });
+
+	    specialClosedCheck.selectedProperty().addListener((obs, o, isClosed) -> {
+	        specialOpenField.setDisable(isClosed);
+	        specialCloseField.setDisable(isClosed);
+
+	        if (isClosed) {
+	            specialOpenField.clear();
+	            specialCloseField.clear();
+	        }
+	    });
+
+	    // ===== DatePicker restriction (NEW) =====
+	    // Allow selection only from tomorrow onward
+	    specialDatePicker.setDayCellFactory(picker -> new DateCell() {
+	        @Override
+	        public void updateItem(LocalDate date, boolean empty) {
+	            super.updateItem(date, empty);
+
+	            if (empty || date == null) return;
+
+	            // Disable today and all past dates
+	            if (!date.isAfter(LocalDate.now())) {
+	                setDisable(true);
+	                setStyle("-fx-background-color: #EEEEEE;");
+	            }
+	        }
+	    });
+
+	    addSpecialButton.setOnAction(e -> onSaveSpecialClicked());
 	}
+
 
 	/**
 	 * Sends an update request for weekly opening hours for the currently selected
