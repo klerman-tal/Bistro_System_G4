@@ -3,16 +3,19 @@ package guiControllers;
 import application.ChatClient;
 import application.ClientSession;
 import dto.ResponseDTO;
-import entities.Subscriber;
+import entities.User;
 import javafx.application.Platform;
-import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.Node;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import network.ClientAPI;
@@ -22,185 +25,308 @@ import java.io.IOException;
 
 public class SubscriberLoginController implements ClientResponseHandler {
 
-    @FXML private TextField subscriberIdField;
-    @FXML private TextField usernameField;
-    @FXML private Label lblMessage;
+	// MUST match the FXML root (StackPane). Also requires fx:id in FXML,
+	// but we also fallback to subscriberIdField to avoid crashes.
+	@FXML
+	private StackPane rootPane;
 
-    private ChatClient chatClient;
-    private ClientAPI api;
+	@FXML
+	private TextField subscriberIdField;
+	@FXML
+	private TextField usernameField;
+	@FXML
+	private Label lblMessage;
+	@FXML
+	private Button btnBarcodeSim;
 
-    private Stage stage;
+	private ChatClient chatClient;
+	private ClientAPI api;
 
-    public void setClient(ChatClient chatClient) {
-        this.chatClient = chatClient;
-        if (chatClient != null) {
-            this.api = new ClientAPI(chatClient);
-            chatClient.setResponseHandler(this);
-        }
-    }
+	/* ================= SETTERS ================= */
 
-    @FXML
-    public void initialize() {
-        if (subscriberIdField != null) {
-            subscriberIdField.textProperty().addListener((obs, oldVal, newVal) -> {
-                if (!newVal.matches("\\d*")) {
-                    subscriberIdField.setText(newVal.replaceAll("[^\\d]", ""));
-                }
-                if (newVal.length() > 10) {
-                    subscriberIdField.setText(oldVal);
-                }
-            });
-        }
-    }
+	/**
+	 * Injects the ChatClient session into this controller and initializes
+	 * ClientAPI. Also registers this controller as the active response handler in
+	 * ChatClient.
+	 */
+	public void setClient(ChatClient chatClient) {
+		this.chatClient = chatClient;
+		if (chatClient != null) {
+			this.api = new ClientAPI(chatClient);
+			chatClient.setResponseHandler(this);
+		}
+	}
 
-    @FXML
-    private void handleSubscriberLogin(ActionEvent event) {
-        hideMessage();
+	/* ================= INIT ================= */
 
-        this.stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+	/**
+	 * JavaFX initialize hook. Configures client-side input validation for
+	 * Subscriber ID: digits only, max length 10.
+	 */
+	@FXML
+	public void initialize() {
+		hideMessage();
 
-        String idStr = subscriberIdField.getText().trim();
-        String user = usernameField.getText().trim();
+		// Subscriber ID – digits only
+		if (subscriberIdField != null) {
+			subscriberIdField.textProperty().addListener((obs, oldVal, newVal) -> {
+				if (newVal == null)
+					return;
+				if (!newVal.matches("\\d*")) {
+					subscriberIdField.setText(newVal.replaceAll("[^\\d]", ""));
+				}
+				if (newVal.length() > 10) {
+					subscriberIdField.setText(oldVal);
+				}
+			});
+		}
+	}
 
-        if (idStr.isEmpty() || user.isEmpty()) {
-            showError("Please fill in all fields.");
-            return;
-        }
+	/* ================= ACTIONS ================= */
 
-        if (api == null) {
-            showError("Internal error: client not initialized.");
-            return;
-        }
+	/**
+	 * Sends a subscriber login request using (subscriberId, username). Performs
+	 * basic validation before sending.
+	 */
+	@FXML
+	private void handleSubscriberLogin() {
+		hideMessage();
 
-        try {
-            int id = Integer.parseInt(idStr);
-            api.loginSubscriber(id, user);
-            showInfo("Connecting to server...");
-        } catch (Exception e) {
-            showError("Subscriber ID must be numeric.");
-        }
-    }
+		if (api == null) {
+			showError("Internal error: connection not initialized.");
+			return;
+		}
 
-    @Override
-    public void handleResponse(ResponseDTO response) {
-        Platform.runLater(() -> {
-            if (response.isSuccess()) {
-                if (response.getData() instanceof Subscriber subscriber) {
+		String idStr = safe(subscriberIdField);
+		String username = safe(usernameField);
 
-                    // ✅ Session: logged in = subscriber, acting = subscriber
-                    ClientSession.setLoggedInUser(subscriber);
-                    ClientSession.setActingUser(subscriber);
+		if (idStr.isEmpty() || username.isEmpty()) {
+			showError("Please fill in all fields.");
+			return;
+		}
 
-                    goToMenu(subscriber);
-                }
-            } else {
-                showError(response.getMessage());
-            }
-        });
-    }
+		try {
+			api.loginSubscriber(Integer.parseInt(idStr), username);
+		} catch (NumberFormatException e) {
+			showError("Subscriber ID must be numeric.");
+		} catch (Exception e) {
+			showError("Failed to send login request.");
+		}
+	}
 
-    private void goToMenu(Subscriber loggedInUser) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
-            Parent root = loader.load();
+	/**
+	 * Opens a modal popup that simulates scanning a subscriber card barcode. On
+	 * scan, sends a barcode-login request to the server.
+	 */
+	@FXML
+	private void onBarcodeSimClicked() {
+		if (api == null) {
+			showError("Internal error: connection not initialized.");
+			return;
+		}
 
-            Menu_BController menu = loader.getController();
-            menu.setClient(loggedInUser, chatClient);
+		Stage simStage = new Stage();
+		simStage.setTitle("Barcode Scanner Simulation");
+		simStage.initModality(Modality.APPLICATION_MODAL);
 
-            if (stage == null) {
-                if (subscriberIdField != null && subscriberIdField.getScene() != null) {
-                    stage = (Stage) subscriberIdField.getScene().getWindow();
-                }
-            }
+		VBox root = new VBox(15);
+		root.setAlignment(Pos.CENTER);
+		root.setPadding(new Insets(25));
+		root.setStyle("""
+				    -fx-background-color: white;
+				    -fx-border-color: #800000;
+				    -fx-border-width: 3;
+				    -fx-border-radius: 10;
+				""");
 
-            if (stage == null) {
-                showError("Internal error: window not found.");
-                return;
-            }
+		Label title = new Label("Place Card on Scanner (Subscriber ID)");
+		title.setStyle("-fx-font-weight: bold; -fx-text-fill: #800000;");
 
-            stage.setScene(new Scene(root));
-            stage.centerOnScreen();
-            stage.show();
+		TextField txtId = new TextField();
+		txtId.setPromptText("Subscriber ID");
 
-        } catch (IOException e) {
-            e.printStackTrace();
-            showError("Failed to open menu.");
-        }
-    }
+		Button btnScan = new Button("SCAN");
+		btnScan.setStyle("-fx-background-color: #800000; -fx-text-fill: white;");
 
-    @FXML
-    private void handleForgotCode(ActionEvent event) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/ForgotSubscriberCode.fxml"));
-            Parent root = loader.load();
+		btnScan.setOnAction(e -> {
+			String id = txtId.getText().trim();
+			if (!id.isEmpty()) {
+				try {
+					api.loginByBarcode(id);
+					simStage.close();
+				} catch (IOException ex) {
+					showError("Failed to scan.");
+				}
+			}
+		});
 
-            ForgotCodeController controller = loader.getController();
-            controller.setClient(chatClient);
-            chatClient.setResponseHandler(controller);
+		root.getChildren().addAll(title, txtId, btnScan);
+		simStage.setScene(new Scene(root, 420, 200));
+		simStage.showAndWait();
+	}
 
-            Stage popupStage = new Stage();
-            popupStage.initModality(Modality.APPLICATION_MODAL);
-            popupStage.setTitle("Recover Subscriber Code");
-            popupStage.setScene(new Scene(root));
-            popupStage.setResizable(false);
-            popupStage.showAndWait();
+	/**
+	 * Navigates back to the main login choice screen.
+	 */
+	@FXML
+	private void handleBackButton() {
+		openWindow("Login_B.fxml", "Login", null);
+	}
 
-            chatClient.setResponseHandler(this);
+	/**
+	 * Opens a modal window that allows recovering a subscriber code. Injects the
+	 * current ChatClient into the popup controller so it can communicate with the
+	 * server.
+	 */
+	@FXML
+	private void handleForgotCode() {
+		try {
+			FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/ForgotSubscriberCode.fxml"));
+			Parent root = loader.load();
 
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+			ForgotCodeController controller = loader.getController();
+			controller.setClient(chatClient);
 
-    @FXML
-    private void handleBackButton(ActionEvent event) {
-        navigateTo(event, "/gui/Login_B.fxml");
-    }
+			Stage popup = new Stage();
+			popup.initModality(Modality.APPLICATION_MODAL);
+			popup.setScene(new Scene(root));
+			popup.showAndWait();
 
-    private void navigateTo(ActionEvent event, String fxmlPath) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
-            Parent root = loader.load();
+		} catch (IOException e) {
+			showError("Failed to open recovery window.");
+		}
+	}
 
-            Stage stageLocal = (Stage) ((Node) event.getSource()).getScene().getWindow();
-            stageLocal.setScene(new Scene(root));
-            stageLocal.centerOnScreen();
-            stageLocal.show();
+	/* ================= SERVER RESPONSE ================= */
 
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+	/**
+	 * Handles login responses from the server. On success: stores the logged-in
+	 * user in ClientSession and navigates to the menu. On failure: shows the server
+	 * message.
+	 */
+	@Override
+	public void handleResponse(ResponseDTO response) {
+		Platform.runLater(() -> {
+			if (response != null && response.isSuccess() && response.getData() instanceof User user) {
 
-    private void showError(String msg) {
-        if (lblMessage == null) return;
-        lblMessage.setText(msg);
-        lblMessage.setStyle("-fx-text-fill: #ff0000; -fx-font-weight: bold;");
-        lblMessage.setVisible(true);
-        lblMessage.setManaged(true);
-    }
+				ClientSession.setLoggedInUser(user);
+				ClientSession.setActingUser(user);
 
-    private void showInfo(String msg) {
-        if (lblMessage == null) return;
-        lblMessage.setText(msg);
-        lblMessage.setStyle("-fx-text-fill: black;");
-        lblMessage.setVisible(true);
-        lblMessage.setManaged(true);
-    }
+				openWindow("Menu_B.fxml", "Main Menu", user);
+			} else {
+				showError(response != null ? response.getMessage() : "Login failed.");
+			}
+		});
+	}
 
-    private void hideMessage() {
-        if (lblMessage == null) return;
-        lblMessage.setVisible(false);
-        lblMessage.setManaged(false);
-    }
+	/**
+	 * Called when a connection error occurs.
+	 */
+	@Override
+	public void handleConnectionError(Exception e) {
+		Platform.runLater(() -> showError("Connection error."));
+	}
 
-    @Override
-    public void handleConnectionError(Exception e) {
-        Platform.runLater(() -> showError("Connection error"));
-    }
+	/**
+	 * Called when the connection is closed.
+	 */
+	@Override
+	public void handleConnectionClosed() {
+	}
 
-    @Override
-    public void handleConnectionClosed() {
-        Platform.runLater(() -> showError("Connection closed"));
-    }
+	/* ================= NAVIGATION ================= */
+
+	/**
+	 * Loads an FXML screen and switches the current scene root to it. If the next
+	 * controller supports setClient(User, ChatClient), the session is injected.
+	 *
+	 * @param fxmlName FXML file name under /gui/
+	 * @param title    window title suffix
+	 * @param user     optional logged-in user to inject
+	 */
+	private void openWindow(String fxmlName, String title, User user) {
+		try {
+			FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
+			Parent root = loader.load();
+
+			Object controller = loader.getController();
+
+			if (controller != null && user != null && chatClient != null) {
+				try {
+					controller.getClass().getMethod("setClient", User.class, ChatClient.class).invoke(controller, user,
+							chatClient);
+				} catch (Exception ignored) {
+				}
+			}
+
+			switchRoot(root, "Bistro - " + title);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			showError("Navigation failed.");
+		}
+	}
+
+	/**
+	 * Reuses the current Stage and Scene (if exists) and replaces only the root
+	 * node. Uses a safe stage lookup based on available injected nodes.
+	 */
+	private void switchRoot(Parent root, String title) {
+		Stage stage = getStageSafe();
+		if (stage == null) {
+			showError("Navigation failed (no stage).");
+			return;
+		}
+
+		Scene scene = stage.getScene();
+		if (scene == null)
+			stage.setScene(new Scene(root));
+		else
+			scene.setRoot(root);
+
+		stage.setTitle(title);
+		stage.setMaximized(true);
+		stage.show();
+	}
+
+	/**
+	 * Safely finds the current Stage using available scene nodes. Prioritizes
+	 * rootPane, and falls back to subscriberIdField.
+	 */
+	private Stage getStageSafe() {
+		if (rootPane != null && rootPane.getScene() != null) {
+			return (Stage) rootPane.getScene().getWindow();
+		}
+		if (subscriberIdField != null && subscriberIdField.getScene() != null) {
+			return (Stage) subscriberIdField.getScene().getWindow();
+		}
+		return null;
+	}
+
+	/* ================= UI HELPERS ================= */
+
+	/**
+	 * Returns trimmed text from a TextField, or empty string if null.
+	 */
+	private String safe(TextField tf) {
+		return (tf == null || tf.getText() == null) ? "" : tf.getText().trim();
+	}
+
+	/**
+	 * Displays an error message in the screen message label.
+	 */
+	private void showError(String msg) {
+		lblMessage.setText(msg);
+		lblMessage.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
+		lblMessage.setVisible(true);
+		lblMessage.setManaged(true);
+	}
+
+	/**
+	 * Hides the message label.
+	 */
+	private void hideMessage() {
+		lblMessage.setVisible(false);
+		lblMessage.setManaged(false);
+	}
 }

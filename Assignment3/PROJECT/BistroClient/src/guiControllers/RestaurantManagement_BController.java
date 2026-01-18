@@ -1,102 +1,188 @@
 package guiControllers;
 
 import application.ChatClient;
+import entities.Enums;
 import entities.User;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
+/**
+ * JavaFX controller for the restaurant management main screen.
+ *
+ * <p>
+ * This screen serves as a hub for management operations such as updating
+ * tables, managing reservations, waiting list, opening hours, subscribers, and
+ * current diners.
+ * </p>
+ *
+ * <p>
+ * Access to reports is restricted to {@link Enums.UserRole#RestaurantManager}
+ * and is enforced both by UI visibility and by a runtime permission check.
+ * </p>
+ */
 public class RestaurantManagement_BController {
 
-    @FXML private BorderPane rootPane;
-    @FXML private Label lblMessage;
+	@FXML
+	private BorderPane rootPane;
+	@FXML
+	private Label lblMessage;
 
-    private User user;
-    private ChatClient chatClient;
+	@FXML
+	private Button btnReports;
 
-    public void setClient(User user, ChatClient chatClient) {
-        this.user = user;
-        this.chatClient = chatClient;
-    }
+	private User user;
+	private ChatClient chatClient;
 
-    private void openWindow(String fxmlName, String title) {
-        try {
-            FXMLLoader loader =
-                    new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
-            Parent root = loader.load();
+	/**
+	 * Injects the current session context and applies role-based UI rules.
+	 *
+	 * @param user       the current logged-in user
+	 * @param chatClient the client used to communicate with the server
+	 */
+	public void setClient(User user, ChatClient chatClient) {
+		this.user = user;
+		this.chatClient = chatClient;
 
-            Object controller = loader.getController();
-            System.out.println("Loaded controller: " + controller.getClass().getName());
+		boolean isManager = user != null && user.getUserRole() == Enums.UserRole.RestaurantManager;
 
-            // Try to call setClient(User, ChatClient)
-            try {
-                var m = controller.getClass().getDeclaredMethod("setClient", User.class, ChatClient.class);
-                m.setAccessible(true);
-                m.invoke(controller, user, chatClient);
-                System.out.println("setClient(User, ChatClient) invoked successfully");
-            } catch (Exception e) {
-                System.out.println("Failed to call setClient(User, ChatClient)");
-                e.printStackTrace();
-            }
+		if (btnReports != null) {
+			btnReports.setVisible(isManager);
+			btnReports.setManaged(isManager);
+		}
+	}
 
-            Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setTitle("Bistro - " + title);
-            stage.setScene(new Scene(root));
-            stage.show();
+	/**
+	 * Loads an FXML screen from {@code /gui/}, injects the session context if
+	 * supported, and navigates by swapping the current scene root.
+	 *
+	 * @param fxmlName the FXML file name under {@code /gui/}
+	 * @param title    the window title suffix
+	 */
+	private void openWindow(String fxmlName, String title) {
+		try {
+			FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
+			Parent root = loader.load();
 
-        } catch (Exception e) {
-            e.printStackTrace();
-            showMessage("Failed to open: " + fxmlName);
-        }
-    }
+			Object controller = loader.getController();
 
-    @FXML
-    private void onUpdateTablesClicked() {
-        openWindow("UpdateTables.fxml", "Update Tables");
-    }
+			if (controller != null && user != null && chatClient != null) {
+				try {
+					controller.getClass().getMethod("setClient", User.class, ChatClient.class).invoke(controller, user,
+							chatClient);
+				} catch (Exception ignored) {
+				}
+			}
 
-    @FXML
-    private void onWaitingListClicked() {
-        openWindow("ManageWaitingList.fxml", "Waiting List");
-    }
+			Stage stage = (Stage) rootPane.getScene().getWindow();
+			Scene scene = stage.getScene();
 
-    @FXML
-    private void onUpdateOpeningHoursClicked() {
-        openWindow("opening.fxml", "Opening Hours");
-    }
+			if (scene == null) {
+				stage.setScene(new Scene(root));
+			} else {
+				scene.setRoot(root);
+			}
 
-    @FXML
-    private void onManageUsersClicked() {
-        openWindow("manageSubscriber.fxml", "Manage Subscribers");
-    }
+			stage.setTitle("Bistro - " + title);
+			stage.setMaximized(true);
+			stage.show();
 
-    @FXML
-    private void onManageReservationClicked() {
-        openWindow("ManageReservation.fxml", "Manage Reservations");
-    }
+		} catch (Exception e) {
+			e.printStackTrace();
+			showMessage("Failed to open: " + fxmlName);
+		}
+	}
 
-    @FXML
-    private void onManageCurrentDinersClicked() {
-        openWindow("ManageCurrentDiners.fxml", "Current Diners");
-    }
+	/**
+	 * Navigates to the "Update Tables" screen.
+	 */
+	@FXML
+	private void onUpdateTablesClicked() {
+		openWindow("UpdateTables.fxml", "Update Tables");
+	}
 
-    @FXML
-    private void onReportsClicked() {
-        openWindow("ReportsMenu.fxml", "Reports");
-    }
+	/**
+	 * Navigates to the "Waiting List" management screen.
+	 */
+	@FXML
+	private void onWaitingListClicked() {
+		openWindow("ManageWaitingList.fxml", "Waiting List");
+	}
 
-    @FXML
-    private void onBackToMenuClicked() {
-        openWindow("Menu_B.fxml", "Main Menu");
-    }
+	/**
+	 * Navigates to the opening hours management screen.
+	 */
+	@FXML
+	private void onUpdateOpeningHoursClicked() {
+		openWindow("opening.fxml", "Opening Hours");
+	}
 
-    private void showMessage(String msg) {
-        lblMessage.setText(msg);
-        lblMessage.setVisible(true);
-        lblMessage.setManaged(true);
-    }
+	/**
+	 * Navigates to the subscribers management screen.
+	 */
+	@FXML
+	private void onManageUsersClicked() {
+		openWindow("manageSubscriber.fxml", "Manage Subscribers");
+	}
+
+	/**
+	 * Navigates to the reservations management screen.
+	 */
+	@FXML
+	private void onManageReservationClicked() {
+		openWindow("ManageReservation.fxml", "Manage Reservations");
+	}
+
+	/**
+	 * Navigates to the "Current Diners" management screen.
+	 */
+	@FXML
+	private void onManageCurrentDinersClicked() {
+		openWindow("ManageCurrentDiners.fxml", "Current Diners");
+	}
+
+	/**
+	 * Navigates to the reports menu screen.
+	 *
+	 * <p>
+	 * Includes a defense-in-depth permission check to prevent access by
+	 * non-managers.
+	 * </p>
+	 */
+	@FXML
+	private void onReportsClicked() {
+		if (user == null || user.getUserRole() != Enums.UserRole.RestaurantManager) {
+
+			showMessage("Access denied. Managers only.");
+			return;
+		}
+
+		openWindow("ReportsMenu.fxml", "Reports");
+	}
+
+	/**
+	 * Navigates back to the main menu screen.
+	 */
+	@FXML
+	private void onBackToMenuClicked() {
+		openWindow("Menu_B.fxml", "Main Menu");
+	}
+
+	/**
+	 * Displays a message on the screen.
+	 *
+	 * @param msg the message text to display
+	 */
+	private void showMessage(String msg) {
+		if (lblMessage == null)
+			return;
+		lblMessage.setText(msg);
+		lblMessage.setVisible(true);
+		lblMessage.setManaged(true);
+	}
 }

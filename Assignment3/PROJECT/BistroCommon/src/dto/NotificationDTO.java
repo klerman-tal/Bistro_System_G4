@@ -2,35 +2,48 @@ package dto;
 
 import java.io.Serializable;
 
+/**
+ * Data Transfer Object (DTO) used to deliver notification information from the
+ * server to the client.
+ * <p>
+ * This object represents a user-facing notification, including its type, the
+ * message to be displayed in the application, and an optional channel message
+ * intended for external communication such as SMS or email.
+ * </p>
+ */
 public class NotificationDTO implements Serializable {
 
-    private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 1L;
 
-    public enum Type {
-        INFO, SUCCESS, WARNING, ERROR
-    }
+	public enum Type {
+		INFO, SUCCESS, WARNING, ERROR
+	}
 
-    // What the app should show in popup (NO sensitive info like codes)
-    private final String displayMessage;
+	private final String displayMessage;
+	private final String channelMessage;
+	private final String channel;
+	private final Type type;
 
-    // The simulated SMS/Email content (can include the code)
-    private final String channelMessage;
+	public NotificationDTO(Type type, String channel, String displayMessage, String channelMessage) {
+		this.type = type;
+		this.channel = channel;
+		this.displayMessage = displayMessage;
+		this.channelMessage = channelMessage;
+	}
 
-    // Optional: for future use (SMS / EMAIL)
-    private final String channel;
+	public Type getType() {
+		return type;
+	}
 
-    private final Type type;
+	public String getChannel() {
+		return channel;
+	}
 
-    public NotificationDTO(Type type, String channel, String displayMessage, String channelMessage) {
-        this.type = type;
-        this.channel = channel;
-        this.displayMessage = displayMessage;
-        this.channelMessage = channelMessage;
-    }
+	public String getDisplayMessage() {
+		return displayMessage;
+	}
 
-    public Type getType() { return type; }
-    public String getChannel() { return channel; }
-
-    public String getDisplayMessage() { return displayMessage; }
-    public String getChannelMessage() { return channelMessage; }
+	public String getChannelMessage() {
+		return channelMessage;
+	}
 }

@@ -3,12 +3,14 @@ package dto;
 import java.io.Serializable;
 
 /**
- * DTO for requesting the entire waiting list from the server.
- * Used by restaurant managers to view all active waiting entries.
+ * Data Transfer Object (DTO) used to request the complete waiting list from the
+ * server.
+ * <p>
+ * This request is typically used by restaurant managers to retrieve all active
+ * waiting list entries. The object does not contain any fields, as the request
+ * itself is sufficient.
+ * </p>
  */
 public class GetWaitingListDTO implements Serializable {
-    private static final long serialVersionUID = 1L;
-    
-    // אין צורך בשדות נוספים כי אנחנו שולפים את כל הרשימה, 
-    // בדומה ל-GetAllReservationsDTO שלך.
+	private static final long serialVersionUID = 1L;
 }

@@ -5,6 +5,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import application.ChatClient;
+import application.ClientSession; // ✅ added
 import dto.GetReservationHistoryDTO;
 import dto.RequestDTO;
 import dto.ResponseDTO;
@@ -24,200 +25,294 @@ import javafx.stage.Stage;
 import network.ClientResponseHandler;
 import protocol.Commands;
 
+/**
+ * JavaFX controller for displaying and updating subscriber profile details.
+ *
+ * <p>
+ * This screen is available to {@link Subscriber} users only. It shows the
+ * subscriber's personal details and loads the reservation history into a table.
+ * The controller sends update and history requests to the server and handles
+ * responses via {@link ClientResponseHandler}.
+ * </p>
+ */
 public class ClientDetails_BController implements ClientResponseHandler {
 
-    private Subscriber subscriber;
-    private ChatClient chatClient;
+	private Subscriber subscriber;
+	private ChatClient chatClient;
 
-    @FXML private BorderPane rootPane;
+	@FXML
+	private BorderPane rootPane;
 
-    @FXML private TextField txtSubscriberNumber;
-    @FXML private TextField txtUserName;
-    @FXML private TextField txtFirstName;
-    @FXML private TextField txtLastName;
-    @FXML private TextField txtPhoneNumber;
-    @FXML private TextField txtEmail;
+	@FXML
+	private TextField txtSubscriberNumber;
+	@FXML
+	private TextField txtUserName;
+	@FXML
+	private TextField txtFirstName;
+	@FXML
+	private TextField txtLastName;
+	@FXML
+	private TextField txtPhoneNumber;
+	@FXML
+	private TextField txtEmail;
 
-    @FXML private Label lblMessage;
+	@FXML
+	private Label lblMessage;
 
-    @FXML private TableView<Reservation> tblReservationHistory;
-    @FXML private TableColumn<Reservation, String> colDateTime;
-    @FXML private TableColumn<Reservation, String> colGuests;
-    @FXML private TableColumn<Reservation, String> colCode;
-    @FXML private TableColumn<Reservation, String> colStatus;
+	@FXML
+	private TableView<Reservation> tblReservationHistory;
+	@FXML
+	private TableColumn<Reservation, String> colDateTime;
+	@FXML
+	private TableColumn<Reservation, String> colGuests;
+	@FXML
+	private TableColumn<Reservation, String> colCode;
+	@FXML
+	private TableColumn<Reservation, String> colStatus;
 
-    private final DateTimeFormatter formatter =
-            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+	private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-    @FXML
-    private void initialize() {
+	/**
+	 * Initializes the controller after FXML injection.
+	 *
+	 * <p>
+	 * Configures table columns to display reservation history fields as formatted
+	 * strings.
+	 * </p>
+	 */
+	@FXML
+	private void initialize() {
 
-        colDateTime.setCellValueFactory(r ->
-                new SimpleStringProperty(
-                        r.getValue().getReservationTime() != null
-                                ? r.getValue().getReservationTime().format(formatter)
-                                : ""
-                ));
+		colDateTime.setCellValueFactory(r -> new SimpleStringProperty(
+				r.getValue().getReservationTime() != null ? r.getValue().getReservationTime().format(formatter) : ""));
 
-        colGuests.setCellValueFactory(r ->
-                new SimpleStringProperty(
-                        String.valueOf(r.getValue().getGuestAmount())
-                ));
+		colGuests.setCellValueFactory(r -> new SimpleStringProperty(String.valueOf(r.getValue().getGuestAmount())));
 
-        colCode.setCellValueFactory(r ->
-                new SimpleStringProperty(
-                        r.getValue().getConfirmationCode()
-                ));
+		colCode.setCellValueFactory(r -> new SimpleStringProperty(r.getValue().getConfirmationCode()));
 
-        colStatus.setCellValueFactory(r ->
-                new SimpleStringProperty(
-                        r.getValue().getReservationStatus().name()
-                ));
-    }
+		colStatus.setCellValueFactory(r -> new SimpleStringProperty(r.getValue().getReservationStatus().name()));
+	}
 
-    public void setClient(User user, ChatClient chatClient) {
+	/**
+	 * Injects the session context into this controller.
+	 *
+	 * <p>
+	 * If the provided user is not a {@link Subscriber}, the screen will display an
+	 * error message and no server requests will be performed.
+	 * </p>
+	 *
+	 * @param user       the current logged-in user
+	 * @param chatClient the network client used to send requests
+	 */
+	public void setClient(User user, ChatClient chatClient) {
 
-        if (!(user instanceof Subscriber)) {
-            showMessage("Only subscribers can view this screen.");
-            return;
-        }
+		// ✅ Always keep the chatClient reference so Back works even on error
+		this.chatClient = chatClient;
 
-        this.subscriber = (Subscriber) user;
-        this.chatClient = chatClient;
+		// ✅ IMPORTANT: This screen should always show the ACTING user (staff may be
+		// RandomClient etc.)
+		User effectiveUser = ClientSession.getActingUser();
+		if (effectiveUser == null) {
+			effectiveUser = user; // fallback (shouldn't happen, but safe)
+		}
 
-        if (this.chatClient != null) {
-            this.chatClient.setResponseHandler(this);
-        }
+		if (!(effectiveUser instanceof Subscriber)) {
+			showMessage("Only subscribers can view this screen.");
+			return;
+		}
 
-        loadSubscriberDetails();
-        requestReservationHistory();
-    }
+		this.subscriber = (Subscriber) effectiveUser;
 
-    private void requestReservationHistory() {
-        try {
-            GetReservationHistoryDTO data =
-                    new GetReservationHistoryDTO(subscriber.getUserId());
+		if (this.chatClient != null) {
+			this.chatClient.setResponseHandler(this);
+		}
 
-            RequestDTO request =
-                    new RequestDTO(Commands.GET_RESERVATION_HISTORY, data);
+		loadSubscriberDetails();
+		requestReservationHistory();
+	}
 
-            chatClient.sendToServer(request);
+	/**
+	 * Requests reservation history for the currently loaded subscriber.
+	 *
+	 * @throws RuntimeException not thrown directly; errors are handled by
+	 *                          displaying a UI message
+	 */
+	private void requestReservationHistory() {
+		try {
+			GetReservationHistoryDTO data = new GetReservationHistoryDTO(subscriber.getUserId());
 
-        } catch (IOException e) {
-            showMessage("Failed to load reservation history");
-        }
-    }
+			RequestDTO request = new RequestDTO(Commands.GET_RESERVATION_HISTORY, data);
 
-    @Override
-    public void handleResponse(ResponseDTO response) {
+			chatClient.sendToServer(request);
 
-        if (!response.isSuccess()) {
-            showMessage(response.getMessage());
-            return;
-        }
+		} catch (IOException e) {
+			showMessage("Failed to load reservation history");
+		}
+	}
 
-        if ("Details updated successfully".equals(response.getMessage())) {
-            showMessage("✔ Details updated successfully");
-            return;
-        }
+	/**
+	 * Handles server responses related to this screen (reservation history and
+	 * profile updates).
+	 *
+	 * @param response the response received from the server
+	 */
+	@Override
+	public void handleResponse(ResponseDTO response) {
 
-        if (response.getData() instanceof List<?> list &&
-            !list.isEmpty() &&
-            list.get(0) instanceof Reservation) {
+		if (!response.isSuccess()) {
+			showMessage(response.getMessage());
+			return;
+		}
 
-            @SuppressWarnings("unchecked")
-            List<Reservation> history = (List<Reservation>) list;
+		if ("Details updated successfully".equals(response.getMessage())) {
+			showMessage("✔ Details updated successfully");
+			return;
+		}
 
-            Platform.runLater(() ->
-                tblReservationHistory.getItems().setAll(history)
-            );
-        }
-    }
+		if (response.getData() instanceof List<?> list && !list.isEmpty() && list.get(0) instanceof Reservation) {
 
-    @Override
-    public void handleConnectionError(Exception e) {
-        showMessage("Connection error: " + e.getMessage());
-    }
+			@SuppressWarnings("unchecked")
+			List<Reservation> history = (List<Reservation>) list;
 
-    @Override
-    public void handleConnectionClosed() {
-        showMessage("Connection closed.");
-    }
+			Platform.runLater(() -> tblReservationHistory.getItems().setAll(history));
+		}
+	}
 
-    private void loadSubscriberDetails() {
-        txtSubscriberNumber.setText(String.valueOf(subscriber.getUserId()));
-        txtUserName.setText(subscriber.getUsername());
-        txtFirstName.setText(subscriber.getFirstName());
-        txtLastName.setText(subscriber.getLastName());
-        txtPhoneNumber.setText(subscriber.getPhoneNumber());
-        txtEmail.setText(subscriber.getEmail());
-    }
+	/**
+	 * Handles connection errors by displaying an error message in the UI.
+	 *
+	 * @param e the connection exception
+	 */
+	@Override
+	public void handleConnectionError(Exception e) {
+		showMessage("Connection error: " + e.getMessage());
+	}
 
-    @FXML
-    private void onUpdateDetailsClicked() {
+	/**
+	 * Handles connection closure events by displaying a message in the UI.
+	 */
+	@Override
+	public void handleConnectionClosed() {
+		showMessage("Connection closed.");
+	}
 
-        try {
-            UpdateSubscriberDetailsDTO dto =
-                    new UpdateSubscriberDetailsDTO(
-                            subscriber.getUserId(),
-                            txtUserName.getText().trim(),
-                            txtFirstName.getText().trim(),
-                            txtLastName.getText().trim(),
-                            txtPhoneNumber.getText().trim(),
-                            txtEmail.getText().trim()
-                    );
+	/**
+	 * Loads subscriber details into the form fields from the in-memory
+	 * {@link Subscriber} object.
+	 */
+	private void loadSubscriberDetails() {
+		txtSubscriberNumber.setText(String.valueOf(subscriber.getUserId()));
+		txtUserName.setText(subscriber.getUsername());
+		txtFirstName.setText(subscriber.getFirstName());
+		txtLastName.setText(subscriber.getLastName());
+		txtPhoneNumber.setText(subscriber.getPhoneNumber());
+		txtEmail.setText(subscriber.getEmail());
+	}
 
-            RequestDTO request =
-                    new RequestDTO(Commands.UPDATE_SUBSCRIBER_DETAILS, dto);
+	/**
+	 * Handles the Update Details button click.
+	 *
+	 * <p>
+	 * Validates the input fields (phone, email, and required fields), then sends an
+	 * {@link Commands#UPDATE_SUBSCRIBER_DETAILS} request to the server.
+	 * </p>
+	 */
+	@FXML
+	private void onUpdateDetailsClicked() {
+		String username = txtUserName.getText().trim();
+		String firstName = txtFirstName.getText().trim();
+		String lastName = txtLastName.getText().trim();
+		String phone = txtPhoneNumber.getText().trim();
+		String email = txtEmail.getText().trim();
 
-            chatClient.sendToServer(request);
+		if (!phone.matches("^05\\d{8}$")) {
+			showMessage("Phone number must start with 05 and contain 10 digits.");
+			return;
+		}
 
-        } catch (IOException e) {
-            e.printStackTrace();
-            showMessage("Failed to update details.");
-        }
-    }
-    @FXML
-    private void onRefreshClicked() {
-        requestReservationHistory();
-        showMessage("✔ Data refreshed");
-    }
+		if (!email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")) {
+			showMessage("Please enter a valid email address (e.g., name@domain.com).");
+			return;
+		}
 
+		if (username.isEmpty() || firstName.isEmpty() || lastName.isEmpty()) {
+			showMessage("All fields must be filled.");
+			return;
+		}
 
-    @FXML
-    private void onBackToMenuClicked() {
+		try {
+			UpdateSubscriberDetailsDTO dto = new UpdateSubscriberDetailsDTO(subscriber.getUserId(), username, firstName,
+					lastName, phone, email);
 
-        try {
-            FXMLLoader loader =
-                    new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
+			RequestDTO request = new RequestDTO(Commands.UPDATE_SUBSCRIBER_DETAILS, dto);
 
-            Parent root = loader.load();
+			chatClient.sendToServer(request);
 
-            // ✅ להעביר session לתפריט
-            Menu_BController menu = loader.getController();
-            if (menu != null) {
-            	menu.setClient(
-            		    application.ClientSession.getLoggedInUser(),
-            		    chatClient
-            		);
+		} catch (IOException e) {
+			e.printStackTrace();
+			showMessage("Failed to update details.");
+		}
+	}
 
-            }
+	/**
+	 * Handles the Refresh button click by re-requesting the reservation history.
+	 */
+	@FXML
+	private void onRefreshClicked() {
+		requestReservationHistory();
+		showMessage("✔ Data refreshed");
+	}
 
-            Stage stage = (Stage) rootPane.getScene().getWindow();
+	/**
+	 * Navigates back to the main menu screen while preserving the current session
+	 * context.
+	 *
+	 * <p>
+	 * Loads {@code /gui/Menu_B.fxml} and injects the logged-in user and
+	 * {@link ChatClient} into the target controller.
+	 * </p>
+	 */
+	@FXML
+	private void onBackToMenuClicked() {
 
-            stage.setTitle("Bistro - Main Menu");
-            stage.setScene(new Scene(root));
-            stage.show();
+		try {
+			FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
 
-        } catch (Exception e) {
-            e.printStackTrace();
-            showMessage("Failed to return to menu.");
-        }
-    }
+			Parent root = loader.load();
 
-    private void showMessage(String msg) {
-        lblMessage.setText(msg);
-        lblMessage.setVisible(true);
-        lblMessage.setManaged(true);
-    }
+			Menu_BController menu = loader.getController();
+			if (menu != null) {
+				menu.setClient(application.ClientSession.getLoggedInUser(), chatClient);
+			}
+
+			Stage stage = (Stage) rootPane.getScene().getWindow();
+
+			stage.setTitle("Bistro - Main Menu");
+
+			Scene scene = stage.getScene();
+			if (scene == null) {
+				stage.setScene(new Scene(root));
+			} else {
+				scene.setRoot(root);
+			}
+
+			stage.setMaximized(true);
+			stage.show();
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			showMessage("Failed to return to menu.");
+		}
+	}
+
+	/**
+	 * Displays a message in the UI message label.
+	 *
+	 * @param msg the message to display
+	 */
+	private void showMessage(String msg) {
+		lblMessage.setText(msg);
+		lblMessage.setVisible(true);
+		lblMessage.setManaged(true);
+	}
 }

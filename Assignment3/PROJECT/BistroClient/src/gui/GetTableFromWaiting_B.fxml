@@ -10,28 +10,23 @@
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="guiControllers.GetTableFromWaiting_BController">
 
+    <!-- ===== HEADER ===== -->
     <top>
-        <HBox alignment="CENTER_LEFT">
+        <HBox alignment="CENTER">
             <padding>
                 <Insets top="18" right="25" bottom="18" left="25"/>
             </padding>
-
             <children>
                 <Label text="Get Table"
-                       styleClass="title"
+                       styleClass="mainTitle"
                        textFill="WHITE"/>
-
-                <Region HBox.hgrow="ALWAYS"/>
-
-                <Button text="Back"
-                        styleClass="btnSecondary"
-                        onAction="#onBackClicked"/>
             </children>
         </HBox>
     </top>
 
+    <!-- ===== CENTER ===== -->
     <center>
-        <VBox alignment="TOP_CENTER" spacing="14">
+        <VBox alignment="CENTER" spacing="15">
             <padding>
                 <Insets top="30" right="40" bottom="20" left="40"/>
             </padding>
@@ -44,32 +39,44 @@
                 <Label text="Enter your confirmation code:"/>
 
                 <TextField fx:id="txtCode"
-                           maxWidth="220"
-                           promptText="e.g., 123456"/>
+                           promptText="e.g., 123456"
+                           maxWidth="260"/>
 
+                <!-- Confirm -->
                 <Button fx:id="btnConfirm"
                         text="Confirm arrival"
-                        prefWidth="220"
-                        styleClass="btnPrimary"
+                        prefWidth="260"
+                        styleClass="btnSecondary"
                         onAction="#onConfirmClicked"/>
 
+                <!-- Info -->
                 <Label fx:id="lblInfo"
                        visible="false"
                        managed="false"
-                       style="-fx-text-fill: #2e7d32; -fx-font-size: 12px;"/>
+                       styleClass="infoMsg"/>
 
+                <!-- Error -->
                 <Label fx:id="lblError"
                        visible="false"
                        managed="false"
                        styleClass="errorMsg"/>
 
-                <!-- ✅ Subscriber-only -->
-                <VBox fx:id="boxMyActive" spacing="8" managed="false" visible="false" maxWidth="520">
-                    <Separator />
-                    <Label text="My active waiting requests (click to fill the code):"
-                           style="-fx-font-weight: bold; -fx-font-size: 12px;" />
+                <!-- Subscriber-only -->
+                <VBox fx:id="boxMyActive"
+                      spacing="10"
+                      managed="false"
+                      visible="false"
+                      maxWidth="520">
 
-                    <TableView fx:id="tblMyActive" prefHeight="150" maxWidth="520">
+                    <Separator/>
+
+                    <Label text="My active waiting requests (click to fill the code):"
+                           styleClass="section"/>
+
+                    <TableView fx:id="tblMyActive"
+                               prefHeight="150"
+                               maxWidth="520">
+
                         <columns>
                             <TableColumn fx:id="colDate" text="Date" prefWidth="160"/>
                             <TableColumn fx:id="colTime" text="Time" prefWidth="120"/>
@@ -77,6 +84,12 @@
                         </columns>
                     </TableView>
                 </VBox>
+
+                <!-- Back -->
+                <Button text="Back"
+                        prefWidth="260"
+                        styleClass="btnPrimary"
+                        onAction="#onBackClicked"/>
 
             </children>
         </VBox>

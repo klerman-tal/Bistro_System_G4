@@ -24,205 +24,357 @@ import javafx.stage.Stage;
 import network.ClientResponseHandler;
 import protocol.Commands;
 
+/**
+ * JavaFX controller for managing restaurant tables (create/update/delete).
+ * <p>
+ * Responsibilities:
+ * <ul>
+ * <li>Loads the current tables list from the server and displays it in a
+ * {@link TableView}.</li>
+ * <li>Validates user input (numeric-only and positive values) for table number
+ * and seats amount.</li>
+ * <li>Sends table save requests ({@link Commands#SAVE_TABLE}) to add a new
+ * table or update an existing one.</li>
+ * <li>Sends table deletion requests ({@link Commands#DELETE_TABLE}) for the
+ * selected table.</li>
+ * <li>Handles async responses from the server via {@link ClientResponseHandler}
+ * and updates the UI safely.</li>
+ * <li>Navigates back to the management screen while reusing the existing
+ * {@link Scene}.</li>
+ * </ul>
+ * </p>
+ */
 public class UpdateTablesController implements ClientResponseHandler {
 
-    private ChatClient chatClient;
+	/**
+	 * Active client connection used to send requests and receive async responses.
+	 */
+	private ChatClient chatClient;
 
-    // ✅ session כדי לחזור אחורה בלי לאבד משתמש
-    private User user;
+	/**
+	 * Session user (needed mainly for navigation back to the management screen).
+	 */
+	private User user;
 
-    @FXML private BorderPane rootPane;
+	/* ======================= FXML ======================= */
 
-    @FXML private TableView<Table> tblTables;
-    @FXML private TableColumn<Table, Integer> colNumber;
-    @FXML private TableColumn<Table, Integer> colSeats;
+	@FXML
+	private BorderPane rootPane;
 
-    @FXML private TextField txtTableNumber;
-    @FXML private TextField txtSeats;
+	/** Table UI displaying all restaurant tables received from the server. */
+	@FXML
+	private TableView<Table> tblTables;
 
-    @FXML private Label lblMsg;
+	/** Column for table number. */
+	@FXML
+	private TableColumn<Table, Integer> colNumber;
 
-    private final ObservableList<Table> tables =
-            FXCollections.observableArrayList();
+	/** Column for seats amount. */
+	@FXML
+	private TableColumn<Table, Integer> colSeats;
 
-    @FXML
-    private void initialize() {
+	/** Input for table number (digits only). */
+	@FXML
+	private TextField txtTableNumber;
 
-        colNumber.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
-        colSeats.setCellValueFactory(new PropertyValueFactory<>("seatsAmount"));
+	/** Input for seats amount (digits only). */
+	@FXML
+	private TextField txtSeats;
 
-        tblTables.setItems(tables);
+	/** Status/feedback label for user messages. */
+	@FXML
+	private Label lblMsg;
 
-        tblTables.getSelectionModel()
-                 .selectedItemProperty()
-                 .addListener((obs, o, n) -> {
-            if (n != null) {
-                txtTableNumber.setText(String.valueOf(n.getTableNumber()));
-                txtSeats.setText(String.valueOf(n.getSeatsAmount()));
-            }
-        });
-    }
+	/** Backing list for the TableView items. */
+	private final ObservableList<Table> tables = FXCollections.observableArrayList();
 
-    // ✅ חדש: סטנדרט אחיד עם user + chatClient
-    public void setClient(User user, ChatClient chatClient) {
-        this.user = user;
-        setClient(chatClient);
-    }
+	/**
+	 * JavaFX initialization hook.
+	 * <p>
+	 * Configures the table columns, binds the observable list to the TableView,
+	 * applies numeric-only input limiters, and populates the form when a row is
+	 * selected.
+	 * </p>
+	 */
+	@FXML
+	private void initialize() {
+		colNumber.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
+		colSeats.setCellValueFactory(new PropertyValueFactory<>("seatsAmount"));
+		tblTables.setItems(tables);
 
-    /**
-     * נשאר בשביל תאימות למקומות שכבר קוראים רק setClient(chatClient)
-     */
-    public void setClient(ChatClient chatClient) {
-        this.chatClient = chatClient;
-        chatClient.setResponseHandler(this);
-        requestTables();
-    }
+		addNumericLimiter(txtTableNumber);
+		addNumericLimiter(txtSeats);
 
-    private void requestTables() {
-        try {
-            RequestDTO req = new RequestDTO(Commands.GET_TABLES, null);
-            chatClient.sendToServer(req);
-            show("Loading tables...");
-        } catch (IOException e) {
-            show("Failed to load tables");
-        }
-    }
+		tblTables.getSelectionModel().selectedItemProperty().addListener((obs, o, n) -> {
+			if (n != null) {
+				txtTableNumber.setText(String.valueOf(n.getTableNumber()));
+				txtSeats.setText(String.valueOf(n.getSeatsAmount()));
+			}
+		});
+	}
 
-    @FXML
-    private void onAddOrSave() {
+	/**
+	 * Restricts a {@link TextField} to accept digits only (filters out non-numeric
+	 * characters).
+	 *
+	 * @param tf the TextField to apply the limiter to
+	 */
+	private void addNumericLimiter(TextField tf) {
+		tf.textProperty().addListener((obs, oldVal, newVal) -> {
+			if (newVal == null)
+				return;
+			if (!newVal.matches("\\d*")) {
+				tf.setText(newVal.replaceAll("[^\\d]", ""));
+			}
+		});
+	}
 
-        Integer num = parseInt(txtTableNumber.getText(), "Table #");
-        Integer seats = parseInt(txtSeats.getText(), "Seats");
-        if (num == null || seats == null) return;
+	/* ======================= SESSION ======================= */
 
-        try {
-            SaveTableDTO dto = new SaveTableDTO(num, seats);
-            RequestDTO req = new RequestDTO(Commands.SAVE_TABLE, dto);
+	/**
+	 * Injects the current session context.
+	 * <p>
+	 * Also registers this controller as the response handler and triggers an
+	 * initial load of tables.
+	 * </p>
+	 *
+	 * @param user       the current user
+	 * @param chatClient the active client connection
+	 */
+	public void setClient(User user, ChatClient chatClient) {
+		this.user = user;
+		setClient(chatClient);
+	}
 
-            chatClient.sendToServer(req);
-            show("Saving table...");
+	/**
+	 * Injects only the {@link ChatClient} and registers this controller as the
+	 * response handler. Triggers a tables request immediately.
+	 *
+	 * @param chatClient the active client connection
+	 */
+	public void setClient(ChatClient chatClient) {
+		this.chatClient = chatClient;
+		chatClient.setResponseHandler(this);
+		requestTables();
+	}
 
-        } catch (IOException e) {
-            show("Failed to save table");
-        }
-    }
+	/* ======================= SERVER REQUESTS ======================= */
 
-    @FXML
-    private void onDeleteSelected() {
+	/**
+	 * Requests the current tables list from the server. Uses
+	 * {@link Commands#GET_TABLES}.
+	 */
+	private void requestTables() {
+		try {
+			chatClient.sendToServer(new RequestDTO(Commands.GET_TABLES, null));
+			show("Loading tables...");
+		} catch (IOException e) {
+			show("Failed to load tables");
+		}
+	}
 
-        Table selected = tblTables.getSelectionModel().getSelectedItem();
+	/* ======================= ACTIONS ======================= */
 
-        if (selected == null) {
-            show("Select a table first");
-            return;
-        }
+	/**
+	 * Adds a new table or saves updates to an existing one.
+	 * <p>
+	 * Validates that table number and seats are present, numeric, and greater than
+	 * 0, then sends {@link Commands#SAVE_TABLE} with {@link SaveTableDTO}.
+	 * </p>
+	 */
+	@FXML
+	private void onAddOrSave() {
+		hide();
 
-        try {
-            DeleteTableDTO dto = new DeleteTableDTO(selected.getTableNumber());
-            RequestDTO req = new RequestDTO(Commands.DELETE_TABLE, dto);
+		Integer num = parseInt(txtTableNumber.getText(), "Table #");
+		Integer seats = parseInt(txtSeats.getText(), "Seats");
 
-            chatClient.sendToServer(req);
-            show("Deleting table...");
+		if (num == null || seats == null)
+			return;
 
-        } catch (IOException e) {
-            show("Failed to delete table");
-        }
-    }
+		if (num <= 0) {
+			show("Table number must be greater than 0");
+			return;
+		}
+		if (seats <= 0) {
+			show("Seats amount must be greater than 0");
+			return;
+		}
 
-    @FXML
-    private void onRefresh() {
-        requestTables();
-    }
+		try {
+			chatClient.sendToServer(new RequestDTO(Commands.SAVE_TABLE, new SaveTableDTO(num, seats)));
+			show("Saving table...");
+		} catch (IOException e) {
+			show("Failed to save table");
+		}
+	}
 
-    @Override
-    public void handleResponse(ResponseDTO response) {
+	/**
+	 * Deletes the currently selected table.
+	 * <p>
+	 * Requires a selection in {@link #tblTables}; sends
+	 * {@link Commands#DELETE_TABLE} with {@link DeleteTableDTO}.
+	 * </p>
+	 */
+	@FXML
+	private void onDeleteSelected() {
+		Table selected = tblTables.getSelectionModel().getSelectedItem();
+		if (selected == null) {
+			show("Select a table first");
+			return;
+		}
 
-        if (!response.isSuccess()) {
-            Platform.runLater(() -> show(response.getMessage()));
-            return;
-        }
+		try {
+			chatClient
+					.sendToServer(new RequestDTO(Commands.DELETE_TABLE, new DeleteTableDTO(selected.getTableNumber())));
+			show("Deleting table...");
+		} catch (IOException e) {
+			show("Failed to delete table");
+		}
+	}
 
-        Object data = response.getData();
+	/**
+	 * Reloads tables from the server.
+	 */
+	@FXML
+	private void onRefresh() {
+		requestTables();
+	}
 
-        if (data instanceof List<?> list) {
+	/* ======================= SERVER RESPONSE ======================= */
 
-            if (!list.isEmpty() && !(list.get(0) instanceof Table)) {
-                Platform.runLater(() -> show("Unexpected data type from server"));
-                return;
-            }
+	/**
+	 * Handles async server responses for table operations.
+	 * <p>
+	 * Expected response patterns:
+	 * <ul>
+	 * <li>A {@link List} of {@link Table} objects on successful
+	 * {@link Commands#GET_TABLES}.</li>
+	 * <li>Any other successful response for save/delete triggers a refresh.</li>
+	 * </ul>
+	 * UI updates are executed on the JavaFX Application Thread using
+	 * {@link Platform#runLater(Runnable)}.
+	 * </p>
+	 *
+	 * @param response the server response wrapper
+	 */
+	@Override
+	public void handleResponse(ResponseDTO response) {
+		if (!response.isSuccess()) {
+			Platform.runLater(() -> show(response.getMessage()));
+			return;
+		}
 
-            @SuppressWarnings("unchecked")
-            List<Table> tableList = (List<Table>) list;
+		Object data = response.getData();
+		if (data instanceof List<?> list) {
+			if (!list.isEmpty() && !(list.get(0) instanceof Table)) {
+				Platform.runLater(() -> show("Unexpected data type from server"));
+				return;
+			}
 
-            Platform.runLater(() -> {
-                tables.setAll(tableList);
-                hide();
-            });
-            return;
-        }
+			@SuppressWarnings("unchecked")
+			List<Table> tableList = (List<Table>) list;
+			Platform.runLater(() -> {
+				tables.setAll(tableList);
+				hide();
+			});
+			return;
+		}
 
-        Platform.runLater(() -> {
-            hide();
-            requestTables();
-        });
-    }
+		Platform.runLater(() -> {
+			hide();
+			requestTables();
+		});
+	}
 
-    @Override
-    public void handleConnectionError(Exception e) {
-        show("Connection error: " + e.getMessage());
-    }
+	/**
+	 * Called when a connection error occurs while this controller is active.
+	 *
+	 * @param e the connection exception
+	 */
+	@Override
+	public void handleConnectionError(Exception e) {
+		Platform.runLater(() -> show("Connection error"));
+	}
 
-    @Override
-    public void handleConnectionClosed() {
-        show("Connection closed");
-    }
+	/**
+	 * Called when the server connection is closed while this controller is active.
+	 */
+	@Override
+	public void handleConnectionClosed() {
+	}
 
-    @FXML
-    private void onBack() {
-        try {
-            FXMLLoader loader =
-                    new FXMLLoader(getClass().getResource("/gui/RestaurantManagement_B.fxml"));
+	/* ================= BACK (FIXED) ================= */
 
-            Parent root = loader.load();
+	/**
+	 * Navigates back to the restaurant management screen.
+	 * <p>
+	 * Reuses the existing {@link Scene} (does not create a new one) by replacing
+	 * the root node. Passes the current session ({@link #user},
+	 * {@link #chatClient}) into the target controller.
+	 * </p>
+	 */
+	@FXML
+	private void onBack() {
+		try {
+			FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/RestaurantManagement_B.fxml"));
+			Parent root = loader.load();
 
-            // ✅ להעביר session חזרה
-            Object controller = loader.getController();
-            if (controller instanceof RestaurantManagement_BController rm) {
-                rm.setClient(user, chatClient);
-            }
+			RestaurantManagement_BController controller = loader.getController();
+			controller.setClient(user, chatClient);
 
-            Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setScene(new Scene(root));
-            stage.setTitle("Bistro - Restaurant Management");
-            stage.show();
+			Stage stage = (Stage) rootPane.getScene().getWindow();
+			Scene scene = stage.getScene();
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+			scene.setRoot(root);
+			stage.setTitle("Bistro - Restaurant Management");
+			stage.centerOnScreen();
+			stage.show();
 
-    private Integer parseInt(String s, String field) {
-        try {
-            if (s == null || s.isBlank()) {
-                show(field + " is required");
-                return null;
-            }
-            return Integer.parseInt(s.trim());
-        } catch (NumberFormatException e) {
-            show(field + " must be a number");
-            return null;
-        }
-    }
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 
-    private void show(String msg) {
-        lblMsg.setText(msg);
-        lblMsg.setVisible(true);
-        lblMsg.setManaged(true);
-    }
+	/* ================= HELPERS ================= */
 
-    private void hide() {
-        lblMsg.setText("");
-        lblMsg.setVisible(false);
-        lblMsg.setManaged(false);
-    }
+	/**
+	 * Parses an integer from a string and shows a user-friendly error if invalid.
+	 *
+	 * @param s     the raw string to parse
+	 * @param field the logical field name (used in error messages)
+	 * @return parsed integer, or null when invalid
+	 */
+	private Integer parseInt(String s, String field) {
+		try {
+			if (s == null || s.isBlank()) {
+				show(field + " is required");
+				return null;
+			}
+			return Integer.parseInt(s.trim());
+		} catch (NumberFormatException e) {
+			show(field + " must be a valid number");
+			return null;
+		}
+	}
+
+	/**
+	 * Displays a message to the user via {@link #lblMsg}.
+	 *
+	 * @param msg message text
+	 */
+	private void show(String msg) {
+		lblMsg.setText(msg);
+		lblMsg.setVisible(true);
+		lblMsg.setManaged(true);
+	}
+
+	/**
+	 * Hides and clears the message label.
+	 */
+	private void hide() {
+		lblMsg.setText("");
+		lblMsg.setVisible(false);
+		lblMsg.setManaged(false);
+	}
 }

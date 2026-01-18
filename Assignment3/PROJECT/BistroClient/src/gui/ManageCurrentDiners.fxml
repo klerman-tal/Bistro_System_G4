@@ -2,69 +2,122 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 
 <BorderPane fx:id="rootPane"
+            id="rootPane"
             stylesheets="@Style.css"
             xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="guiControllers.ManageCurrentDinersController">
 
-    <center>
-        <VBox spacing="20" alignment="TOP_CENTER">
+    <!-- ===== HEADER ===== -->
+    <top>
+        <VBox spacing="6">
             <padding>
-                <Insets top="25" right="40" bottom="25" left="40"/>
+                <Insets top="20" right="20" bottom="10" left="20"/>
             </padding>
 
-            <children>
-                <Label text="Active diners in restaurant"
-                       styleClass="section"/>
+            <HBox alignment="CENTER_LEFT" spacing="12">
+                <VBox spacing="2">
+                    <Label text="Manage Current Diners"
+                           styleClass="title"/>
+                    <Label text="View and manage active diners in the restaurant"
+                           styleClass="subtitle"/>
+                </VBox>
+
+                <Region HBox.hgrow="ALWAYS"/>
+
+                <!-- ===== STATUS MESSAGE ===== -->
+                <Label fx:id="lblStatus"
+                       managed="false"
+                       visible="false"
+                       styleClass="errorMsg"/>
+            </HBox>
+        </VBox>
+    </top>
+
+    <!-- ===== CONTENT ===== -->
+    <center>
+        <VBox spacing="12" VBox.vgrow="ALWAYS">
+            <padding>
+                <Insets top="0" right="20" bottom="10" left="20"/>
+            </padding>
+
+            <!-- ===== CURRENT DINERS TABLE ===== -->
+            <VBox styleClass="card30"
+                  spacing="10"
+                  VBox.vgrow="ALWAYS">
+                <padding>
+                    <Insets top="18" right="18" bottom="18" left="18"/>
+                </padding>
+
+                <!-- ===== FILTER BAR (NEW) ===== -->
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <TextField fx:id="txtFilter"
+                               promptText="Filter (created by / role / table...)"
+                               prefWidth="300"/>
+
+                    <ComboBox fx:id="cmbMatchMode"
+                              prefWidth="120"/>
+
+                    <Button text="X"
+                            prefWidth="35"
+                            onAction="#onClearFilter"/>
+                </HBox>
 
                 <TableView fx:id="tblCurrentDiners"
-                           prefHeight="400"
-                           maxWidth="600">
+                           VBox.vgrow="ALWAYS">
                     <columns>
                         <TableColumn fx:id="colCreatedBy"
-                                     text="created_by"
+                                     text="Created By"
                                      prefWidth="200"/>
-
                         <TableColumn fx:id="colCreatedByRole"
-                                     text="created_by_role"
+                                     text="Role"
                                      prefWidth="200"/>
-
                         <TableColumn fx:id="colTableNumber"
-                                     text="table_number"
+                                     text="Table Number"
                                      prefWidth="200"/>
                     </columns>
+                    <columnResizePolicy>
+                        <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+                    </columnResizePolicy>
                 </TableView>
-
-                <Label fx:id="lblStatus"
-                       text=""
-                       visible="false"
-                       managed="false"
-                       wrapText="true"
-                       styleClass="error"/>
-            </children>
+            </VBox>
         </VBox>
     </center>
 
+    <!-- ===== FOOTER ===== -->
     <bottom>
-        <HBox alignment="CENTER_LEFT">
+        <VBox spacing="12">
             <padding>
-                <Insets top="15" right="25" bottom="15" left="25"/>
+                <Insets top="0" right="20" bottom="20" left="20"/>
             </padding>
 
-            <children>
-                <Button text="Back"
-                        onAction="#onBackClicked"
-                        styleClass="secondary-button"/>
-            </children>
-        </HBox>
+            <Separator/>
+
+            <!-- ===== ACTIONS ===== -->
+            <HBox alignment="CENTER_RIGHT" spacing="10">
+                <padding>
+                    <Insets top="10"/>
+                </padding>
+                <children>
+                    <Button fx:id="btnBack"
+                            text="Back"
+                            styleClass="btnSecondary"
+                            onAction="#onBackClicked"/>
+                </children>
+            </HBox>
+        </VBox>
     </bottom>
 
 </BorderPane>

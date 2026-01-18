@@ -5,19 +5,26 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
+<!-- =====================================================
+     Opening Hours Screen
+     ===================================================== -->
 <VBox id="rootPane"
-      prefHeight="820.0" prefWidth="700.0"
+      prefHeight="820.0"
+      prefWidth="700.0"
       spacing="18.0"
       stylesheets="@Style.css"
       xmlns="http://javafx.com/javafx/25"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="guiControllers.OpeningHoursController">
 
+    <!-- Root padding -->
     <padding>
         <Insets top="20" right="20" bottom="20" left="20"/>
     </padding>
 
-    <!-- ===== HEADER ===== -->
+    <!-- =================================================
+         HEADER
+         ================================================= -->
     <VBox spacing="4">
         <children>
             <Label text="Opening Hours" styleClass="title"/>
@@ -26,7 +33,9 @@
         </children>
     </VBox>
 
-    <!-- ===== WEEKLY TABLE CARD (UNCHANGED) ===== -->
+    <!-- =================================================
+         WEEKLY OPENING HOURS TABLE
+         ================================================= -->
     <VBox styleClass="card30" spacing="10" prefHeight="320.0">
         <padding>
             <Insets top="18" right="18" bottom="18" left="18"/>
@@ -35,88 +44,129 @@
         <children>
             <TableView fx:id="openingHoursTable" prefHeight="280.0">
                 <columns>
-                    <TableColumn fx:id="dayColumn" prefWidth="210.0" text="Day"/>
-                    <TableColumn fx:id="openTimeColumn" prefWidth="210.0" text="Open Time"/>
-                    <TableColumn fx:id="closeTimeColumn" prefWidth="210.0" text="Close Time"/>
+                    <TableColumn fx:id="dayColumn"
+                                 prefWidth="210.0"
+                                 text="Day"/>
+                    <TableColumn fx:id="openTimeColumn"
+                                 prefWidth="210.0"
+                                 text="Open Time"/>
+                    <TableColumn fx:id="closeTimeColumn"
+                                 prefWidth="210.0"
+                                 text="Close Time"/>
                 </columns>
             </TableView>
         </children>
     </VBox>
 
-    <!-- ===== UPDATE WEEKLY AREA (UNCHANGED) ===== -->
+    <!-- =================================================
+         UPDATE SELECTED WEEKLY CELL
+         ================================================= -->
     <VBox styleClass="card" spacing="12">
         <padding>
             <Insets top="14" right="14" bottom="14" left="14"/>
         </padding>
 
         <children>
-            <Label text="Update selected cell" styleClass="field-label"/>
+            <Label text="Update selected cell"
+                   styleClass="field-label"/>
 
             <HBox alignment="CENTER_LEFT" spacing="12">
                 <children>
-                    <Label text="New Time:" styleClass="subtitle"/>
-                    <TextField fx:id="openTimeField" prefWidth="110" promptText="HH:MM"/>
-                    <Button fx:id="updateButton" text="Update" styleClass="btnPrimary"/>
+                    <Label text="New Time:"
+                           styleClass="subtitle"/>
+                    <TextField fx:id="openTimeField"
+                               prefWidth="110"
+                               promptText="HH:MM"/>
+                    <Button fx:id="updateButton"
+                            text="Update"
+                            styleClass="btnPrimary"/>
                 </children>
             </HBox>
         </children>
     </VBox>
 
-    <!-- ===== SPECIAL DATES TABLE ===== -->
+    <!-- =================================================
+         SPECIAL OPENING DATES TABLE
+         ================================================= -->
     <VBox styleClass="card30" spacing="10">
         <padding>
             <Insets top="18" right="18" bottom="18" left="18"/>
         </padding>
 
         <children>
-            <Label text="Special Opening Dates" styleClass="field-label"/>
+            <Label text="Special Opening Dates"
+                   styleClass="field-label"/>
 
             <TableView fx:id="specialHoursTable" prefHeight="180.0">
                 <columns>
-                    <TableColumn fx:id="specialDateColumn" prefWidth="220.0" text="Date"/>
-                    <TableColumn fx:id="specialOpenColumn" prefWidth="180.0" text="Open"/>
-                    <TableColumn fx:id="specialCloseColumn" prefWidth="180.0" text="Close"/>
+                    <TableColumn fx:id="specialDateColumn"
+                                 prefWidth="220.0"
+                                 text="Date"/>
+                    <TableColumn fx:id="specialOpenColumn"
+                                 prefWidth="180.0"
+                                 text="Open"/>
+                    <TableColumn fx:id="specialCloseColumn"
+                                 prefWidth="180.0"
+                                 text="Close"/>
                 </columns>
             </TableView>
         </children>
     </VBox>
 
-    <!-- ===== ADD SPECIAL DATE ===== -->
+    <!-- =================================================
+         ADD / UPDATE SPECIAL DATE
+         ================================================= -->
     <VBox styleClass="card" spacing="12">
         <padding>
             <Insets top="14" right="14" bottom="14" left="14"/>
         </padding>
 
         <children>
-            <Label text="Add / Update Special Date" styleClass="field-label"/>
+            <Label text="Add / Update Special Date"
+                   styleClass="field-label"/>
 
+            <!-- Date & closed checkbox -->
             <HBox alignment="CENTER_LEFT" spacing="10">
                 <children>
-                    <Label text="Date:" styleClass="subtitle"/>
+                    <Label text="Date:"
+                           styleClass="subtitle"/>
                     <DatePicker fx:id="specialDatePicker"/>
-
-                    <CheckBox fx:id="specialClosedCheck" text="Closed"/>
+                    <CheckBox fx:id="specialClosedCheck"
+                              text="Closed"/>
                 </children>
             </HBox>
 
+            <!-- Open / Close time inputs -->
             <HBox alignment="CENTER_LEFT" spacing="10">
                 <children>
-                    <Label text="Open:" styleClass="subtitle"/>
-                    <TextField fx:id="specialOpenField" prefWidth="110" promptText="HH:MM"/>
+                    <Label text="Open:"
+                           styleClass="subtitle"/>
+                    <TextField fx:id="specialOpenField"
+                               prefWidth="110"
+                               promptText="HH:MM"/>
 
-                    <Label text="Close:" styleClass="subtitle"/>
-                    <TextField fx:id="specialCloseField" prefWidth="110" promptText="HH:MM"/>
+                    <Label text="Close:"
+                           styleClass="subtitle"/>
+                    <TextField fx:id="specialCloseField"
+                               prefWidth="110"
+                               promptText="HH:MM"/>
 
-                    <Button fx:id="addSpecialButton" text="Save" styleClass="btnPrimary"/>
+                    <Button fx:id="addSpecialButton"
+                            text="Save"
+                            styleClass="btnPrimary"/>
                 </children>
             </HBox>
         </children>
     </VBox>
 
-    <!-- ===== BACK BUTTON ===== -->
+    <!-- =================================================
+         BACK NAVIGATION
+         ================================================= -->
     <HBox alignment="CENTER_RIGHT">
         <children>
-            <Button fx:id="backButton" text="Back" styleClass="btnSecondary"/>
+            <Button fx:id="backButton"
+                    text="Back"
+                    styleClass="btnSecondary"/>
         </children>
     </HBox>
 

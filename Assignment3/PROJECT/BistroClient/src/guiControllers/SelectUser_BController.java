@@ -1,85 +1,138 @@
 package guiControllers;
 
-import java.io.IOException;
-
 import application.ChatClient;
 import entities.User;
 import interfaces.ClientActions;
-import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
+/**
+ * JavaFX controller that lets a management user choose which user-management
+ * screen to open.
+ *
+ * <p>
+ * This screen provides navigation to the subscribers management screen and the
+ * guests management screen, while preserving the current session ({@link User}
+ * and {@link ChatClient}) and optionally forwarding {@link ClientActions} to
+ * the next controller.
+ * </p>
+ */
 public class SelectUser_BController {
 
-    private ClientActions clientActions;
+	@FXML
+	private BorderPane rootPane;
 
-    // ✅ session
-    private User user;
-    private ChatClient chatClient;
+	private ClientActions clientActions;
 
-    public void setClientActions(ClientActions clientActions) {
-        this.clientActions = clientActions;
-    }
+	private User user;
+	private ChatClient chatClient;
 
-    // ✅ נקרא מ-RestaurantManagement_BController
-    public void setClient(User user, ChatClient chatClient) {
-        this.user = user;
-        this.chatClient = chatClient;
-    }
+	/**
+	 * Injects a {@link ClientActions} instance that can be forwarded to subsequent
+	 * screens.
+	 *
+	 * @param clientActions the client actions interface implementation
+	 */
+	public void setClientActions(ClientActions clientActions) {
+		this.clientActions = clientActions;
+	}
 
-    @FXML
-    private void onSubscribersClicked(ActionEvent event) {
-        navigateTo(event, "/gui/manageSubscriber.fxml");
-    }
+	/**
+	 * Injects the current session context for navigation.
+	 *
+	 * @param user       the current logged-in user
+	 * @param chatClient the active client connection to the server
+	 */
+	public void setClient(User user, ChatClient chatClient) {
+		this.user = user;
+		this.chatClient = chatClient;
+	}
 
-    @FXML
-    private void onGuestsClicked(ActionEvent event) {
-        navigateTo(event, "/gui/manegeGustsGui.fxml");
-    }
+	/**
+	 * Opens the subscribers management screen.
+	 */
+	@FXML
+	private void onSubscribersClicked() {
+		openWindow("manageSubscriber.fxml", "Manage Subscribers");
+	}
 
-    @FXML
-    private void onBackToMenuClicked(ActionEvent event) {
-        navigateTo(event, "/gui/RestaurantManagement_B.fxml");
-    }
+	/**
+	 * Opens the guests management screen.
+	 */
+	@FXML
+	private void onGuestsClicked() {
+		openWindow("manegeGustsGui.fxml", "Manage Guests");
+	}
 
-    private void navigateTo(ActionEvent event, String fxmlPath) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
-            Parent root = loader.load();
+	/**
+	 * Navigates back to the restaurant management main screen.
+	 */
+	@FXML
+	private void onBackToMenuClicked() {
+		openWindow("RestaurantManagement_B.fxml", "Restaurant Management");
+	}
 
-            Object controller = loader.getController();
+	/**
+	 * Loads an FXML screen from {@code /gui/}, injects the session context and/or
+	 * {@link ClientActions} if supported, and navigates by swapping the current
+	 * scene root.
+	 *
+	 * @param fxmlName the FXML file name under {@code /gui/}
+	 * @param title    the window title suffix
+	 */
+	private void openWindow(String fxmlName, String title) {
+		try {
+			FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
+			Parent root = loader.load();
 
-            // להעביר clientActions (כמו שהיה לך)
-            if (controller != null && clientActions != null) {
-                try {
-                    controller.getClass()
-                            .getMethod("setClientActions", ClientActions.class)
-                            .invoke(controller, clientActions);
-                } catch (Exception ignored) {}
-            }
+			Object controller = loader.getController();
 
-            // ✅ להעביר user + chatClient למסך הבא (ManageSubscriber צריך את זה)
-            if (controller != null && user != null && chatClient != null) {
-                try {
-                    controller.getClass()
-                            .getMethod("setClient", User.class, ChatClient.class)
-                            .invoke(controller, user, chatClient);
-                } catch (Exception ignored) {}
-            }
+			if (controller != null && clientActions != null) {
+				try {
+					controller.getClass().getMethod("setClientActions", ClientActions.class).invoke(controller,
+							clientActions);
+				} catch (Exception ignored) {
+				}
+			}
 
-            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-            stage.setScene(new Scene(root));
-            stage.centerOnScreen();
-            stage.show();
+			if (controller != null && user != null && chatClient != null) {
+				try {
+					controller.getClass().getMethod("setClient", User.class, ChatClient.class).invoke(controller, user,
+							chatClient);
+				} catch (Exception ignored) {
+				}
+			}
 
-            System.out.println("Switched to: " + fxmlPath);
+			switchRoot(root, "Bistro - " + title);
 
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Switches the current scene root to the given root node while preserving the
+	 * existing {@link Scene}.
+	 *
+	 * @param root  the new root node to display
+	 * @param title the window title to set
+	 */
+	private void switchRoot(Parent root, String title) {
+		Stage stage = (Stage) rootPane.getScene().getWindow();
+		Scene scene = stage.getScene();
+
+		if (scene == null) {
+			stage.setScene(new Scene(root));
+		} else {
+			scene.setRoot(root);
+		}
+
+		stage.setTitle(title);
+		stage.setMaximized(true);
+		stage.show();
+	}
 }

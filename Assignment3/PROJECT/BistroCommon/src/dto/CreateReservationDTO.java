@@ -6,14 +6,22 @@ import java.time.LocalTime;
 
 import entities.Enums.UserRole;
 
-public class CreateReservationDTO implements Serializable{
-	
+/**
+ * Data Transfer Object (DTO) used to transfer reservation creation data between
+ * the client and the server.
+ * <p>
+ * This object contains details such as the reservation date, time, number of
+ * guests, user ID, and user role.
+ * </p>
+ */
+public class CreateReservationDTO implements Serializable {
+
 	private LocalDate date;
 	private LocalTime time;
 	private int guests;
 	private int userId;
 	private UserRole role;
-	
+
 	public CreateReservationDTO(LocalDate date, LocalTime time, int guests, int userId, UserRole role) {
 		super();
 		this.date = date;
@@ -42,7 +50,5 @@ public class CreateReservationDTO implements Serializable{
 	public UserRole getRole() {
 		return role;
 	}
-	
-	
 
 }

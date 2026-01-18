@@ -25,230 +25,335 @@ import java.sql.Time;
 import java.time.LocalDate;
 import java.util.ArrayList;
 
+/**
+ * JavaFX controller for managing restaurant opening hours.
+ *
+ * <p>
+ * This screen supports:
+ * </p>
+ * <ul>
+ * <li>Viewing and updating weekly opening hours (per day of week).</li>
+ * <li>Viewing and creating/updating special opening hours for specific
+ * dates.</li>
+ * </ul>
+ *
+ * <p>
+ * Data is retrieved and updated through {@link ClientAPI} / {@link ChatClient}
+ * requests, and the controller handles asynchronous server responses via
+ * {@link ClientResponseHandler}.
+ * </p>
+ *
+ * <p>
+ * Weekly editing uses a simple interaction model: clicking a cell determines
+ * whether the user is editing the open time or close time for the selected day.
+ * </p>
+ */
 public class OpeningHoursController implements ClientResponseHandler {
 
-    @FXML private TableView<OpeningHouers> openingHoursTable;
-    @FXML private TableColumn<OpeningHouers, String> dayColumn;
-    @FXML private TableColumn<OpeningHouers, String> openTimeColumn;
-    @FXML private TableColumn<OpeningHouers, String> closeTimeColumn;
+	@FXML
+	private TableView<OpeningHouers> openingHoursTable;
+	@FXML
+	private TableColumn<OpeningHouers, String> dayColumn;
+	@FXML
+	private TableColumn<OpeningHouers, String> openTimeColumn;
+	@FXML
+	private TableColumn<OpeningHouers, String> closeTimeColumn;
 
-    @FXML private TextField openTimeField;
-    @FXML private Button updateButton;
-    @FXML private Button backButton;
+	@FXML
+	private TextField openTimeField;
+	@FXML
+	private Button updateButton;
+	@FXML
+	private Button backButton;
 
-    // Special opening hours
-    @FXML private TableView<SpecialOpeningHours> specialHoursTable;
-    @FXML private TableColumn<SpecialOpeningHours, String> specialDateColumn;
-    @FXML private TableColumn<SpecialOpeningHours, String> specialOpenColumn;
-    @FXML private TableColumn<SpecialOpeningHours, String> specialCloseColumn;
+	// Special opening hours
+	@FXML
+	private TableView<SpecialOpeningHours> specialHoursTable;
+	@FXML
+	private TableColumn<SpecialOpeningHours, String> specialDateColumn;
+	@FXML
+	private TableColumn<SpecialOpeningHours, String> specialOpenColumn;
+	@FXML
+	private TableColumn<SpecialOpeningHours, String> specialCloseColumn;
 
-    @FXML private DatePicker specialDatePicker;
-    @FXML private CheckBox specialClosedCheck;
-    @FXML private TextField specialOpenField;
-    @FXML private TextField specialCloseField;
-    @FXML private Button addSpecialButton;
+	@FXML
+	private DatePicker specialDatePicker;
+	@FXML
+	private CheckBox specialClosedCheck;
+	@FXML
+	private TextField specialOpenField;
+	@FXML
+	private TextField specialCloseField;
+	@FXML
+	private Button addSpecialButton;
 
-    private User user;
-    private ChatClient chatClient;
-    private ClientAPI api;
+	private User user;
+	private ChatClient chatClient;
+	private ClientAPI api;
 
-    private enum EditTarget { OPEN_TIME, CLOSE_TIME }
-    private EditTarget editTarget = EditTarget.OPEN_TIME;
+	/**
+	 * Internal marker for deciding whether the user edits the open time or close
+	 * time in the weekly opening hours table.
+	 */
+	private enum EditTarget {
+		OPEN_TIME, CLOSE_TIME
+	}
 
-    public void setClient(User user, ChatClient chatClient) {
-        this.user = user;
-        this.chatClient = chatClient;
-        this.api = new ClientAPI(chatClient);
+	private EditTarget editTarget = EditTarget.OPEN_TIME;
 
-        this.chatClient.setResponseHandler(this);
+	/**
+	 * Injects the current session context and triggers loading of both weekly and
+	 * special opening hours. Also registers this controller as the response handler
+	 * of the provided {@link ChatClient}.
+	 *
+	 * @param user       the current logged-in user
+	 * @param chatClient the network client used to communicate with the server
+	 */
+	public void setClient(User user, ChatClient chatClient) {
+		this.user = user;
+		this.chatClient = chatClient;
+		this.api = new ClientAPI(chatClient);
 
-        try {
-            api.getOpeningHours();
-            api.getSpecialOpeningHours();
-        } catch (IOException e) {
-            showAlert("Failed to load opening hours.");
-        }
-    }
+		this.chatClient.setResponseHandler(this);
 
-    @FXML
-    public void initialize() {
+		try {
+			api.getOpeningHours();
+			api.getSpecialOpeningHours();
+		} catch (IOException e) {
+			showAlert("Failed to load opening hours.");
+		}
+	}
 
-        dayColumn.setCellValueFactory(c ->
-                new SimpleStringProperty(c.getValue().getDayOfWeek()));
+	/**
+	 * Initializes table bindings, UI listeners, and button actions. This method is
+	 * called automatically by JavaFX after FXML injection.
+	 */
+	@FXML
+	public void initialize() {
 
-        openTimeColumn.setCellValueFactory(c -> {
-            String v = toHHMM(c.getValue().getOpenTime());
-            return new SimpleStringProperty(v.isBlank() ? "CLOSED" : v);
-        });
+		dayColumn.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getDayOfWeek()));
 
-        closeTimeColumn.setCellValueFactory(c -> {
-            String v = toHHMM(c.getValue().getCloseTime());
-            return new SimpleStringProperty(v.isBlank() ? "CLOSED" : v);
-        });
+		openTimeColumn.setCellValueFactory(c -> {
+			String v = toHHMM(c.getValue().getOpenTime());
+			return new SimpleStringProperty(v.isBlank() ? "CLOSED" : v);
+		});
 
-        openingHoursTable.addEventFilter(MouseEvent.MOUSE_CLICKED,
-                e -> detectClickedColumn());
+		closeTimeColumn.setCellValueFactory(c -> {
+			String v = toHHMM(c.getValue().getCloseTime());
+			return new SimpleStringProperty(v.isBlank() ? "CLOSED" : v);
+		});
 
-        openingHoursTable.getSelectionModel().selectedItemProperty().addListener((obs, oldV, selected) -> {
-            if (selected == null) return;
-            openTimeField.setText(
-                    editTarget == EditTarget.OPEN_TIME
-                            ? toHHMM(selected.getOpenTime())
-                            : toHHMM(selected.getCloseTime())
-            );
-        });
+		openingHoursTable.addEventFilter(MouseEvent.MOUSE_CLICKED, e -> detectClickedColumn());
 
-        updateButton.setOnAction(e -> onUpdateClicked());
-        backButton.setOnAction(e -> onBackClicked());
+		openingHoursTable.getSelectionModel().selectedItemProperty().addListener((obs, oldV, selected) -> {
+			if (selected == null)
+				return;
+			openTimeField.setText(editTarget == EditTarget.OPEN_TIME ? toHHMM(selected.getOpenTime())
+					: toHHMM(selected.getCloseTime()));
+		});
 
-        // Special table
-        specialDateColumn.setCellValueFactory(c ->
-                new SimpleStringProperty(c.getValue().getSpecialDate().toString()));
+		updateButton.setOnAction(e -> onUpdateClicked());
+		backButton.setOnAction(e -> onBackClicked());
 
-        specialOpenColumn.setCellValueFactory(c -> {
-            if (c.getValue().isClosed()) return new SimpleStringProperty("CLOSED");
-            Time t = c.getValue().getOpenTime();
-            return new SimpleStringProperty(t == null ? "" : t.toString().substring(0, 5));
-        });
+		// ===== Special opening hours =====
 
-        specialCloseColumn.setCellValueFactory(c -> {
-            if (c.getValue().isClosed()) return new SimpleStringProperty("CLOSED");
-            Time t = c.getValue().getCloseTime();
-            return new SimpleStringProperty(t == null ? "" : t.toString().substring(0, 5));
-        });
+		specialDateColumn.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getSpecialDate().toString()));
 
-        specialClosedCheck.selectedProperty().addListener((obs, o, isClosed) -> {
-            specialOpenField.setDisable(isClosed);
-            specialCloseField.setDisable(isClosed);
-            if (isClosed) {
-                specialOpenField.clear();
-                specialCloseField.clear();
-            }
-        });
+		specialOpenColumn.setCellValueFactory(c -> {
+			if (c.getValue().isClosed())
+				return new SimpleStringProperty("CLOSED");
+			Time t = c.getValue().getOpenTime();
+			return new SimpleStringProperty(t == null ? "" : t.toString().substring(0, 5));
+		});
 
-        addSpecialButton.setOnAction(e -> onSaveSpecialClicked());
-    }
+		specialCloseColumn.setCellValueFactory(c -> {
+			if (c.getValue().isClosed())
+				return new SimpleStringProperty("CLOSED");
+			Time t = c.getValue().getCloseTime();
+			return new SimpleStringProperty(t == null ? "" : t.toString().substring(0, 5));
+		});
 
-    private void onUpdateClicked() {
+		specialClosedCheck.selectedProperty().addListener((obs, o, isClosed) -> {
+			specialOpenField.setDisable(isClosed);
+			specialCloseField.setDisable(isClosed);
+			if (isClosed) {
+				specialOpenField.clear();
+				specialCloseField.clear();
+			}
+		});
 
-        OpeningHouers selected = openingHoursTable.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showAlert("Please select a day.");
-            return;
-        }
+		addSpecialButton.setOnAction(e -> onSaveSpecialClicked());
+	}
 
-        String newTime = openTimeField.getText().trim();
+	/**
+	 * Sends an update request for weekly opening hours for the currently selected
+	 * day. The updated field (open/close) is determined by {@link #editTarget}.
+	 */
+	private void onUpdateClicked() {
 
-        String open = selected.getOpenTime();
-        String close = selected.getCloseTime();
+		OpeningHouers selected = openingHoursTable.getSelectionModel().getSelectedItem();
+		if (selected == null) {
+			showAlert("Please select a day.");
+			return;
+		}
 
-        if (newTime.isBlank()) {
-            open = null;
-            close = null;
-        } else {
-            if (!newTime.matches("^\\d{2}:\\d{2}$")) {
-                showAlert("Invalid time format (HH:MM).");
-                return;
-            }
-            if (editTarget == EditTarget.OPEN_TIME) open = newTime;
-            else close = newTime;
-        }
+		String newTime = openTimeField.getText().trim();
 
-        try {
-            chatClient.sendToServer(
-                    new RequestDTO(Commands.UPDATE_OPENING_HOURS,
-                            new dto.UpdateOpeningHoursDTO(
-                                    selected.getDayOfWeek(), open, close)));
-        } catch (IOException e) {
-            showAlert("Failed to update opening hours.");
-        }
-    }
+		String open = selected.getOpenTime();
+		String close = selected.getCloseTime();
 
-    private void onSaveSpecialClicked() {
-        LocalDate date = specialDatePicker.getValue();
-        if (date == null) {
-            showAlert("Please choose a date.");
-            return;
-        }
+		if (newTime.isBlank()) {
+			open = null;
+			close = null;
+		} else {
+			if (!newTime.matches("^\\d{2}:\\d{2}$")) {
+				showAlert("Invalid time format (HH:MM).");
+				return;
+			}
+			if (editTarget == EditTarget.OPEN_TIME)
+				open = newTime;
+			else
+				close = newTime;
+		}
 
-        boolean closed = specialClosedCheck.isSelected();
-        Time open = null, close = null;
+		try {
+			chatClient.sendToServer(new RequestDTO(Commands.UPDATE_OPENING_HOURS,
+					new dto.UpdateOpeningHoursDTO(selected.getDayOfWeek(), open, close)));
+		} catch (IOException e) {
+			showAlert("Failed to update opening hours.");
+		}
+	}
 
-        if (!closed) {
-            open = Time.valueOf(specialOpenField.getText() + ":00");
-            close = Time.valueOf(specialCloseField.getText() + ":00");
-        }
+	/**
+	 * Validates inputs and sends a request to create/update special opening hours
+	 * for a specific date. When "Closed" is selected, open/close times are sent as
+	 * {@code null}.
+	 */
+	private void onSaveSpecialClicked() {
 
-        try {
-            api.updateSpecialOpeningHours(date, open, close, closed);
-        } catch (Exception e) {
-            showAlert("Failed to save special hours.");
-        }
-    }
+		LocalDate date = specialDatePicker.getValue();
+		if (date == null) {
+			showAlert("Please choose a date.");
+			return;
+		}
 
-    @Override
-    public void handleResponse(ResponseDTO response) {
+		boolean closed = specialClosedCheck.isSelected();
+		Time open = null, close = null;
 
-        if (response == null || !response.isSuccess()) {
-            showAlert(response != null ? response.getMessage() : "Unknown error");
-            return;
-        }
+		if (!closed) {
+			open = Time.valueOf(specialOpenField.getText() + ":00");
+			close = Time.valueOf(specialCloseField.getText() + ":00");
+		}
 
-        if (response.getData() instanceof ArrayList<?> list && !list.isEmpty()) {
+		try {
+			api.updateSpecialOpeningHours(date, open, close, closed);
+		} catch (Exception e) {
+			showAlert("Failed to save special hours.");
+		}
+	}
 
-            if (list.get(0) instanceof OpeningHouers) {
-                openingHoursTable.getItems().setAll((ArrayList<OpeningHouers>) list);
-                Restaurant.getInstance().setOpeningHours((ArrayList<OpeningHouers>) list);
-            }
+	/**
+	 * Handles server responses for weekly and special opening hours. Updates the
+	 * relevant table and (for weekly hours) updates the {@link Restaurant}
+	 * singleton cache.
+	 *
+	 * @param response the response received from the server
+	 */
+	@Override
+	public void handleResponse(ResponseDTO response) {
 
-            if (list.get(0) instanceof SpecialOpeningHours) {
-                specialHoursTable.getItems().setAll((ArrayList<SpecialOpeningHours>) list);
-            }
-        }
-    }
+		if (response == null || !response.isSuccess()) {
+			showAlert(response != null ? response.getMessage() : "Unknown error");
+			return;
+		}
 
-    private void onBackClicked() {
-        chatClient.setResponseHandler(null);
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/RestaurantManagement_B.fxml"));
-            Parent root = loader.load();
-            ((RestaurantManagement_BController) loader.getController()).setClient(user, chatClient);
-            Stage stage = (Stage) backButton.getScene().getWindow();
-            stage.setScene(new Scene(root));
-        } catch (IOException e) {
-            showAlert("Failed to go back.");
-        }
-    }
+		if (response.getData() instanceof ArrayList<?> list && !list.isEmpty()) {
 
-    private void detectClickedColumn() {
-        if (openingHoursTable.getSelectionModel().getSelectedCells().isEmpty()) return;
-        TablePosition<?, ?> pos = openingHoursTable.getSelectionModel().getSelectedCells().get(0);
-        editTarget = pos.getTableColumn() == openTimeColumn
-                ? EditTarget.OPEN_TIME
-                : EditTarget.CLOSE_TIME;
-    }
+			if (list.get(0) instanceof OpeningHouers) {
+				openingHoursTable.getItems().setAll((ArrayList<OpeningHouers>) list);
+				Restaurant.getInstance().setOpeningHours((ArrayList<OpeningHouers>) list);
+			}
 
-    private String toHHMM(String t) {
-        return (t == null || t.length() < 5) ? "" : t.substring(0, 5);
-    }
+			if (list.get(0) instanceof SpecialOpeningHours) {
+				specialHoursTable.getItems().setAll((ArrayList<SpecialOpeningHours>) list);
+			}
+		}
+	}
 
-    private void showAlert(String msg) {
-        Alert a = new Alert(Alert.AlertType.INFORMATION);
-        a.setTitle("Opening Hours");
-        a.setHeaderText(null);
-        a.setContentText(msg);
-        a.showAndWait();
-    }
+	/**
+	 * Navigates back to the restaurant management screen by swapping the current
+	 * scene root. Clears the current response handler before leaving the screen.
+	 */
+	private void onBackClicked() {
+
+		if (chatClient != null) {
+			chatClient.setResponseHandler(null);
+		}
+
+		try {
+			FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/RestaurantManagement_B.fxml"));
+			Parent root = loader.load();
+
+			RestaurantManagement_BController controller = loader.getController();
+			controller.setClient(user, chatClient);
+
+			Stage stage = (Stage) backButton.getScene().getWindow();
+			Scene scene = stage.getScene();
+
+			if (scene == null) {
+				stage.setScene(new Scene(root));
+			} else {
+				scene.setRoot(root);
+			}
+
+			stage.setTitle("Bistro - Restaurant Management");
+			stage.setMaximized(true);
+			stage.show();
+
+		} catch (IOException e) {
+			showAlert("Failed to go back.");
+		}
+	}
+
+	/**
+	 * Determines whether the user clicked the open-time column or close-time column
+	 * in the weekly table, and updates {@link #editTarget} accordingly.
+	 */
+	private void detectClickedColumn() {
+		if (openingHoursTable.getSelectionModel().getSelectedCells().isEmpty())
+			return;
+		TablePosition<?, ?> pos = openingHoursTable.getSelectionModel().getSelectedCells().get(0);
+		editTarget = pos.getTableColumn() == openTimeColumn ? EditTarget.OPEN_TIME : EditTarget.CLOSE_TIME;
+	}
+
+	/**
+	 * Converts a time string to HH:MM format.
+	 *
+	 * @param t a time string (expected at least HH:MM...) or {@code null}
+	 * @return HH:MM if available; otherwise an empty string
+	 */
+	private String toHHMM(String t) {
+		return (t == null || t.length() < 5) ? "" : t.substring(0, 5);
+	}
+
+	/**
+	 * Shows an informational alert dialog.
+	 *
+	 * @param msg the message to display
+	 */
+	private void showAlert(String msg) {
+		Alert a = new Alert(Alert.AlertType.INFORMATION);
+		a.setTitle("Opening Hours");
+		a.setHeaderText(null);
+		a.setContentText(msg);
+		a.showAndWait();
+	}
 
 	@Override
 	public void handleConnectionError(Exception e) {
-		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
 	public void handleConnectionClosed() {
-		// TODO Auto-generated method stub
-		
 	}
 }

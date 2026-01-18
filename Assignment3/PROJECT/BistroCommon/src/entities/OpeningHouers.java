@@ -1,22 +1,43 @@
 package entities;
 
-import java.io.Serializable; // 1. ייבוא הממשק
+import java.io.Serializable;
 
 /**
- * Represents restaurant opening hours for a specific day.
+ * Entity representing the opening hours of the restaurant for a specific day.
+ * <p>
+ * This class stores the day of the week along with the opening and closing
+ * times, and is typically used for configuration, display, and persistence of
+ * restaurant operating hours.
+ * </p>
  */
-public class OpeningHouers implements Serializable { // 2. מימוש הממשק
-    private static final long serialVersionUID = 1L; // 3. הוספת מזהה גרסה
+public class OpeningHouers implements Serializable {
+	private static final long serialVersionUID = 1L;
 
-    private String dayOfWeek;
-    private String openTime;
-    private String closeTime;
+	private String dayOfWeek;
+	private String openTime;
+	private String closeTime;
 
-    // קונסטרקטורים, גטרים וסטרים נשארים ללא שינוי...
-    public String getDayOfWeek() { return dayOfWeek; }
-    public void setDayOfWeek(String dayOfWeek) { this.dayOfWeek = dayOfWeek; }
-    public String getOpenTime() { return openTime; }
-    public void setOpenTime(String openTime) { this.openTime = openTime; }
-    public String getCloseTime() { return closeTime; }
-    public void setCloseTime(String closeTime) { this.closeTime = closeTime; }
+	public String getDayOfWeek() {
+		return dayOfWeek;
+	}
+
+	public void setDayOfWeek(String dayOfWeek) {
+		this.dayOfWeek = dayOfWeek;
+	}
+
+	public String getOpenTime() {
+		return openTime;
+	}
+
+	public void setOpenTime(String openTime) {
+		this.openTime = openTime;
+	}
+
+	public String getCloseTime() {
+		return closeTime;
+	}
+
+	public void setCloseTime(String closeTime) {
+		this.closeTime = closeTime;
+	}
 }

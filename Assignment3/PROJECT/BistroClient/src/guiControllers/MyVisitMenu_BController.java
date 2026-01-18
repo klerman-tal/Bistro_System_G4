@@ -12,75 +12,195 @@ import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
+/**
+ * Controller for the "My Visit" menu screen.
+ * <p>
+ * This screen is intended for customers during an active/ongoing visit and
+ * provides quick access to visit-related actions (e.g., getting a table, making
+ * a payment), and a way to navigate back to the main menu.
+ * </p>
+ *
+ * <h3>Main responsibilities</h3>
+ * <ul>
+ * <li>Receives and stores the session context: {@link User} and
+ * {@link ChatClient}.</li>
+ * <li>Optionally receives {@link ClientActions} and forwards it to other
+ * screens that support it.</li>
+ * <li>Handles button actions for:
+ * <ul>
+ * <li>Get Table flow</li>
+ * <li>Payment flow</li>
+ * <li>Back to Main Menu</li>
+ * </ul>
+ * </li>
+ * <li>Navigates by reusing the existing {@link Scene} and replacing only the
+ * root node.</li>
+ * </ul>
+ *
+ * <p>
+ * <b>Navigation rule:</b> This controller does not create new stages; it uses
+ * the existing stage and swaps the root to keep one consistent full-screen
+ * window across the app.
+ * </p>
+ */
 public class MyVisitMenu_BController {
 
-    private User user;
-    private ChatClient chatClient;
-    private ClientActions clientActions;
+	/** Current user (customer / acting user) operating this screen. */
+	private User user;
 
-    @FXML private BorderPane rootPane;
+	/** Active client connection to the server. */
+	private ChatClient chatClient;
 
-    // כמו כל שאר החלונות אצלך
-    public void setClient(User user, ChatClient chatClient) {
-        this.user = user;
-        this.chatClient = chatClient;
-    }
+	/**
+	 * Optional client actions implementation (passed through if supported by target
+	 * controllers).
+	 */
+	private ClientActions clientActions;
 
-    public void setClientActions(ClientActions clientActions) {
-        this.clientActions = clientActions;
-    }
+	@FXML
+	private BorderPane rootPane;
 
-    @FXML
-    private void onGetTable() {
-        // ✅ במקום Checkin_B.fxml (שלא קיים) -> למסך הבחירה החדש
-        openWindow("GetTableChoice_B.fxml", "Get Table");
-    }
+	// ================= SESSION =================
 
-    @FXML
-    private void onPayment() {
-        openWindow("Payment_B.fxml", "Payment");
-    }
+	/**
+	 * Injects the session context into this controller.
+	 *
+	 * @param user       the current user for this screen
+	 * @param chatClient the active client connection
+	 */
+	public void setClient(User user, ChatClient chatClient) {
+		this.user = user;
+		this.chatClient = chatClient;
+	}
 
-    @FXML
-    private void onBack() {
-        openWindow("Menu_B.fxml", "Menu");
-    }
+	/**
+	 * Injects {@link ClientActions} into this controller. This is optional and is
+	 * forwarded to other controllers that expose a
+	 * <code>setClientActions(ClientActions)</code> method.
+	 *
+	 * @param clientActions client actions implementation
+	 */
+	public void setClientActions(ClientActions clientActions) {
+		this.clientActions = clientActions;
+	}
 
-    // ================= NAVIGATION =================
+	// ================= ACTIONS =================
 
-    private void openWindow(String fxmlName, String title) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
-            Parent root = loader.load();
+	/**
+	 * Opens the "Get Table" flow screen.
+	 */
+	@FXML
+	private void onGetTable() {
+		openWindow("GetTableChoice_B.fxml", "Get Table");
+	}
 
-            Object controller = loader.getController();
+	/**
+	 * Opens the payment screen.
+	 */
+	@FXML
+	private void onPayment() {
+		openWindow("Payment_B.fxml", "Payment");
+	}
 
-            // pass clientActions if exists
-            if (controller != null && clientActions != null) {
-                try {
-                    controller.getClass()
-                            .getMethod("setClientActions", ClientActions.class)
-                            .invoke(controller, clientActions);
-                } catch (Exception ignored) {}
-            }
+	/**
+	 * Navigates back to the main menu.
+	 */
+	@FXML
+	private void onBack() {
+		try {
+			FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/Menu_B.fxml"));
+			Parent root = loader.load();
 
-            // ✅ Preserve logged-in user + chatClient/session
-            if (controller != null && user != null && chatClient != null) {
-                try {
-                    controller.getClass()
-                            .getMethod("setClient", User.class, ChatClient.class)
-                            .invoke(controller, user, chatClient);
-                } catch (Exception ignored) {}
-            }
+			Object controller = loader.getController();
 
-            Stage stage = (Stage) rootPane.getScene().getWindow();
-            stage.setTitle("Bistro - " + title);
-            stage.setScene(new Scene(root));
-            stage.centerOnScreen();
-            stage.show();
+			// ✅ ALWAYS pass the real logged-in user to Menu
+			User logged = application.ClientSession.getLoggedInUser();
 
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+			if (controller != null && logged != null && chatClient != null) {
+				try {
+					controller.getClass().getMethod("setClient", User.class, ChatClient.class).invoke(controller,
+							logged, chatClient);
+				} catch (Exception ignored) {
+				}
+			}
+
+			Stage stage = (Stage) rootPane.getScene().getWindow();
+			Scene scene = stage.getScene();
+
+			if (scene == null) {
+				stage.setScene(new Scene(root));
+			} else {
+				scene.setRoot(root);
+			}
+
+			stage.setTitle("Bistro - Menu");
+			stage.setMaximized(true);
+			stage.show();
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	// ================= NAVIGATION =================
+
+	/**
+	 * Loads an FXML screen and navigates to it by replacing the current scene root.
+	 * <p>
+	 * Injection behavior (best-effort via reflection):
+	 * <ul>
+	 * <li>If the target controller has
+	 * <code>setClientActions(ClientActions)</code>, passes the current
+	 * {@link #clientActions}.</li>
+	 * <li>If the target controller has <code>setClient(User, ChatClient)</code>,
+	 * passes the current {@link #user} and {@link #chatClient}.</li>
+	 * </ul>
+	 * </p>
+	 *
+	 * @param fxmlName FXML file name under <code>/gui/</code>
+	 * @param title    window title suffix
+	 */
+	private void openWindow(String fxmlName, String title) {
+		try {
+			FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/" + fxmlName));
+			Parent root = loader.load();
+
+			Object controller = loader.getController();
+
+			// pass clientActions if exists
+			if (controller != null && clientActions != null) {
+				try {
+					controller.getClass().getMethod("setClientActions", ClientActions.class).invoke(controller,
+							clientActions);
+				} catch (Exception ignored) {
+				}
+			}
+
+			// preserve user + chatClient
+			if (controller != null && user != null && chatClient != null) {
+				try {
+					controller.getClass().getMethod("setClient", User.class, ChatClient.class).invoke(controller, user,
+							chatClient);
+				} catch (Exception ignored) {
+				}
+			}
+
+			Stage stage = (Stage) rootPane.getScene().getWindow();
+			Scene scene = stage.getScene();
+
+			// ✅ Rule: reuse Scene, replace root
+			if (scene == null) {
+				stage.setScene(new Scene(root));
+			} else {
+				scene.setRoot(root);
+			}
+
+			stage.setTitle("Bistro - " + title);
+			stage.setMaximized(true);
+			stage.show();
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 }

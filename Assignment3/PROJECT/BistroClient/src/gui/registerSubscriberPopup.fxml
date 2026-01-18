@@ -19,25 +19,31 @@
 
     <children>
 
-        <VBox alignment="CENTER" spacing="22" maxWidth="520">
+        <!-- ===== MAIN CONTAINER ===== -->
+        <VBox alignment="CENTER"
+              spacing="22"
+              maxWidth="520">
 
-            <!-- LOGO -->
-            <ImageView fitHeight="85" preserveRatio="true">
+            <!-- ===== LOGO ===== -->
+            <ImageView fitHeight="85"
+                       preserveRatio="true">
                 <image>
                     <Image url="@BistroLogo.png"/>
                 </image>
             </ImageView>
 
-            <!-- TITLE -->
-            <VBox alignment="CENTER" spacing="6">
+            <!-- ===== TITLE ===== -->
+            <VBox alignment="CENTER"
+                  spacing="6">
                 <children>
-                    <Label text="CREATE USER" styleClass="welcomeTitle"/>
+                    <Label text="CREATE USER"
+                           styleClass="welcomeTitle"/>
                     <Label text="Fill in the details to create a new user"
                            styleClass="subtitleItalic"/>
                 </children>
             </VBox>
 
-            <!-- FORM CARD -->
+            <!-- ===== FORM CARD ===== -->
             <VBox alignment="CENTER"
                   spacing="14"
                   styleClass="card30">
@@ -46,37 +52,46 @@
                 </padding>
 
                 <children>
-                    <TextField fx:id="firstNameField" promptText="First Name"/>
-                    <TextField fx:id="lastNameField" promptText="Last Name"/>
-                    <TextField fx:id="usernameField" promptText="Username"/>
-                    <TextField fx:id="phoneField" promptText="Phone Number"/>
-                    <TextField fx:id="emailField" promptText="Email Address"/>
 
-                    <!-- NEW -->
+                    <!-- ===== FORM FIELDS ===== -->
+                    <TextField fx:id="firstNameField"
+                               promptText="First Name"/>
+                    <TextField fx:id="lastNameField"
+                               promptText="Last Name"/>
+                    <TextField fx:id="usernameField"
+                               promptText="Username"/>
+                    <TextField fx:id="phoneField"
+                               promptText="Phone Number"/>
+                    <TextField fx:id="emailField"
+                               promptText="Email Address"/>
+
                     <ComboBox fx:id="roleCombo"
                               promptText="Select Role"
                               maxWidth="1.7976931348623157E308"/>
 
+                    <!-- ===== MESSAGE ===== -->
                     <Label fx:id="lblMessage"
                            visible="false"
                            managed="false"
                            styleClass="errorMsg"/>
 
-                    <HBox alignment="CENTER" spacing="12">
+                    <!-- ===== ACTIONS ===== -->
+                    <HBox alignment="CENTER"
+                          spacing="12">
                         <children>
                             <Button text="CREATE"
-                                    onAction="#handleCreate"
+                                    prefWidth="170"
                                     styleClass="btnPrimary"
-                                    prefWidth="170"/>
+                                    onAction="#handleCreate"/>
 
                             <Button text="CANCEL"
-                                    onAction="#handleCancel"
+                                    prefWidth="170"
                                     styleClass="btnSecondary"
-                                    prefWidth="170"/>
+                                    onAction="#handleCancel"/>
                         </children>
                     </HBox>
-                </children>
 
+                </children>
             </VBox>
 
         </VBox>

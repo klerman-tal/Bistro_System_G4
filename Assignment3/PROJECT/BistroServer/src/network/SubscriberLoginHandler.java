@@ -8,52 +8,80 @@ import logicControllers.OnlineUsersRegistry;
 import logicControllers.UserController;
 import ocsf.server.ConnectionToClient;
 
+/**
+ * Server-side request handler responsible for subscriber login.
+ * <p>
+ * This handler authenticates a subscriber using subscriber ID and username,
+ * initializes a session for the connected client, and prevents duplicate
+ * concurrent logins for the same user.
+ * </p>
+ */
 public class SubscriberLoginHandler implements RequestHandler {
 
-    private final UserController userController;
-    private final OnlineUsersRegistry onlineUsers;
+	private final UserController userController;
+	private final OnlineUsersRegistry onlineUsers;
 
-    public SubscriberLoginHandler(UserController userController, OnlineUsersRegistry onlineUsers) {
-        this.userController = userController;
-        this.onlineUsers = onlineUsers;
-    }
+	/**
+	 * Constructs a new SubscriberLoginHandler with required dependencies.
+	 *
+	 * @param userController controller responsible for user authentication
+	 * @param onlineUsers    registry used to track online users
+	 */
+	public SubscriberLoginHandler(UserController userController, OnlineUsersRegistry onlineUsers) {
+		this.userController = userController;
+		this.onlineUsers = onlineUsers;
+	}
 
-    @Override
-    public void handle(RequestDTO request, ConnectionToClient client) {
+	@Override
+	public void handle(RequestDTO request, ConnectionToClient client) {
 
-        Object dataObj = request.getData();
-        if (!(dataObj instanceof SubscriberLoginDTO loginData)) {
-            send(client, new ResponseDTO(false, "Invalid login data", null));
-            return;
-        }
+		// Step 1: Validate request payload
+		Object dataObj = request.getData();
+		if (!(dataObj instanceof SubscriberLoginDTO)) {
+			send(client, new ResponseDTO(false, "Invalid login data", null));
+			return;
+		}
 
-        Subscriber subscriber =
-                userController.loginSubscriber(
-                        loginData.getSubscriberId(),
-                        loginData.getUsername()
-                );
+		SubscriberLoginDTO loginData = (SubscriberLoginDTO) dataObj;
 
-        if (subscriber == null) {
-            send(client, new ResponseDTO(false, "Invalid ID or Username", null));
-            return;
-        }
+		// Step 2: Authenticate subscriber
+		Subscriber subscriber = userController.loginSubscriber(
+				loginData.getSubscriberId(),
+				loginData.getUsername()
+		);
 
-        // Session on connection
-        client.setInfo("user", subscriber);
+		if (subscriber == null) {
+			send(client, new ResponseDTO(false, "Invalid ID or Username", null));
+			return;
+		}
 
-        // ✅ Register online user for SMS popups
-        if (onlineUsers != null) {
-            onlineUsers.setOnline(subscriber.getUserId(), client);
-        }
+		// Step 3: Block duplicate login
+		if (onlineUsers != null && onlineUsers.isOnline(subscriber.getUserId())) {
+			send(client, new ResponseDTO(
+					false,
+					"User is already logged in from another session",
+					null
+			));
+			return;
+		}
 
-        send(client, new ResponseDTO(true, "Login successful", subscriber));
-    }
+		// Step 4: Store subscriber in session
+		client.setInfo("user", subscriber);
 
-    private void send(ConnectionToClient client, ResponseDTO res) {
-        try {
-            client.sendToClient(res);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+		// Step 5: Register subscriber as online
+		if (onlineUsers != null) {
+			onlineUsers.setOnline(subscriber.getUserId(), client);
+		}
+
+		// Step 6: Send successful login response
+		send(client, new ResponseDTO(true, "Login successful", subscriber));
+	}
+
+	private void send(ConnectionToClient client, ResponseDTO res) {
+		try {
+			client.sendToClient(res);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 }
