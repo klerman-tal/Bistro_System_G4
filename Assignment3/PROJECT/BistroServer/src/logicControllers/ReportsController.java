@@ -163,6 +163,48 @@ public class ReportsController {
 			dto.setMinAvgDay(minDay);
 			dto.setMinAvgMinutes(minAvg);
 		}
+		
+		// ================= Month-over-Month Comparison =================
+
+		int prevYear = year;
+		int prevMonth = month - 1;
+
+		if (prevMonth == 0) {
+		    prevMonth = 12;
+		    prevYear--;
+		}
+
+		ArrayList<Reservation> prevFinished =
+		        reservationDB.getFinishedReservationsByMonth(prevYear, prevMonth);
+
+		if (!prevFinished.isEmpty()) {
+
+		    int prevOnTime = 0;
+		    int prevMinor = 0;
+		    int prevMajor = 0;
+
+		    for (Reservation r : prevFinished) {
+
+		        if (r.getReservationTime() == null || r.getCheckinTime() == null)
+		            continue;
+
+		        long delayMinutes =
+		                Duration.between(r.getReservationTime(), r.getCheckinTime()).toMinutes();
+
+		        if (delayMinutes < 3) {
+		            prevOnTime++;
+		        } else if (delayMinutes <= 10) {
+		            prevMinor++;
+		        } else {
+		            prevMajor++;
+		        }
+		    }
+
+		    dto.setOnTimeDelta(onTime - prevOnTime);
+		    dto.setMinorDelayDelta(minorDelay - prevMinor);
+		    dto.setSignificantDelayDelta(significantDelay - prevMajor);
+		}
+
 
 		return dto;
 	}
@@ -193,33 +235,75 @@ public class ReportsController {
 	 */
 	public SubscribersReportDTO buildSubscribersReport(int year, int month) throws SQLException {
 
-		SubscribersReportDTO dto = new SubscribersReportDTO();
-		dto.setYear(year);
-		dto.setMonth(month);
+	    SubscribersReportDTO dto = new SubscribersReportDTO();
+	    dto.setYear(year);
+	    dto.setMonth(month);
 
-		// ================= TAB 1: Active / Inactive Subscribers =================
+	    // ================= TAB 1: Active / Inactive Subscribers =================
 
-		// TAB 1: Active / Inactive Subscribers (MONTHLY)
-		int activeSubscribers = userDB.countActiveSubscribersInMonth(year, month);
+	    // TAB 1: Active / Inactive Subscribers (MONTHLY)
+	    int activeSubscribers = userDB.countActiveSubscribersInMonth(year, month);
+	    int inactiveSubscribers = userDB.countInactiveSubscribersInMonth(year, month);
 
-		int inactiveSubscribers = userDB.countInactiveSubscribersInMonth(year, month);
+	    dto.setActiveSubscribersCount(activeSubscribers);
+	    dto.setInactiveSubscribersCount(inactiveSubscribers);
 
-		dto.setActiveSubscribersCount(activeSubscribers);
-		dto.setInactiveSubscribersCount(inactiveSubscribers);
+	    // ================= TAB 2: Waiting List Activity =================
 
-		// ================= TAB 2: Waiting List Activity =================
+	    Map<Integer, Integer> waitingPerDay =
+	            waitingDB.getWaitingCountPerDayByRole(UserRole.Subscriber, year, month);
 
-		Map<Integer, Integer> waitingPerDay = waitingDB.getWaitingCountPerDayByRole(UserRole.Subscriber, year, month);
+	    dto.setWaitingListPerDay(
+	            waitingPerDay != null ? waitingPerDay : new HashMap<>()
+	    );
 
-		dto.setWaitingListPerDay(waitingPerDay);
+	    // ================= TAB 3: Reservations Trend =================
 
-		// ================= TAB 3: Reservations Trend =================
+	    Map<Integer, Integer> reservationsPerDay =
+	            reservationDB.getReservationsCountPerDayByRole(
+	                    UserRole.Subscriber, year, month);
 
-		Map<Integer, Integer> reservationsPerDay = reservationDB.getReservationsCountPerDayByRole(UserRole.Subscriber,
-				year, month);
+	    dto.setReservationsPerDay(
+	            reservationsPerDay != null ? reservationsPerDay : new HashMap<>()
+	    );
 
-		dto.setReservationsPerDay(reservationsPerDay);
+	    // ================= Month-over-Month Comparison =================
 
-		return dto;
+	    int prevYear = year;
+	    int prevMonth = month - 1;
+
+	    if (prevMonth == 0) {
+	        prevMonth = 12;
+	        prevYear--;
+	    }
+
+	    int prevActive = userDB.countActiveSubscribersInMonth(prevYear, prevMonth);
+
+	    int prevWaitingTotal =
+	            waitingDB.getWaitingCountPerDayByRole(UserRole.Subscriber, prevYear, prevMonth)
+	                     .values().stream().mapToInt(Integer::intValue).sum();
+
+	    int prevReservationsTotal =
+	            reservationDB.getReservationsCountPerDayByRole(
+	                    UserRole.Subscriber, prevYear, prevMonth)
+	                    .values().stream().mapToInt(Integer::intValue).sum();
+
+	    int currentWaitingTotal =
+	            waitingPerDay != null
+	                    ? waitingPerDay.values().stream().mapToInt(Integer::intValue).sum()
+	                    : 0;
+
+	    int currentReservationsTotal =
+	            reservationsPerDay != null
+	                    ? reservationsPerDay.values().stream().mapToInt(Integer::intValue).sum()
+	                    : 0;
+
+	    dto.setActiveSubscribersDelta(activeSubscribers - prevActive);
+	    dto.setWaitingTotalDelta(currentWaitingTotal - prevWaitingTotal);
+	    dto.setReservationsTotalDelta(currentReservationsTotal - prevReservationsTotal);
+
+	    return dto;
 	}
+
 }
+
