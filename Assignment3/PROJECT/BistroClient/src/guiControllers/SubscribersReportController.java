@@ -30,276 +30,280 @@ import java.util.*;
 
 public class SubscribersReportController implements ClientResponseHandler {
 
-    /* ======================= Constants ======================= */
-    private static final int MONTHS_BACK = 12;
-    private static final DateTimeFormatter MONTH_FORMATTER =
-            DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH);
+	/* ======================= Constants ======================= */
+	private static final int MONTHS_BACK = 12;
+	private static final DateTimeFormatter MONTH_FORMATTER = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH);
 
-    /* ======================= Root ======================= */
-    @FXML private BorderPane rootPane;
-    @FXML private ComboBox<YearMonth> cmbReportMonth;
+	/* ======================= Root ======================= */
+	@FXML
+	private BorderPane rootPane;
+	@FXML
+	private ComboBox<YearMonth> cmbReportMonth;
 
-    /* ======================= Subscribers summary ======================= */
-    @FXML private Label lblSubscribersSummaryTitle;
-    @FXML private Text txtSubscribersSummaryText;
-    @FXML private Label lblWaitingTotal;
-    @FXML private Label lblWaitingAvg;
-    @FXML private Label lblWaitingPeak;
+	/* ======================= Subscribers summary ======================= */
+	@FXML
+	private Label lblSubscribersSummaryTitle;
+	@FXML
+	private Text txtSubscribersSummaryText;
+	@FXML
+	private Label lblWaitingTotal;
+	@FXML
+	private Label lblWaitingAvg;
+	@FXML
+	private Label lblWaitingPeak;
 
-    /* ======================= Waiting list summary ======================= */
-    @FXML private Label lblWaitingSummaryTitle;
-    @FXML private Text txtWaitingSummaryText;
+	/* ======================= Waiting list summary ======================= */
+	@FXML
+	private Label lblWaitingSummaryTitle;
+	@FXML
+	private Text txtWaitingSummaryText;
 
-    /* ======================= Reservations summary ======================= */
-    @FXML private Label lblReservationsSummaryTitle;
-    @FXML private Text txtReservationsSummaryText;
-    @FXML private Label lblReservationsTotal;
-    @FXML private Label lblReservationsAvg;
-    @FXML private Label lblReservationsPeak;
+	/* ======================= Reservations summary ======================= */
+	@FXML
+	private Label lblReservationsSummaryTitle;
+	@FXML
+	private Text txtReservationsSummaryText;
+	@FXML
+	private Label lblReservationsTotal;
+	@FXML
+	private Label lblReservationsAvg;
+	@FXML
+	private Label lblReservationsPeak;
 
-    /* ======================= Charts ======================= */
-    @FXML private PieChart activeSubscribersPie;
-    @FXML private Label lblActiveSubscribers;
-    @FXML private Label lblInactiveSubscribers;
+	/* ======================= Charts ======================= */
+	@FXML
+	private PieChart activeSubscribersPie;
+	@FXML
+	private Label lblActiveSubscribers;
+	@FXML
+	private Label lblInactiveSubscribers;
 
-    @FXML private BarChart<String, Number> waitingListChart;
-    @FXML private LineChart<String, Number> reservationsTrendChart;
+	@FXML
+	private BarChart<String, Number> waitingListChart;
+	@FXML
+	private LineChart<String, Number> reservationsTrendChart;
 
-    private User user;
-    private ChatClient chatClient;
-    private YearMonth reportMonth;
+	private User user;
+	private ChatClient chatClient;
+	private YearMonth reportMonth;
 
-    /* ======================= INIT ======================= */
+	/* ======================= INIT ======================= */
 
-    @FXML
-    public void initialize() {
-        activeSubscribersPie.setLegendVisible(false);
-        waitingListChart.setLegendVisible(false);
-        reservationsTrendChart.setLegendVisible(false);
-        initMonthComboBox();
-    }
+	@FXML
+	public void initialize() {
+		activeSubscribersPie.setLegendVisible(false);
+		waitingListChart.setLegendVisible(false);
+		reservationsTrendChart.setLegendVisible(false);
+		initMonthComboBox();
+	}
 
-    public void setClient(User user, ChatClient chatClient) {
-        this.user = user;
-        this.chatClient = chatClient;
-        this.chatClient.setResponseHandler(this);
+	public void setClient(User user, ChatClient chatClient) {
+		this.user = user;
+		this.chatClient = chatClient;
+		this.chatClient.setResponseHandler(this);
 
-        onMonthSelected(cmbReportMonth.getValue());
-    }
+		onMonthSelected(cmbReportMonth.getValue());
+	}
 
-    /* ======================= MONTH SELECTION ======================= */
+	/* ======================= MONTH SELECTION ======================= */
 
-    private void initMonthComboBox() {
-        YearMonth defaultMonth = YearMonth.now().minusMonths(1);
+	private void initMonthComboBox() {
+		YearMonth defaultMonth = YearMonth.now().minusMonths(1);
 
-        List<YearMonth> months = new ArrayList<>();
-        for (int i = 0; i < MONTHS_BACK; i++) {
-            months.add(defaultMonth.minusMonths(i));
-        }
+		List<YearMonth> months = new ArrayList<>();
+		for (int i = 0; i < MONTHS_BACK; i++) {
+			months.add(defaultMonth.minusMonths(i));
+		}
 
-        cmbReportMonth.setItems(FXCollections.observableArrayList(months));
-        cmbReportMonth.setValue(defaultMonth);
+		cmbReportMonth.setItems(FXCollections.observableArrayList(months));
+		cmbReportMonth.setValue(defaultMonth);
 
-        cmbReportMonth.setCellFactory(cb -> new ListCell<>() {
-            @Override
-            protected void updateItem(YearMonth item, boolean empty) {
-                super.updateItem(item, empty);
-                setText(empty || item == null ? null : item.format(MONTH_FORMATTER));
-            }
-        });
-        cmbReportMonth.setButtonCell(cmbReportMonth.getCellFactory().call(null));
+		cmbReportMonth.setCellFactory(cb -> new ListCell<>() {
+			@Override
+			protected void updateItem(YearMonth item, boolean empty) {
+				super.updateItem(item, empty);
+				setText(empty || item == null ? null : item.format(MONTH_FORMATTER));
+			}
+		});
+		cmbReportMonth.setButtonCell(cmbReportMonth.getCellFactory().call(null));
 
-        cmbReportMonth.setOnAction(e ->
-                onMonthSelected(cmbReportMonth.getValue()));
-    }
+		cmbReportMonth.setOnAction(e -> onMonthSelected(cmbReportMonth.getValue()));
+	}
 
-    private void onMonthSelected(YearMonth ym) {
-        if (ym == null) return;
+	private void onMonthSelected(YearMonth ym) {
+		if (ym == null)
+			return;
 
-        this.reportMonth = ym;
-        updateSubscribersSummary();
-        updateWaitingSummary();
-        updateReservationsSummary();
-        requestSubscribersReport();
-    }
+		this.reportMonth = ym;
+		updateSubscribersSummary();
+		updateWaitingSummary();
+		updateReservationsSummary();
+		requestSubscribersReport();
+	}
 
-    /* ======================= SERVER REQUEST ======================= */
+	/* ======================= SERVER REQUEST ======================= */
 
-    private void requestSubscribersReport() {
-        SubscribersReportDTO dto = new SubscribersReportDTO();
-        dto.setYear(reportMonth.getYear());
-        dto.setMonth(reportMonth.getMonthValue());
+	private void requestSubscribersReport() {
+		SubscribersReportDTO dto = new SubscribersReportDTO();
+		dto.setYear(reportMonth.getYear());
+		dto.setMonth(reportMonth.getMonthValue());
 
-        try {
-            chatClient.sendToServer(
-                    new RequestDTO(Commands.GET_SUBSCRIBERS_REPORT, dto));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+		try {
+			chatClient.sendToServer(new RequestDTO(Commands.GET_SUBSCRIBERS_REPORT, dto));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 
-    /* ======================= SERVER RESPONSE ======================= */
+	/* ======================= SERVER RESPONSE ======================= */
 
-    @Override
-    public void handleResponse(ResponseDTO response) {
-        if (response == null || !response.isSuccess()) return;
-        if (!(response.getData() instanceof SubscribersReportDTO dto)) return;
+	@Override
+	public void handleResponse(ResponseDTO response) {
+		if (response == null || !response.isSuccess())
+			return;
+		if (!(response.getData() instanceof SubscribersReportDTO dto))
+			return;
 
-        Platform.runLater(() -> {
-            drawSubscribersStatus(dto);
-            drawWaitingList(dto);
-            drawReservationsTrend(dto);
-        });
-    }
+		Platform.runLater(() -> {
+			drawSubscribersStatus(dto);
+			drawWaitingList(dto);
+			drawReservationsTrend(dto);
+		});
+	}
 
-    /* ======================= SUMMARIES ======================= */
+	/* ======================= SUMMARIES ======================= */
 
-    private void updateSubscribersSummary() {
-        lblSubscribersSummaryTitle.setText(
-                "Subscribers Status: " + reportMonth.format(MONTH_FORMATTER));
-        txtSubscribersSummaryText.setText(
-                "Shows the number of active versus inactive subscribers during the selected month.");
-    }
+	private void updateSubscribersSummary() {
+		lblSubscribersSummaryTitle.setText("Subscribers Status: " + reportMonth.format(MONTH_FORMATTER));
+		txtSubscribersSummaryText
+				.setText("Shows the number of active versus inactive subscribers during the selected month.");
+	}
 
-    private void updateWaitingSummary() {
-        lblWaitingSummaryTitle.setText(
-                "Waiting List Activity: " + reportMonth.format(MONTH_FORMATTER));
-        txtWaitingSummaryText.setText(
-                "Displays daily waiting list entries joined by subscribers throughout the selected month.");
-    }
+	private void updateWaitingSummary() {
+		lblWaitingSummaryTitle.setText("Waiting List Activity: " + reportMonth.format(MONTH_FORMATTER));
+		txtWaitingSummaryText
+				.setText("Displays daily waiting list entries joined by subscribers throughout the selected month.");
+	}
 
-    private void updateReservationsSummary() {
-        lblReservationsSummaryTitle.setText(
-                "Reservations Trend: " + reportMonth.format(MONTH_FORMATTER));
-        txtReservationsSummaryText.setText(
-                "Presents the daily number of reservations made by subscribers.");
-    }
+	private void updateReservationsSummary() {
+		lblReservationsSummaryTitle.setText("Reservations Trend: " + reportMonth.format(MONTH_FORMATTER));
+		txtReservationsSummaryText.setText("Presents the daily number of reservations made by subscribers.");
+	}
 
-    /* ======================= CHARTS ======================= */
+	/* ======================= CHARTS ======================= */
 
-    private void drawSubscribersStatus(SubscribersReportDTO dto) {
-        int active = dto.getActiveSubscribersCount();
-        int inactive = dto.getInactiveSubscribersCount();
-        int total = active + inactive;
+	private void drawSubscribersStatus(SubscribersReportDTO dto) {
+		int active = dto.getActiveSubscribersCount();
+		int inactive = dto.getInactiveSubscribersCount();
+		int total = active + inactive;
 
-        activeSubscribersPie.getData().setAll(
-                new PieChart.Data(percent(active, total), active),
-                new PieChart.Data(percent(inactive, total), inactive)
-        );
+		activeSubscribersPie.getData().setAll(new PieChart.Data(percent(active, total), active),
+				new PieChart.Data(percent(inactive, total), inactive));
 
-        lblActiveSubscribers.setText(
-                "● Active Subscribers: " + active +
-                " (" + percent(active, total) + ")" +
-                formatDelta(dto.getActiveSubscribersDelta())
-        );
+		lblActiveSubscribers.setText("● Active Subscribers: " + active + " (" + percent(active, total) + ")"
+				+ formatDelta(dto.getActiveSubscribersDelta()));
 
-        lblInactiveSubscribers.setText(
-                "● Inactive Subscribers: " + inactive +
-                " (" + percent(inactive, total) + ")"
-        );
-    }
+		lblInactiveSubscribers.setText("● Inactive Subscribers: " + inactive + " (" + percent(inactive, total) + ")");
+	}
 
-    private void drawWaitingList(SubscribersReportDTO dto) {
-        waitingListChart.getData().clear();
+	private void drawWaitingList(SubscribersReportDTO dto) {
+		waitingListChart.getData().clear();
 
-        XYChart.Series<String, Number> series = new XYChart.Series<>();
-        Map<Integer, Integer> data = dto.getWaitingListPerDay();
-        int days = reportMonth.lengthOfMonth();
+		XYChart.Series<String, Number> series = new XYChart.Series<>();
+		Map<Integer, Integer> data = dto.getWaitingListPerDay();
+		int days = reportMonth.lengthOfMonth();
 
-        int total = 0, maxDay = -1, maxCount = 0;
+		int total = 0, maxDay = -1, maxCount = 0;
 
-        for (int day = 1; day <= days; day++) {
-            int value = data.getOrDefault(day, 0);
-            total += value;
+		for (int day = 1; day <= days; day++) {
+			int value = data.getOrDefault(day, 0);
+			total += value;
 
-            if (value > maxCount) {
-                maxCount = value;
-                maxDay = day;
-            }
-            series.getData().add(new XYChart.Data<>(String.valueOf(day), value));
-        }
+			if (value > maxCount) {
+				maxCount = value;
+				maxDay = day;
+			}
+			series.getData().add(new XYChart.Data<>(String.valueOf(day), value));
+		}
 
-        waitingListChart.getData().add(series);
+		waitingListChart.getData().add(series);
 
-        lblWaitingTotal.setText(
-                "Total Waiting Entries: " + total +
-                formatDelta(dto.getWaitingTotalDelta())
-        );
-        lblWaitingAvg.setText(String.format("Daily Average: %.1f", (double) total / days));
-        lblWaitingPeak.setText(
-                maxDay == -1 ? "Peak Day: N/A"
-                        : "Peak Day: Day " + maxDay + " (" + maxCount + ")");
-    }
+		lblWaitingTotal.setText("Total Waiting Entries: " + total + formatDelta(dto.getWaitingTotalDelta()));
+		lblWaitingAvg.setText(String.format("Daily Average: %.1f", (double) total / days));
+		lblWaitingPeak.setText(maxDay == -1 ? "Peak Day: N/A" : "Peak Day: Day " + maxDay + " (" + maxCount + ")");
+	}
 
-    private void drawReservationsTrend(SubscribersReportDTO dto) {
-        reservationsTrendChart.getData().clear();
+	private void drawReservationsTrend(SubscribersReportDTO dto) {
+		reservationsTrendChart.getData().clear();
 
-        XYChart.Series<String, Number> series = new XYChart.Series<>();
-        Map<Integer, Integer> data = dto.getReservationsPerDay();
-        int days = reportMonth.lengthOfMonth();
+		XYChart.Series<String, Number> series = new XYChart.Series<>();
+		Map<Integer, Integer> data = dto.getReservationsPerDay();
+		int days = reportMonth.lengthOfMonth();
 
-        int total = 0, maxDay = -1, maxCount = 0;
+		int total = 0, maxDay = -1, maxCount = 0;
 
-        for (int day = 1; day <= days; day++) {
-            int value = data.getOrDefault(day, 0);
-            total += value;
+		for (int day = 1; day <= days; day++) {
+			int value = data.getOrDefault(day, 0);
+			total += value;
 
-            if (value > maxCount) {
-                maxCount = value;
-                maxDay = day;
-            }
-            series.getData().add(new XYChart.Data<>(String.valueOf(day), value));
-        }
+			if (value > maxCount) {
+				maxCount = value;
+				maxDay = day;
+			}
+			series.getData().add(new XYChart.Data<>(String.valueOf(day), value));
+		}
 
-        reservationsTrendChart.getData().add(series);
+		reservationsTrendChart.getData().add(series);
 
-        lblReservationsTotal.setText(
-                "Total Reservations: " + total +
-                formatDelta(dto.getReservationsTotalDelta())
-        );
-        lblReservationsAvg.setText(String.format("Daily Average: %.1f", (double) total / days));
-        lblReservationsPeak.setText(
-                maxDay == -1 ? "Peak Day: N/A"
-                        : "Peak Day: Day " + maxDay + " (" + maxCount + ")");
-    }
+		lblReservationsTotal.setText("Total Reservations: " + total + formatDelta(dto.getReservationsTotalDelta()));
+		lblReservationsAvg.setText(String.format("Daily Average: %.1f", (double) total / days));
+		lblReservationsPeak.setText(maxDay == -1 ? "Peak Day: N/A" : "Peak Day: Day " + maxDay + " (" + maxCount + ")");
+	}
 
-    private String percent(int value, int total) {
-        return total == 0 ? "0%" : String.format("%.1f%%", (value * 100.0) / total);
-    }
+	private String percent(int value, int total) {
+		return total == 0 ? "0%" : String.format("%.1f%%", (value * 100.0) / total);
+	}
 
-    private String formatDelta(Integer delta) {
-        if (delta == null) return "";
-        if (delta > 0) return " ▲ +" + delta;
-        if (delta < 0) return " ▼ " + delta;
-        return " —";
-    }
+	private String formatDelta(Integer delta) {
+		if (delta == null)
+			return "";
+		if (delta > 0)
+			return " ▲ +" + delta;
+		if (delta < 0)
+			return " ▼ " + delta;
+		return " —";
+	}
 
-    /* ======================= NAVIGATION ======================= */
+	/* ======================= NAVIGATION ======================= */
 
-    @FXML
-    private void onBackClicked() {
-        try {
-            chatClient.setResponseHandler(null);
+	@FXML
+	private void onBackClicked() {
+		try {
+			chatClient.setResponseHandler(null);
 
-            FXMLLoader loader =
-                    new FXMLLoader(getClass().getResource("/gui/ReportsMenu.fxml"));
-            Parent root = loader.load();
+			FXMLLoader loader = new FXMLLoader(getClass().getResource("/gui/ReportsMenu.fxml"));
+			Parent root = loader.load();
 
-            ReportsMenuController controller = loader.getController();
-            controller.setClient(user, chatClient);
+			ReportsMenuController controller = loader.getController();
+			controller.setClient(user, chatClient);
 
-            Stage stage = (Stage) rootPane.getScene().getWindow();
-            Scene scene = stage.getScene();
+			Stage stage = (Stage) rootPane.getScene().getWindow();
+			Scene scene = stage.getScene();
 
-            scene.setRoot(root);
-            stage.setTitle("Bistro - Reports");
-            stage.show();
+			scene.setRoot(root);
+			stage.setTitle("Bistro - Reports");
+			stage.show();
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 
-    @Override public void handleConnectionError(Exception e) {}
-    @Override public void handleConnectionClosed() {}
+	@Override
+	public void handleConnectionError(Exception e) {
+	}
+
+	@Override
+	public void handleConnectionClosed() {
+	}
 }
