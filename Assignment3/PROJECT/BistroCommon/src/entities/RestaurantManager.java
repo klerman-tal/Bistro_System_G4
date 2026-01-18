@@ -13,34 +13,27 @@ import entities.Enums.UserRole;
  */
 public class RestaurantManager extends RestaurantAgent {
 
-    /**
-     * Default constructor.
-     * <p>
-     * Initializes a restaurant manager and assigns the
-     * {@link UserRole#RestaurantManager} role.
-     * </p>
-     */
-    public RestaurantManager() {
-        super();
-        setUserRole(UserRole.RestaurantManager);
-    }
+	/**
+	 * Default constructor.
+	 * <p>
+	 * Initializes a restaurant manager and assigns the
+	 * {@link UserRole#RestaurantManager} role.
+	 * </p>
+	 */
+	public RestaurantManager() {
+		super();
+		setUserRole(UserRole.RestaurantManager);
+	}
 
-    /**
-     * Constructs a restaurant manager with full subscriber details.
-     * <p>
-     * The user role is automatically set to
-     * {@link UserRole#RestaurantManager}.
-     * </p>
-     */
-    public RestaurantManager(
-            int subscriberId,
-            String username,
-            String firstName,
-            String lastName,
-            String phone,
-            String email
-    ) {
-        super(subscriberId, username, firstName, lastName, phone, email);
-        setUserRole(UserRole.RestaurantManager);
-    }
+	/**
+	 * Constructs a restaurant manager with full subscriber details.
+	 * <p>
+	 * The user role is automatically set to {@link UserRole#RestaurantManager}.
+	 * </p>
+	 */
+	public RestaurantManager(int subscriberId, String username, String firstName, String lastName, String phone,
+			String email) {
+		super(subscriberId, username, firstName, lastName, phone, email);
+		setUserRole(UserRole.RestaurantManager);
+	}
 }

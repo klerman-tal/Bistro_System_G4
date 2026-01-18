@@ -3,35 +3,37 @@ package dto;
 import java.io.Serializable;
 
 /**
- * Data Transfer Object (DTO) used to update the opening hours of a specific day.
+ * Data Transfer Object (DTO) used to update the opening hours of a specific
+ * day.
  * <p>
- * This object contains the day of the week, opening time, and closing time.
- * If the opening or closing time is null, it indicates that the restaurant is closed.
+ * This object contains the day of the week, opening time, and closing time. If
+ * the opening or closing time is null, it indicates that the restaurant is
+ * closed.
  * </p>
  */
 public class UpdateOpeningHoursDTO implements Serializable {
 
-    private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 1L;
 
-    private String dayOfWeek;
-    private String openTime;   // "HH:MM" or null
-    private String closeTime;  // "HH:MM" or null
+	private String dayOfWeek;
+	private String openTime; // "HH:MM" or null
+	private String closeTime; // "HH:MM" or null
 
-    public UpdateOpeningHoursDTO(String dayOfWeek, String openTime, String closeTime) {
-        this.dayOfWeek = dayOfWeek;
-        this.openTime = openTime;
-        this.closeTime = closeTime;
-    }
+	public UpdateOpeningHoursDTO(String dayOfWeek, String openTime, String closeTime) {
+		this.dayOfWeek = dayOfWeek;
+		this.openTime = openTime;
+		this.closeTime = closeTime;
+	}
 
-    public String getDayOfWeek() {
-        return dayOfWeek;
-    }
+	public String getDayOfWeek() {
+		return dayOfWeek;
+	}
 
-    public String getOpenTime() {
-        return openTime;
-    }
+	public String getOpenTime() {
+		return openTime;
+	}
 
-    public String getCloseTime() {
-        return closeTime;
-    }
+	public String getCloseTime() {
+		return closeTime;
+	}
 }
