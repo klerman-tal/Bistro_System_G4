@@ -398,18 +398,21 @@ public class RestaurantServer extends AbstractServer {
 	 *
 	 * @param client the disconnected client
 	 */
-	@Override
-	protected synchronized void clientDisconnected(ConnectionToClient client) {
-		touchActivity();
+	 @Override
+	    protected synchronized void clientDisconnected(ConnectionToClient client) {
+	        touchActivity();
 
-		String ip = client.getInetAddress() != null ? client.getInetAddress().getHostAddress() : "UNKNOWN";
+	        String ip = client.getInetAddress() != null
+	                ? client.getInetAddress().getHostAddress()
+	                : "UNKNOWN";
 
-		if (onlineUsersRegistry != null) {
-			onlineUsersRegistry.removeClient(client);
-		}
+	        if (onlineUsersRegistry != null) {
+	            onlineUsersRegistry.removeClient(client);
+	        }
 
-		log("🔌 Client disconnected (Logout or window closed) | IP: " + ip);
-	}
+	        log("🔌 Client disconnected (Logout or window closed) | IP: " + ip);
+	    }
+	
 
 	// ================= Shutdown =================
 
