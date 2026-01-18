@@ -10,14 +10,14 @@ import entities.Enums.ReservationStatus;
 /**
  * Entity representing a restaurant reservation.
  * <p>
- * This class stores all reservation-related data, including timing,
- * guest count, table assignment, status, and lifecycle events such as
- * check-in and check-out. It is persisted in the database and used
- * throughout the reservation management flow.
+ * This class stores all reservation-related data, including timing, guest
+ * count, table assignment, status, and lifecycle events such as check-in and
+ * check-out. It is persisted in the database and used throughout the
+ * reservation management flow.
  * </p>
  */
 public class Reservation implements Serializable {
-    private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 1L;
 
 	// ===== Fields =====
 	private int reservationId;
@@ -37,8 +37,8 @@ public class Reservation implements Serializable {
 	/**
 	 * Default constructor.
 	 * <p>
-	 * Initializes a reservation with default values and an active status.
-	 * Typically used for database mapping or framework initialization.
+	 * Initializes a reservation with default values and an active status. Typically
+	 * used for database mapping or framework initialization.
 	 * </p>
 	 */
 	public Reservation() {
@@ -71,7 +71,7 @@ public class Reservation implements Serializable {
 	}
 
 	public void setConfirmationCode(String code) {
-	    this.confirmationCode = code;
+		this.confirmationCode = code;
 	}
 
 	public int getCreatedByUserId() {
@@ -173,6 +173,6 @@ public class Reservation implements Serializable {
 	 * Generates and assigns a confirmation code to this reservation.
 	 */
 	public void generateAndSetConfirmationCode() {
-	    this.confirmationCode = createConfirmationCode();
+		this.confirmationCode = createConfirmationCode();
 	}
 }

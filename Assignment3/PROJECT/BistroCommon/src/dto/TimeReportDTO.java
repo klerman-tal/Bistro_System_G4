@@ -4,8 +4,8 @@ import java.io.Serializable;
 import java.util.Map;
 
 /**
- * Data Transfer Object (DTO) used to transfer monthly time report data
- * from the server to the client.
+ * Data Transfer Object (DTO) used to transfer monthly time report data from the
+ * server to the client.
  * <p>
  * This object contains aggregated statistics about arrival and stay durations
  * for a specific month, including the year and other relevant data.
@@ -13,188 +13,190 @@ import java.util.Map;
  */
 public class TimeReportDTO implements Serializable {
 
-    private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 1L;
 
-    /* =====================================================
-     * Request Parameters
-     * ===================================================== */
+	/*
+	 * ===================================================== Request Parameters
+	 * =====================================================
+	 */
 
-    /** Report year (e.g. 2026) */
-    private int year;
+	/** Report year (e.g. 2026) */
+	private int year;
 
-    /** Report month (1-12) */
-    private int month;
+	/** Report month (1-12) */
+	private int month;
 
-    /* =====================================================
-     * Arrival Status Statistics (TAB 1)
-     * ===================================================== */
+	/*
+	 * ===================================================== Arrival Status
+	 * Statistics (TAB 1) =====================================================
+	 */
 
-    /** Number of on-time arrivals */
-    private int onTimeCount;
+	/** Number of on-time arrivals */
+	private int onTimeCount;
 
-    /** Number of arrivals with minor delay */
-    private int minorDelayCount;
+	/** Number of arrivals with minor delay */
+	private int minorDelayCount;
 
-    /** Number of arrivals with significant delay */
-    private int significantDelayCount;
+	/** Number of arrivals with significant delay */
+	private int significantDelayCount;
 
-    /* =====================================================
-     * Stay Duration Statistics (TAB 2)
-     * ===================================================== */
+	/*
+	 * ===================================================== Stay Duration
+	 * Statistics (TAB 2) =====================================================
+	 */
 
-    /**
-     * Average stay duration per day.
-     * Key   - day of month (1-31)
-     * Value - average stay duration in minutes
-     */
-    private Map<Integer, Integer> avgStayMinutesPerDay;
+	/**
+	 * Average stay duration per day. Key - day of month (1-31) Value - average stay
+	 * duration in minutes
+	 */
+	private Map<Integer, Integer> avgStayMinutesPerDay;
 
-    /** Monthly average stay duration (minutes) */
-    private int monthlyAvgStay;
+	/** Monthly average stay duration (minutes) */
+	private int monthlyAvgStay;
 
-    /** Day with the highest average stay duration */
-    private int maxAvgDay;
+	/** Day with the highest average stay duration */
+	private int maxAvgDay;
 
-    /** Highest average stay duration (minutes) */
-    private int maxAvgMinutes;
+	/** Highest average stay duration (minutes) */
+	private int maxAvgMinutes;
 
-    /** Day with the lowest average stay duration */
-    private int minAvgDay;
+	/** Day with the lowest average stay duration */
+	private int minAvgDay;
 
-    /** Lowest average stay duration (minutes) */
-    private int minAvgMinutes;
+	/** Lowest average stay duration (minutes) */
+	private int minAvgMinutes;
 
-    /* =====================================================
-     * Getters and Setters
-     * ===================================================== */
+	/*
+	 * ===================================================== Getters and Setters
+	 * =====================================================
+	 */
 
-    public int getYear() {
-        return year;
-    }
+	public int getYear() {
+		return year;
+	}
 
-    public void setYear(int year) {
-        this.year = year;
-    }
+	public void setYear(int year) {
+		this.year = year;
+	}
 
-    public int getMonth() {
-        return month;
-    }
+	public int getMonth() {
+		return month;
+	}
 
-    public void setMonth(int month) {
-        this.month = month;
-    }
-    
- // ================= Month-over-Month Delta =================
+	public void setMonth(int month) {
+		this.month = month;
+	}
 
-    private Integer onTimeDelta;
-    private Integer minorDelayDelta;
-    private Integer significantDelayDelta;
+	// ================= Month-over-Month Delta =================
 
-    public Integer getOnTimeDelta() {
-        return onTimeDelta;
-    }
+	private Integer onTimeDelta;
+	private Integer minorDelayDelta;
+	private Integer significantDelayDelta;
 
-    public void setOnTimeDelta(Integer onTimeDelta) {
-        this.onTimeDelta = onTimeDelta;
-    }
+	public Integer getOnTimeDelta() {
+		return onTimeDelta;
+	}
 
-    public Integer getMinorDelayDelta() {
-        return minorDelayDelta;
-    }
+	public void setOnTimeDelta(Integer onTimeDelta) {
+		this.onTimeDelta = onTimeDelta;
+	}
 
-    public void setMinorDelayDelta(Integer minorDelayDelta) {
-        this.minorDelayDelta = minorDelayDelta;
-    }
+	public Integer getMinorDelayDelta() {
+		return minorDelayDelta;
+	}
 
-    public Integer getSignificantDelayDelta() {
-        return significantDelayDelta;
-    }
+	public void setMinorDelayDelta(Integer minorDelayDelta) {
+		this.minorDelayDelta = minorDelayDelta;
+	}
 
-    public void setSignificantDelayDelta(Integer significantDelayDelta) {
-        this.significantDelayDelta = significantDelayDelta;
-    }
+	public Integer getSignificantDelayDelta() {
+		return significantDelayDelta;
+	}
 
+	public void setSignificantDelayDelta(Integer significantDelayDelta) {
+		this.significantDelayDelta = significantDelayDelta;
+	}
 
-    public int getOnTimeCount() {
-        return onTimeCount;
-    }
+	public int getOnTimeCount() {
+		return onTimeCount;
+	}
 
-    public void setOnTimeCount(int onTimeCount) {
-        this.onTimeCount = onTimeCount;
-    }
+	public void setOnTimeCount(int onTimeCount) {
+		this.onTimeCount = onTimeCount;
+	}
 
-    public int getMinorDelayCount() {
-        return minorDelayCount;
-    }
+	public int getMinorDelayCount() {
+		return minorDelayCount;
+	}
 
-    public void setMinorDelayCount(int minorDelayCount) {
-        this.minorDelayCount = minorDelayCount;
-    }
+	public void setMinorDelayCount(int minorDelayCount) {
+		this.minorDelayCount = minorDelayCount;
+	}
 
-    public int getSignificantDelayCount() {
-        return significantDelayCount;
-    }
+	public int getSignificantDelayCount() {
+		return significantDelayCount;
+	}
 
-    public void setSignificantDelayCount(int significantDelayCount) {
-        this.significantDelayCount = significantDelayCount;
-    }
+	public void setSignificantDelayCount(int significantDelayCount) {
+		this.significantDelayCount = significantDelayCount;
+	}
 
-    public Map<Integer, Integer> getAvgStayMinutesPerDay() {
-        return avgStayMinutesPerDay;
-    }
+	public Map<Integer, Integer> getAvgStayMinutesPerDay() {
+		return avgStayMinutesPerDay;
+	}
 
-    public void setAvgStayMinutesPerDay(Map<Integer, Integer> avgStayMinutesPerDay) {
-        this.avgStayMinutesPerDay = avgStayMinutesPerDay;
-    }
+	public void setAvgStayMinutesPerDay(Map<Integer, Integer> avgStayMinutesPerDay) {
+		this.avgStayMinutesPerDay = avgStayMinutesPerDay;
+	}
 
-    public int getMonthlyAvgStay() {
-        return monthlyAvgStay;
-    }
+	public int getMonthlyAvgStay() {
+		return monthlyAvgStay;
+	}
 
-    public void setMonthlyAvgStay(int monthlyAvgStay) {
-        this.monthlyAvgStay = monthlyAvgStay;
-    }
+	public void setMonthlyAvgStay(int monthlyAvgStay) {
+		this.monthlyAvgStay = monthlyAvgStay;
+	}
 
-    public int getMaxAvgDay() {
-        return maxAvgDay;
-    }
+	public int getMaxAvgDay() {
+		return maxAvgDay;
+	}
 
-    public void setMaxAvgDay(int maxAvgDay) {
-        this.maxAvgDay = maxAvgDay;
-    }
+	public void setMaxAvgDay(int maxAvgDay) {
+		this.maxAvgDay = maxAvgDay;
+	}
 
-    public int getMaxAvgMinutes() {
-        return maxAvgMinutes;
-    }
+	public int getMaxAvgMinutes() {
+		return maxAvgMinutes;
+	}
 
-    public void setMaxAvgMinutes(int maxAvgMinutes) {
-        this.maxAvgMinutes = maxAvgMinutes;
-    }
+	public void setMaxAvgMinutes(int maxAvgMinutes) {
+		this.maxAvgMinutes = maxAvgMinutes;
+	}
 
-    public int getMinAvgDay() {
-        return minAvgDay;
-    }
+	public int getMinAvgDay() {
+		return minAvgDay;
+	}
 
-    public void setMinAvgDay(int minAvgDay) {
-        this.minAvgDay = minAvgDay;
-    }
+	public void setMinAvgDay(int minAvgDay) {
+		this.minAvgDay = minAvgDay;
+	}
 
-    public int getMinAvgMinutes() {
-        return minAvgMinutes;
-    }
+	public int getMinAvgMinutes() {
+		return minAvgMinutes;
+	}
 
-    public void setMinAvgMinutes(int minAvgMinutes) {
-        this.minAvgMinutes = minAvgMinutes;
-    }
-    
-    private Integer monthlyAvgDelta;
+	public void setMinAvgMinutes(int minAvgMinutes) {
+		this.minAvgMinutes = minAvgMinutes;
+	}
 
-    public Integer getMonthlyAvgDelta() {
-        return monthlyAvgDelta;
-    }
+	private Integer monthlyAvgDelta;
 
-    public void setMonthlyAvgDelta(Integer monthlyAvgDelta) {
-        this.monthlyAvgDelta = monthlyAvgDelta;
-    }
+	public Integer getMonthlyAvgDelta() {
+		return monthlyAvgDelta;
+	}
+
+	public void setMonthlyAvgDelta(Integer monthlyAvgDelta) {
+		this.monthlyAvgDelta = monthlyAvgDelta;
+	}
 
 }
