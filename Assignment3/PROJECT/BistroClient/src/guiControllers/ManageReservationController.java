@@ -42,7 +42,7 @@ public class ManageReservationController implements Initializable {
     @FXML private BorderPane rootPane;
     @FXML private Label lblStatus;
 
-    // ===== FILTER (NEW) =====
+    // ===== FILTER =====
     @FXML private TextField txtFilter;
     @FXML private ComboBox<String> cmbMatchMode;
 
@@ -67,25 +67,12 @@ public class ManageReservationController implements Initializable {
     private final ObservableList<Reservation> reservationsList =
             FXCollections.observableArrayList();
 
-    // ===== FILTER DATA (NEW) =====
     private FilteredList<Reservation> filteredReservations;
 
-    /**
-     * Injects a {@link ClientActions} implementation for controllers that rely on GUI-to-client actions.
-     *
-     * @param clientActions the client actions bridge used by downstream controllers
-     */
     public void setClientActions(ClientActions clientActions) {
         this.clientActions = clientActions;
     }
 
-    /**
-     * Injects the current session context, initializes {@link ClientAPI}, and installs a response handler
-     * that delegates responses to {@link #handleServerResponse(ResponseDTO)} on the JavaFX UI thread.
-     *
-     * @param user       the current logged-in user
-     * @param chatClient the network client used to communicate with the server
-     */
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
@@ -118,9 +105,6 @@ public class ManageReservationController implements Initializable {
         // intentionally empty
     }
 
-    /**
-     * Configures the reservations table columns and binds the table to the observable data list.
-     */
     private void initializeTableBehavior() {
         colReservationId.setCellValueFactory(new PropertyValueFactory<>("reservationId"));
         colDateTime.setCellValueFactory(new PropertyValueFactory<>("reservationTime"));
@@ -130,7 +114,10 @@ public class ManageReservationController implements Initializable {
         colStatus.setCellValueFactory(new PropertyValueFactory<>("reservationStatus"));
         colTableNumber.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
 
-        // ===== FILTER + SORT (NEW) =====
+        // ===== STATUS COLORING (NEW) =====
+        installStatusColoring();
+
+        // ===== FILTER + SORT =====
         filteredReservations = new FilteredList<>(reservationsList, r -> true);
 
         SortedList<Reservation> sorted = new SortedList<>(filteredReservations);
@@ -138,13 +125,13 @@ public class ManageReservationController implements Initializable {
 
         tblReservations.setItems(sorted);
 
-        // ===== MATCH MODE (Exact default) (NEW) =====
+        // ===== MATCH MODE (Exact default) =====
         if (cmbMatchMode != null) {
             cmbMatchMode.getItems().setAll("Contains", "Exact");
             cmbMatchMode.getSelectionModel().select("Exact");
         }
 
-        // ===== LISTENERS (NEW) =====
+        // ===== LISTENERS =====
         if (txtFilter != null) {
             txtFilter.textProperty().addListener((obs, oldVal, newVal) -> applyFilter());
         }
@@ -154,8 +141,34 @@ public class ManageReservationController implements Initializable {
     }
 
     /**
-     * Applies a general filter across multiple reservation fields. (NEW)
+     * Colors only the text in the Status column:
+     * Active -> green, Cancelled -> red, Finished -> default.
      */
+    private void installStatusColoring() {
+        colStatus.setCellFactory(col -> new TableCell<Reservation, ReservationStatus>() {
+            @Override
+            protected void updateItem(ReservationStatus status, boolean empty) {
+                super.updateItem(status, empty);
+
+                if (empty || status == null) {
+                    setText(null);
+                    setStyle("");
+                    return;
+                }
+
+                setText(status.toString());
+                setStyle(""); // reset
+
+                if (status == ReservationStatus.Active) {
+                    setStyle("-fx-text-fill: #2E7D32; -fx-font-weight: bold;");
+                } else if (status == ReservationStatus.Cancelled) {
+                    setStyle("-fx-text-fill: #C62828; -fx-font-weight: bold;");
+                }
+                // Finished -> default (no style)
+            }
+        });
+    }
+
     private void applyFilter() {
         String input = (txtFilter == null || txtFilter.getText() == null) ? "" : txtFilter.getText();
         String filter = input.trim().toLowerCase();
@@ -204,18 +217,12 @@ public class ManageReservationController implements Initializable {
         return (s == null) ? "" : s.toLowerCase();
     }
 
-    /**
-     * Clears filter input and restores default match mode (Exact). (NEW)
-     */
     @FXML
     private void onClearFilter() {
         if (txtFilter != null) txtFilter.clear();
         if (cmbMatchMode != null) cmbMatchMode.getSelectionModel().select("Exact");
     }
 
-    /**
-     * Loads all reservations from the server when entering the screen.
-     */
     private void loadReservationsOnEnter() {
         hideMessage();
         if (clientAPI == null) return;
@@ -227,9 +234,6 @@ public class ManageReservationController implements Initializable {
         }
     }
 
-    /**
-     * Processes server responses related to reservation management.
-     */
     public void handleServerResponse(ResponseDTO response) {
         if (response == null) return;
 
@@ -248,9 +252,6 @@ public class ManageReservationController implements Initializable {
         }
     }
 
-    /**
-     * Opens the "Add Reservation" screen and configures it to navigate back to this screen.
-     */
     @FXML
     private void onAddClicked() {
         try {
@@ -281,9 +282,6 @@ public class ManageReservationController implements Initializable {
         }
     }
 
-    /**
-     * Opens the cancel screen for the currently selected reservation.
-     */
     @FXML
     private void onDeleteClicked() {
         Reservation selected = tblReservations.getSelectionModel().getSelectedItem();
@@ -322,9 +320,6 @@ public class ManageReservationController implements Initializable {
         }
     }
 
-    /**
-     * Navigates back to the restaurant management screen.
-     */
     @FXML
     private void onBackClicked() {
         openWindow("RestaurantManagement_B.fxml", "Management");
