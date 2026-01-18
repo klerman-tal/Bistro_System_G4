@@ -63,6 +63,14 @@ public class SubscribersReportDTO implements Serializable {
     private Map<Integer, Integer> reservationsPerDay;
 
     /* =====================================================
+     * Month-over-Month Deltas
+     * ===================================================== */
+
+    private Integer activeSubscribersDelta;
+    private Integer waitingTotalDelta;
+    private Integer reservationsTotalDelta;
+
+    /* =====================================================
      * Getters and Setters
      * ===================================================== */
 
@@ -112,5 +120,29 @@ public class SubscribersReportDTO implements Serializable {
 
     public void setReservationsPerDay(Map<Integer, Integer> reservationsPerDay) {
         this.reservationsPerDay = reservationsPerDay;
+    }
+
+    public Integer getActiveSubscribersDelta() {
+        return activeSubscribersDelta;
+    }
+
+    public void setActiveSubscribersDelta(Integer activeSubscribersDelta) {
+        this.activeSubscribersDelta = activeSubscribersDelta;
+    }
+
+    public Integer getWaitingTotalDelta() {
+        return waitingTotalDelta;
+    }
+
+    public void setWaitingTotalDelta(Integer waitingTotalDelta) {
+        this.waitingTotalDelta = waitingTotalDelta;
+    }
+
+    public Integer getReservationsTotalDelta() {
+        return reservationsTotalDelta;
+    }
+
+    public void setReservationsTotalDelta(Integer reservationsTotalDelta) {
+        this.reservationsTotalDelta = reservationsTotalDelta;
     }
 }

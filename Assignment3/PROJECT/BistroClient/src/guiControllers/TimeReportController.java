@@ -204,6 +204,14 @@ public class TimeReportController implements ClientResponseHandler {
             drawStayDuration(dto);
         });
     }
+    
+    private String formatDelta(Integer delta) {
+        if (delta == null) return "";
+        if (delta > 0) return " ▲ +" + delta;
+        if (delta < 0) return " ▼ " + delta;
+        return " —";
+    }
+
 
     /* ======================= Summaries ======================= */
 
@@ -244,9 +252,24 @@ public class TimeReportController implements ClientResponseHandler {
                 new PieChart.Data(percent(minor, total), minor)
         );
 
-        lblOnTime.setText("● On Time (< 3 min): " + onTime + " (" + percent(onTime, total) + ")");
-        lblMinorDelay.setText("● Minor Delay (3–10 min): " + minor + " (" + percent(minor, total) + ")");
-        lblMajorDelay.setText("● Significant Delay (≥ 10 min): " + major + " (" + percent(major, total) + ")");
+        lblOnTime.setText(
+        	    "● On Time (< 3 min): " + onTime +
+        	    " (" + percent(onTime, total) + ")" +
+        	    formatDelta(dto.getOnTimeDelta())
+        	);
+
+        lblMinorDelay.setText(
+        	    "● Minor Delay (3–10 min): " + minor +
+        	    " (" + percent(minor, total) + ")" +
+        	    formatDelta(dto.getMinorDelayDelta())
+        	);
+
+        lblMajorDelay.setText(
+        	    "● Significant Delay (≥ 10 min): " + major +
+        	    " (" + percent(major, total) + ")" +
+        	    formatDelta(dto.getSignificantDelayDelta())
+        	);
+
     }
 
     /**
@@ -268,7 +291,11 @@ public class TimeReportController implements ClientResponseHandler {
 
         timesChart.getData().add(series);
 
-        lblMonthlyAvg.setText("Monthly Average: " + dto.getMonthlyAvgStay() + " min");
+        lblMonthlyAvg.setText(
+        	    "Monthly Average: " + dto.getMonthlyAvgStay() + " min" +
+        	    formatDelta(dto.getMonthlyAvgDelta())
+        	);
+
         lblMaxDay.setText("Longest Stay: Day " + dto.getMaxAvgDay() +
                 " (" + dto.getMaxAvgMinutes() + " min)");
         lblMinDay.setText("Shortest Stay: Day " + dto.getMinAvgDay() +
