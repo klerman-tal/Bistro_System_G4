@@ -20,14 +20,11 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
-import javafx.scene.control.Button;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableRow;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
@@ -49,7 +46,7 @@ public class ManageWaitingListController {
 
     @FXML private BorderPane rootPane;
 
-    // ===== FILTER (NEW) =====
+    // ===== FILTER =====
     @FXML private TextField txtFilter;
     @FXML private ComboBox<String> cmbMatchMode;
 
@@ -70,16 +67,8 @@ public class ManageWaitingListController {
     private final ObservableList<Waiting> waitingData =
             FXCollections.observableArrayList();
 
-    // ===== FILTER DATA (NEW) =====
     private FilteredList<Waiting> filteredWaiting;
 
-    /**
-     * Injects the current session context, initializes {@link ClientAPI}, registers a response handler,
-     * and loads the initial waiting list.
-     *
-     * @param user       the current logged-in user
-     * @param chatClient the network client used to communicate with the server
-     */
     public void setClient(User user, ChatClient chatClient) {
         this.user = user;
         this.chatClient = chatClient;
@@ -106,10 +95,6 @@ public class ManageWaitingListController {
         loadWaitingList();
     }
 
-    /**
-     * Configures the waiting list table columns, binds it to the observable list,
-     * applies row styling based on {@link WaitingStatus}, and installs filtering. (UPDATED)
-     */
     private void setupTable() {
         colWaitingId.setCellValueFactory(new PropertyValueFactory<>("waitingId"));
         colCreatedBy.setCellValueFactory(new PropertyValueFactory<>("createdByUserId"));
@@ -120,6 +105,10 @@ public class ManageWaitingListController {
         colTableNum.setCellValueFactory(new PropertyValueFactory<>("tableNumber"));
         colStatus.setCellValueFactory(new PropertyValueFactory<>("waitingStatus"));
 
+        // ===== STATUS COLORING (NEW) =====
+        installStatusColoring();
+
+        // ===== ROW STYLING (EXISTING) =====
         tblWaitingList.setRowFactory(tv -> new TableRow<Waiting>() {
             @Override
             protected void updateItem(Waiting item, boolean empty) {
@@ -136,7 +125,7 @@ public class ManageWaitingListController {
             }
         });
 
-        // ===== FILTER + SORT (NEW) =====
+        // ===== FILTER + SORT =====
         filteredWaiting = new FilteredList<>(waitingData, w -> true);
 
         SortedList<Waiting> sorted = new SortedList<>(filteredWaiting);
@@ -144,13 +133,13 @@ public class ManageWaitingListController {
 
         tblWaitingList.setItems(sorted);
 
-        // ===== MATCH MODE (Exact default) (NEW) =====
+        // ===== MATCH MODE (Exact default) =====
         if (cmbMatchMode != null) {
             cmbMatchMode.getItems().setAll("Contains", "Exact");
             cmbMatchMode.getSelectionModel().select("Exact");
         }
 
-        // ===== LISTENERS (NEW) =====
+        // ===== LISTENERS =====
         if (txtFilter != null) {
             txtFilter.textProperty().addListener((obs, oldVal, newVal) -> applyFilter());
         }
@@ -160,8 +149,35 @@ public class ManageWaitingListController {
     }
 
     /**
-     * Applies a general filter across multiple waiting fields. (NEW)
+     * Colors only the text in the Status column:
+     * Waiting -> blue, Seated -> green, Cancelled -> red.
      */
+    private void installStatusColoring() {
+        colStatus.setCellFactory(col -> new TableCell<Waiting, WaitingStatus>() {
+            @Override
+            protected void updateItem(WaitingStatus status, boolean empty) {
+                super.updateItem(status, empty);
+
+                if (empty || status == null) {
+                    setText(null);
+                    setStyle("");
+                    return;
+                }
+
+                setText(status.toString());
+                setStyle(""); // reset
+
+                if (status == WaitingStatus.Cancelled) {
+                    setStyle("-fx-text-fill: #C62828; -fx-font-weight: bold;");
+                } else if (status == WaitingStatus.Seated) {
+                    setStyle("-fx-text-fill: #2E7D32; -fx-font-weight: bold;");
+                } else if (status == WaitingStatus.Waiting) {
+                    setStyle("-fx-text-fill: #1565C0; -fx-font-weight: bold;");
+                }
+            }
+        });
+    }
+
     private void applyFilter() {
         String input = (txtFilter == null || txtFilter.getText() == null) ? "" : txtFilter.getText();
         String filter = input.trim().toLowerCase();
@@ -213,18 +229,12 @@ public class ManageWaitingListController {
         return (s == null) ? "" : s.toLowerCase();
     }
 
-    /**
-     * Clears filter input and restores default match mode (Exact). (NEW)
-     */
     @FXML
     private void onClearFilter() {
         if (txtFilter != null) txtFilter.clear();
         if (cmbMatchMode != null) cmbMatchMode.getSelectionModel().select("Exact");
     }
 
-    /**
-     * Opens the "Join Waiting" screen and configures it to navigate back to this screen.
-     */
     @FXML
     private void onAddWaitingClicked() {
         openScreen("/gui/JoinWaiting_B.fxml", controller -> {
@@ -234,9 +244,6 @@ public class ManageWaitingListController {
         });
     }
 
-    /**
-     * Opens the "Cancel Waiting" screen for the selected waiting entry.
-     */
     @FXML
     private void onCancelWaitingClicked() {
         Waiting selected = tblWaitingList.getSelectionModel().getSelectedItem();
@@ -249,18 +256,12 @@ public class ManageWaitingListController {
         });
     }
 
-    /**
-     * Clears the current table data and reloads the waiting list from the server.
-     */
     @FXML
     private void onRefreshClicked() {
         waitingData.clear();
         loadWaitingList();
     }
 
-    /**
-     * Requests the full waiting list from the server.
-     */
     private void loadWaitingList() {
         try {
             clientAPI.getWaitingList();
@@ -269,9 +270,6 @@ public class ManageWaitingListController {
         }
     }
 
-    /**
-     * Navigates back to the restaurant management screen.
-     */
     @FXML
     private void onBackClicked() {
         openScreen("/gui/RestaurantManagement_B.fxml", controller ->
@@ -280,9 +278,6 @@ public class ManageWaitingListController {
         );
     }
 
-    /**
-     * Loads the requested FXML and swaps the current scene root to navigate between screens.
-     */
     private void openScreen(String fxmlPath, java.util.function.Consumer<Object> injector) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
